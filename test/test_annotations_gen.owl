@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<!DOCTYPE Ontology [
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
+    <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+    <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#" >
+    <!ENTITY owl "http://www.w3.org/2002/07/owl#" >
+]>
+<Ontology xmlns="http://www.w3.org/2002/07/owl#" xml:base="http://test.org/test_annotations_gen.owl" ontologyIRI="http://test.org/test_annotations_gen.owl"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+>
+<Prefix name="" IRI="http://test.org/test_annotations_gen.owl"/>
+<Prefix name="owl" IRI="http://www.w3.org/2002/07/owl#"/>
+<Prefix name="rdf" IRI="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+<Prefix name="xsd" IRI="http://www.w3.org/2001/XMLSchema#"/>
+<Prefix name="rdfs" IRI="http://www.w3.org/2000/01/rdf-schema#"/>
+<Prefix name="test_annotations_gen" IRI="http://test.org/test_annotations_gen.owl"/>
+
+<Declaration><ObjectProperty IRI="http://test.org/test_annotations_gen.owl#rel"/></Declaration>
+<Declaration><Class IRI="http://test.org/test_annotations_gen.owl#C"/></Declaration>
+<Declaration><Class IRI="http://test.org/test_annotations_gen.owl#D"/></Declaration>
+<Declaration><Class IRI="http://test.org/test_annotations_gen.owl#E"/></Declaration>
+<Declaration><NamedIndividual IRI="http://test.org/test_annotations_gen.owl#i"/></Declaration>
+<Declaration><NamedIndividual IRI="http://test.org/test_annotations_gen.owl#j"/></Declaration>
+
+<ObjectPropertyDomain>
+<Annotation><AnnotationProperty IRI="http://www.w3.org/2000/01/rdf-schema#comment"/><Literal datatypeIRI="&xsd;string">dom</Literal></Annotation>
+<ObjectProperty IRI="http://test.org/test_annotations_gen.owl#rel"/><Class IRI="http://test.org/test_annotations_gen.owl#D"/></ObjectPropertyDomain>
+<ObjectPropertyRange>
+<Annotation><AnnotationProperty IRI="http://www.w3.org/2000/01/rdf-schema#comment"/><Literal datatypeIRI="&xsd;string">range1</Literal></Annotation>
+
+<Annotation><AnnotationProperty IRI="http://www.w3.org/2000/01/rdf-schema#comment"/><Literal datatypeIRI="&xsd;string">range2</Literal></Annotation>
+<ObjectProperty IRI="http://test.org/test_annotations_gen.owl#rel"/><Class IRI="http://test.org/test_annotations_gen.owl#C"/></ObjectPropertyRange>
+
+<AnnotationAssertion><AnnotationProperty IRI="http://www.w3.org/2000/01/rdf-schema#comment"/><IRI>http://test.org/test_annotations_gen.owl#C</IRI><Literal datatypeIRI="&xsd;string" xml:lang="fr">Teste !</Literal></AnnotationAssertion>
+<AnnotationAssertion><AnnotationProperty IRI="http://www.w3.org/2000/01/rdf-schema#comment"/><IRI>http://test.org/test_annotations_gen.owl#C</IRI><Literal datatypeIRI="&xsd;string" xml:lang="en">test</Literal></AnnotationAssertion>
+
+<SubClassOf>
+<Annotation><AnnotationProperty IRI="http://www.w3.org/2000/01/rdf-schema#comment"/><Literal datatypeIRI="&xsd;string">annot</Literal></Annotation>
+<Class IRI="http://test.org/test_annotations_gen.owl#D"/><Class IRI="http://test.org/test_annotations_gen.owl#C"/></SubClassOf>
+
+
+<ClassAssertion>
+<Annotation><AnnotationProperty IRI="http://www.w3.org/2000/01/rdf-schema#comment"/><Literal datatypeIRI="&xsd;string">ind class</Literal></Annotation>
+<Class IRI="http://test.org/test_annotations_gen.owl#D"/><NamedIndividual IRI="http://test.org/test_annotations_gen.owl#i"/></ClassAssertion>
+<ObjectPropertyAssertion>
+<Annotation><AnnotationProperty IRI="http://www.w3.org/2000/01/rdf-schema#comment"/><Literal datatypeIRI="&xsd;string">ind rel</Literal></Annotation>
+<ObjectProperty IRI="http://test.org/test_annotations_gen.owl#rel"/><NamedIndividual IRI="http://test.org/test_annotations_gen.owl#i"/><NamedIndividual IRI="http://test.org/test_annotations_gen.owl#j"/></ObjectPropertyAssertion>
+<AnnotationAssertion><AnnotationProperty IRI="http://www.w3.org/2000/01/rdf-schema#comment"/><IRI>http://test.org/test_annotations_gen.owl#i</IRI><Literal datatypeIRI="&xsd;string">ind</Literal></AnnotationAssertion>
+
+<ClassAssertion><Class IRI="http://test.org/test_annotations_gen.owl#C"/><NamedIndividual IRI="http://test.org/test_annotations_gen.owl#j"/></ClassAssertion>
+
+</Ontology>

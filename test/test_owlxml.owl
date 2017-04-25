@@ -1,0 +1,165 @@
+<?xml version="1.0"?>
+
+
+<!DOCTYPE Ontology [
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
+    <!ENTITY xml "http://www.w3.org/XML/1998/namespace" >
+    <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#" >
+    <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+]>
+
+
+<Ontology xmlns="http://www.w3.org/2002/07/owl#"
+     xml:base="http://www.semanticweb.org/jiba/ontologies/2017/3/test_owlxml.owl"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     ontologyIRI="http://www.semanticweb.org/jiba/ontologies/2017/3/test_owlxml.owl">
+    <Prefix name="" IRI="http://www.w3.org/2002/07/owl#"/>
+    <Prefix name="owl" IRI="http://www.w3.org/2002/07/owl#"/>
+    <Prefix name="rdf" IRI="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+    <Prefix name="xsd" IRI="http://www.w3.org/2001/XMLSchema#"/>
+    <Prefix name="rdfs" IRI="http://www.w3.org/2000/01/rdf-schema#"/>
+    <Declaration>
+        <Class IRI="#C"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#C2"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#D"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#DC"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#p1"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#p2"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#p3"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="#d"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="#d2"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#c1"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#c2"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#d1"/>
+    </Declaration>
+    <Declaration>
+        <AnnotationProperty IRI="#annot"/>
+    </Declaration>
+    <EquivalentClasses>
+        <Class IRI="#DC"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#p1"/>
+            <Class IRI="#C"/>
+        </ObjectSomeValuesFrom>
+    </EquivalentClasses>
+    <EquivalentClasses>
+        <Class IRI="#DC"/>
+        <ObjectAllValuesFrom>
+            <ObjectProperty IRI="#p1"/>
+            <Class IRI="#D"/>
+        </ObjectAllValuesFrom>
+    </EquivalentClasses>
+    <EquivalentClasses>
+        <Class IRI="#DC"/>
+        <ObjectMaxCardinality cardinality="2">
+            <ObjectProperty IRI="#p2"/>
+            <ObjectIntersectionOf>
+                <Class IRI="#C"/>
+                <ObjectSomeValuesFrom>
+                    <ObjectProperty IRI="#p1"/>
+                    <Class IRI="#D"/>
+                </ObjectSomeValuesFrom>
+            </ObjectIntersectionOf>
+        </ObjectMaxCardinality>
+    </EquivalentClasses>
+    <SubClassOf>
+        <Class IRI="#C2"/>
+        <Class IRI="#C"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+            <Literal xml:lang="en" datatypeIRI="&rdf;PlainLiteral">Test</Literal>
+        </Annotation>
+        <Class IRI="#DC"/>
+        <Class IRI="#C"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#DC"/>
+        <Class IRI="#D"/>
+    </SubClassOf>
+    <ClassAssertion>
+        <Class IRI="#C"/>
+        <NamedIndividual IRI="#c1"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#C"/>
+        <NamedIndividual IRI="#c2"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#D"/>
+        <NamedIndividual IRI="#d1"/>
+    </ClassAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#p3"/>
+        <NamedIndividual IRI="#c1"/>
+        <NamedIndividual IRI="#d1"/>
+    </ObjectPropertyAssertion>
+    <SubObjectPropertyOf>
+        <ObjectProperty IRI="#p2"/>
+        <ObjectProperty IRI="#p1"/>
+    </SubObjectPropertyOf>
+    <FunctionalObjectProperty>
+        <ObjectProperty IRI="#p3"/>
+    </FunctionalObjectProperty>
+    <TransitiveObjectProperty>
+        <ObjectProperty IRI="#p1"/>
+    </TransitiveObjectProperty>
+    <ObjectPropertyDomain>
+        <ObjectProperty IRI="#p3"/>
+        <Class IRI="#C"/>
+    </ObjectPropertyDomain>
+    <ObjectPropertyRange>
+        <ObjectProperty IRI="#p3"/>
+        <Class IRI="#D"/>
+    </ObjectPropertyRange>
+    <FunctionalDataProperty>
+        <DataProperty IRI="#d"/>
+    </FunctionalDataProperty>
+    <DataPropertyRange>
+        <DataProperty IRI="#d2"/>
+        <DataUnionOf>
+            <Datatype abbreviatedIRI="xsd:float"/>
+            <Datatype abbreviatedIRI="xsd:int"/>
+        </DataUnionOf>
+    </DataPropertyRange>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#d2</IRI>
+        <Literal xml:lang="en" datatypeIRI="&rdf;PlainLiteral">Test2</Literal>
+    </AnnotationAssertion>
+    <AnnotationPropertyRange>
+        <AnnotationProperty IRI="#annot"/>
+        <AbbreviatedIRI>xsd:string</AbbreviatedIRI>
+    </AnnotationPropertyRange>
+</Ontology>
+
+
+
+<!-- Generated by the OWL API (version 3.4.2) http://owlapi.sourceforge.net -->
+

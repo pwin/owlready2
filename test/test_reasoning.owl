@@ -1,0 +1,302 @@
+<?xml version="1.0"?>
+
+
+<!DOCTYPE rdf:RDF [
+    <!ENTITY owl "http://www.w3.org/2002/07/owl#" >
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
+    <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#" >
+    <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+    <!ENTITY test_reasoning "http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#" >
+]>
+
+
+<rdf:RDF xmlns="http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#"
+     xml:base="http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:test_reasoning="http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <owl:Ontology rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Object Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#has_topping -->
+
+    <owl:ObjectProperty rdf:about="&test_reasoning;has_topping">
+        <rdfs:domain rdf:resource="&test_reasoning;Pizza"/>
+        <rdfs:range rdf:resource="&test_reasoning;Topping"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#topping_of -->
+
+    <owl:ObjectProperty rdf:about="&test_reasoning;topping_of">
+        <rdfs:range rdf:resource="&test_reasoning;Pizza"/>
+        <rdfs:domain rdf:resource="&test_reasoning;Topping"/>
+        <owl:inverseOf rdf:resource="&test_reasoning;has_topping"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#Cheese -->
+
+    <owl:Class rdf:about="&test_reasoning;Cheese">
+        <rdfs:subClassOf rdf:resource="&test_reasoning;Topping"/>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#Meat -->
+
+    <owl:Class rdf:about="&test_reasoning;Meat">
+        <rdfs:subClassOf rdf:resource="&test_reasoning;Topping"/>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#Pizza -->
+
+    <owl:Class rdf:about="&test_reasoning;Pizza"/>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#Tomato -->
+
+    <owl:Class rdf:about="&test_reasoning;Tomato">
+        <rdfs:subClassOf rdf:resource="&test_reasoning;Vegetable"/>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#Topping -->
+
+    <owl:Class rdf:about="&test_reasoning;Topping"/>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#Vegetable -->
+
+    <owl:Class rdf:about="&test_reasoning;Vegetable">
+        <rdfs:subClassOf rdf:resource="&test_reasoning;Topping"/>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#VegetalianPizza -->
+
+    <owl:Class rdf:about="&test_reasoning;VegetalianPizza">
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="&test_reasoning;Pizza"/>
+                    <owl:Class>
+                        <owl:complementOf>
+                            <owl:Restriction>
+                                <owl:onProperty rdf:resource="&test_reasoning;has_topping"/>
+                                <owl:someValuesFrom rdf:resource="&test_reasoning;Cheese"/>
+                            </owl:Restriction>
+                        </owl:complementOf>
+                    </owl:Class>
+                    <owl:Class>
+                        <owl:complementOf>
+                            <owl:Restriction>
+                                <owl:onProperty rdf:resource="&test_reasoning;has_topping"/>
+                                <owl:someValuesFrom rdf:resource="&test_reasoning;Meat"/>
+                            </owl:Restriction>
+                        </owl:complementOf>
+                    </owl:Class>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+        <rdfs:subClassOf rdf:resource="&test_reasoning;Pizza"/>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#VegetarianPizza -->
+
+    <owl:Class rdf:about="&test_reasoning;VegetarianPizza">
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="&test_reasoning;Pizza"/>
+                    <owl:Class>
+                        <owl:complementOf>
+                            <owl:Restriction>
+                                <owl:onProperty rdf:resource="&test_reasoning;has_topping"/>
+                                <owl:someValuesFrom rdf:resource="&test_reasoning;Meat"/>
+                            </owl:Restriction>
+                        </owl:complementOf>
+                    </owl:Class>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+        <rdfs:subClassOf rdf:resource="&test_reasoning;Pizza"/>
+    </owl:Class>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Individuals
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#cheese1 -->
+
+    <owl:NamedIndividual rdf:about="&test_reasoning;cheese1">
+        <rdf:type rdf:resource="&test_reasoning;Cheese"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#meat1 -->
+
+    <owl:NamedIndividual rdf:about="&test_reasoning;meat1">
+        <rdf:type rdf:resource="&test_reasoning;Meat"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#pizza_tomato -->
+
+    <owl:NamedIndividual rdf:about="&test_reasoning;pizza_tomato">
+        <rdf:type rdf:resource="&test_reasoning;Pizza"/>
+        <rdf:type>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&test_reasoning;has_topping"/>
+                <owl:allValuesFrom>
+                    <owl:Class>
+                        <owl:oneOf rdf:parseType="Collection">
+                            <rdf:Description rdf:about="&test_reasoning;tomato1"/>
+                        </owl:oneOf>
+                    </owl:Class>
+                </owl:allValuesFrom>
+            </owl:Restriction>
+        </rdf:type>
+        <has_topping rdf:resource="&test_reasoning;tomato1"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#pizza_tomato_cheese -->
+
+    <owl:NamedIndividual rdf:about="&test_reasoning;pizza_tomato_cheese">
+        <rdf:type rdf:resource="&test_reasoning;Pizza"/>
+        <rdf:type>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&test_reasoning;has_topping"/>
+                <owl:allValuesFrom>
+                    <owl:Class>
+                        <owl:oneOf rdf:parseType="Collection">
+                            <rdf:Description rdf:about="&test_reasoning;tomato2"/>
+                            <rdf:Description rdf:about="&test_reasoning;cheese1"/>
+                        </owl:oneOf>
+                    </owl:Class>
+                </owl:allValuesFrom>
+            </owl:Restriction>
+        </rdf:type>
+        <has_topping rdf:resource="&test_reasoning;cheese1"/>
+        <has_topping rdf:resource="&test_reasoning;tomato2"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#pizza_tomato_meat -->
+
+    <owl:NamedIndividual rdf:about="&test_reasoning;pizza_tomato_meat">
+        <rdf:type rdf:resource="&test_reasoning;Pizza"/>
+        <rdf:type>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&test_reasoning;has_topping"/>
+                <owl:allValuesFrom>
+                    <owl:Class>
+                        <owl:oneOf rdf:parseType="Collection">
+                            <rdf:Description rdf:about="&test_reasoning;tomato3"/>
+                            <rdf:Description rdf:about="&test_reasoning;meat1"/>
+                        </owl:oneOf>
+                    </owl:Class>
+                </owl:allValuesFrom>
+            </owl:Restriction>
+        </rdf:type>
+        <has_topping rdf:resource="&test_reasoning;meat1"/>
+        <has_topping rdf:resource="&test_reasoning;tomato3"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#tomato1 -->
+
+    <owl:NamedIndividual rdf:about="&test_reasoning;tomato1">
+        <rdf:type rdf:resource="&test_reasoning;Tomato"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#tomato2 -->
+
+    <owl:NamedIndividual rdf:about="&test_reasoning;tomato2">
+        <rdf:type rdf:resource="&test_reasoning;Tomato"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl#tomato3 -->
+
+    <owl:NamedIndividual rdf:about="&test_reasoning;tomato3">
+        <rdf:type rdf:resource="&test_reasoning;Tomato"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // General axioms
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    <rdf:Description>
+        <rdf:type rdf:resource="&owl;AllDisjointClasses"/>
+        <owl:members rdf:parseType="Collection">
+            <rdf:Description rdf:about="&test_reasoning;Cheese"/>
+            <rdf:Description rdf:about="&test_reasoning;Meat"/>
+            <rdf:Description rdf:about="&test_reasoning;Vegetable"/>
+        </owl:members>
+    </rdf:Description>
+</rdf:RDF>
+
+
+
+<!-- Generated by the OWL API (version 3.4.2) http://owlapi.sourceforge.net -->
+

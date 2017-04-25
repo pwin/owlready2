@@ -1,0 +1,34 @@
+global-include *.py
+global-include *.txt
+global-include *.owl
+global-include *.rdf
+global-include *.ntriples
+global-include *.nt
+global-include *.rst
+global-include *.png
+global-include *.svg
+
+graft doc
+graft test
+graft hermit
+graft locale
+
+include ./LICENSE.txt
+include ./README.rst
+
+exclude .hg
+exclude .hg/*
+
+exclude doc/examples/contraindications.py
+
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.save
+global-exclude catalog-v001.xml
+global-exclude __pycache__
+global-exclude test*.py
+
+
+include test/regtest.py
+include test/bench.py
+include test/Bench.java

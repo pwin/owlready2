@@ -1,0 +1,387 @@
+# -*- coding: utf-8 -*-
+# Owlready2
+# Copyright (C) 2013-2017 Jean-Baptiste LAMY
+# LIMICS (Laboratoire d'informatique médicale et d'ingénierie des connaissances en santé), UMR_S 1142
+# University Paris 13, Sorbonne paris-Cité, Bobigny, France
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from owlready2.namespace import *
+
+from owlready2.base import _universal_iri_2_abbrev, _universal_abbrev_2_datatype, _universal_datatype_2_abbrev
+_non_negative_integer = _universal_iri_2_abbrev["http://www.w3.org/2001/XMLSchema#nonNegativeInteger"]
+
+class ClassConstruct(object):
+  def __and__(a, b): return And([a, b])
+  def __or__ (a, b): return Or ([a, b])
+  def __invert__(a): return Not(a)
+  
+  def __init__(self, ontology = None, bnode = None):
+    self.ontology = ontology
+    self.storid   = bnode
+    
+    if ontology and not LOADING: self._create_triples(ontology)
+    
+  def _set_ontology(self, ontology):
+    if not LOADING:
+      if   self.ontology and not ontology:
+        self._destroy_triples(self.ontology)
+      elif ontology and not self.ontology:
+        if self.storid is None: self.storid = ontology.world.new_blank_node()
+        self._create_triples(ontology)
+      elif ontology and self.ontology:
+        raise OwlReadySharedBlankNodeError("A ClassConstruct cannot be shared by two ontologies, because it correspond to a RDF blank node. Please create a dupplicate.")
+    self.ontology = ontology
+    
+  def _destroy_triples(self, ontology):
+    ontology.del_triple(self.storid, None, None)
+    
+  def _create_triples (self, ontology):
+    pass
+
+class Not(ClassConstruct):
+  def __init__(self, Class, ontology = None, bnode = None):
+    super().__init__(ontology, bnode)
+    if not Class is None: self.__dict__["Class"] = Class
+    
+  def __repr__(self): return "Not(%s)" % (self.Class)
+  
+  def __getattr__(self, attr):
+    if attr == "Class":
+      self.__dict__["Class"] = C = self.ontology._to_python(self.ontology.get_triple_sp(self.storid, owl_complementof))
+      return C
+    return super().__getattribute__(attr)
+  
+  def _set_ontology(self, ontology):
+    if isinstance(self.Class, ClassConstruct): self.Class._set_ontology(ontology)
+    super()._set_ontology(ontology)
+    
+  def __setattr__(self, attr, value):
+    super().__setattr__(attr, value)
+    if (attr == "Class") and self.ontology: self._create_triples(self.ontology)
+    
+  def _create_triples(self, ontology):
+    ClassConstruct._create_triples(self, ontology)
+    ontology.set_triple(self.storid, rdf_type, owl_class)
+    ontology.set_triple(self.storid, owl_complementof, self.Class.storid)
+    
+  def _satisfied_by(self, x):
+    return not self.Class._satisfied_by(x)
+  
+  
+class Inverse(ClassConstruct):
+  def __new__(Class, Property, ontology = None, bnode = None, simplify = True):
+    if simplify:
+      if isinstance(Property, Inverse): return Property.property
+      if Property.inverse_property: return Property.inverse_property
+    return object.__new__(Class)
+  
+  def __init__(self, Property, ontology = None, bnode = None, simplify = True):
+    super().__init__(ontology, bnode)
+    self.__dict__["property"] = Property
+    
+  def __repr__(self): return "Inverse(%s)" % (self.property)
+  
+  def __setattr__(self, attr, value):
+    super().__setattr__(attr, value)
+    if (attr == "property") and self.ontology: self._create_triples(self.ontology)
+    
+  def _create_triples(self, ontology):
+    ClassConstruct._create_triples(self, ontology)
+    ontology.set_triple(self.storid, owl_inverse_property, self.property.storid)
+  
+  def some   (self,     value): return Restriction(self, SOME   , None, value)
+  def only   (self,     value): return Restriction(self, ONLY   , None, value)
+  def value  (self,     value): return Restriction(self, VALUE  , None, value)
+  def exactly(self, nb, value = None): return Restriction(self, EXACTLY, nb  , value)
+  def min    (self, nb, value = None): return Restriction(self, MIN    , nb  , value)
+  def max    (self, nb, value = None): return Restriction(self, MAX    , nb  , value)
+  
+  
+  
+
+class LogicalClassConstruct(ClassConstruct):
+  def __init__(self, Classes, ontology = None, bnode = None):
+    if isinstance(Classes, str):
+      self._list_bnode = Classes
+    else:
+      self._list_bnode = None
+      self.Classes = CallbackList(Classes, self, LogicalClassConstruct._callback)
+    ClassConstruct.__init__(self, ontology, bnode)
+    
+  def _set_ontology(self, ontology):
+    if ontology and (self._list_bnode is None): self._list_bnode = ontology.world.new_blank_node()
+    for Class in self.Classes:
+      if isinstance(Class, ClassConstruct): Class._set_ontology(ontology)
+    super()._set_ontology(ontology)
+      
+  def __getattr__(self, attr):
+    if attr == "Classes":
+      self.Classes = CallbackList(self.ontology._parse_list(self._list_bnode), self, LogicalClassConstruct._callback)
+      return self.Classes
+    return super().__getattribute__(attr)
+  
+  def _callback(self, old):
+    if self.ontology:
+      self._destroy_triples(self.ontology)
+      self._create_triples (self.ontology)
+      
+  def _destroy_triples(self, ontology):
+    ClassConstruct._destroy_triples(self, ontology)
+    ontology._del_list(self._list_bnode)
+    
+  def _create_triples(self, ontology):
+    ClassConstruct._create_triples(self, ontology)
+    if self.Classes and (self.Classes[0] in _universal_datatype_2_abbrev):
+      ontology.add_triple(self.storid, rdf_type, rdfs_datatype)
+    else:
+      ontology.add_triple(self.storid, rdf_type, owl_class)
+    ontology.add_triple(self.storid, self._owl_op, self._list_bnode)
+    ontology._set_list(self._list_bnode, self.Classes)
+    
+  def __repr__(self):
+    s = []
+    for x in self.Classes:
+      if isinstance(x, LogicalClassConstruct): s.append("(%s)" % x)
+      else:                                    s.append(repr(x))
+    if (len(s) <= 1): return "%s([%s])" % (self.__class__.__name__, ", ".join(s))
+    return self._char.join(s)
+
+  
+class Or(LogicalClassConstruct):
+  _owl_op = owl_unionof
+  _char   = " | "
+    
+  def _satisfied_by(self, x):
+    for Class in self.Classes:
+      if Class._satisfied_by(x): return True
+    return False
+  
+class And(LogicalClassConstruct):
+  _owl_op = owl_intersectionof
+  _char   = " & "
+  
+  def _satisfied_by(self, x):
+    for Class in self.Classes:
+      if not Class._satisfied_by(x): return False
+    return True
+
+
+_qualified_2_non_qualified = {
+  EXACTLY : owl_cardinality,
+  MIN     : owl_min_cardinality,
+  MAX     : owl_max_cardinality,
+}
+_restriction_type_2_label = {
+  SOME    : "some",
+  ONLY    : "only",
+  VALUE   : "value",
+  EXACTLY : "exactly",
+  MIN     : "min",
+  MAX     : "max",
+  }
+
+class Restriction(ClassConstruct):
+  def __init__(self, Property, type, cardinality = None, value = None, ontology = None, bnode = None):
+    self.__dict__["property"]    = Property
+    self.__dict__["type"]        = type
+    self.__dict__["cardinality"] = cardinality
+    if (not value is None) or (not bnode):
+      self.__dict__["value"]     = value
+      
+    super().__init__(ontology, bnode)
+    
+  def __repr__(self):
+    if (self.type == SOME) or (self.type == ONLY) or (self.type == VALUE):
+      return """%s.%s(%s)""" % (self.property, _restriction_type_2_label[self.type], self.value)
+    else:
+      return """%s.%s(%s, %s)""" % (self.property, _restriction_type_2_label[self.type], self.cardinality, self.value)
+    
+  def _set_ontology(self, ontology):
+    if isinstance(self.property, ClassConstruct): self.property._set_ontology(ontology)
+    if isinstance(self.value,    ClassConstruct): self.value   ._set_ontology(ontology)
+    super()._set_ontology(ontology)
+    
+  def _create_triples(self, ontology):
+    ClassConstruct._create_triples(self, ontology)
+    ontology.add_triple(self.storid, rdf_type, owl_restriction)
+    ontology.add_triple(self.storid, owl_onproperty, self.property.storid)
+    if   (self.type is SOME) or (self.type is ONLY) or (self.type is VALUE):
+      value = _universal_datatype_2_abbrev.get(self.value) or ontology.world._to_rdf(self.value)
+      ontology.add_triple(self.storid, self.type, value)
+    else:
+      if self.value is None:
+        if not self.cardinality is None: ontology.add_triple(self.storid, _qualified_2_non_qualified[self.type], '"%s"^%s' % (self.cardinality, _non_negative_integer))
+      else:
+        if not self.cardinality is None: ontology.add_triple(self.storid, self.type, '"%s"^%s' % (self.cardinality, _non_negative_integer))
+        value = _universal_datatype_2_abbrev.get(self.value)
+        if value:
+          ontology.add_triple(self.storid, owl_ondatarange, value)
+        else:
+          value = ontology.world._to_rdf(self.value)
+          ontology.add_triple(self.storid, owl_onclass, value)
+          
+  def __getattr__(self, attr):
+    if attr == "value":
+      if (self.type is SOME) or (self.type is ONLY) or (self.type is VALUE):
+        v = self.ontology.get_triple_sp(self.storid, self.type)
+        v = self.__dict__["value"] = _universal_abbrev_2_datatype.get(v) or self.ontology.world._to_python(v)
+      else:
+        v = self.ontology.get_triple_sp(self.storid, owl_onclass)
+        if v is None: v = self.ontology.get_triple_sp(self.storid, owl_ondatarange)
+        v = self.__dict__["value"] = _universal_abbrev_2_datatype.get(v) or self.ontology.world._to_python(v)
+      return v
+    return super().__getattribute__(attr)
+  
+  def __setattr__(self, attr, v):
+    super().__setattr__(attr, v)
+    if ((attr == "property") or (attr == "type") or (attr == "cardinality") or (attr == "value")) and self.ontology:
+      self._destroy_triples(self.ontology)
+      self._create_triples (self.ontology)
+      
+  def _satisfied_by(self, x):
+    if isinstance(x, EntityClass): return True # XXX not doable on classes
+    
+    values = self.property[x]
+    if   self.type == SOME:
+      for obj in values:
+        if self.value._satisfied_by(obj): return True
+      return False
+    
+    elif self.type == ONLY:
+      for obj in values:
+        if not self.value._satisfied_by(obj): return False
+      return True
+    
+    elif self.type == VALUE:
+      for obj in values:
+        if obj is self.value: return True
+      return False
+    
+    else:
+      nb = 0
+      for obj in values:
+        if self.value._satisfied_by(obj): nb += 1
+      if   self.type == MIN:     return nb >= self.cardinality
+      elif self.type == MAX:     return nb <= self.cardinality
+      elif self.type == EXACTLY: return nb == self.cardinality
+      
+      
+class OneOf(ClassConstruct):
+  def __init__(self, instances, ontology = None, bnode = None):
+    if isinstance(instances, str):
+      self._list_bnode = instances
+    else:
+      self._list_bnode = None
+      self.instances = CallbackList(instances, self, OneOf._callback)
+    ClassConstruct.__init__(self, ontology, bnode)
+    
+  def __getattr__(self, attr):
+    if attr == "instances":
+      self.instances = CallbackList(self.ontology._parse_list(self._list_bnode), self, OneOf._callback)
+      return self.instances
+    return super().__getattribute__(attr)
+  
+  def _callback(self, old):
+    if self.ontology:
+      self._destroy_triples(self.ontology)
+      self._create_triples (self.ontology)
+      
+  def _destroy_triples(self, ontology):
+    ClassConstruct._destroy_triples(self, ontology)
+    ontology._del_list(self._list_bnode)
+    
+  def _create_triples(self, ontology):
+    if ontology and (self._list_bnode is None): self._list_bnode = ontology.world.new_blank_node()
+    ClassConstruct._create_triples(self, ontology)
+    ontology.set_triple(self.storid, rdf_type, owl_class)
+    ontology.set_triple(self.storid, owl_oneof, self._list_bnode)
+    ontology._set_list(self._list_bnode, self.instances)
+    
+  def _satisfied_by(self, x): return x in self.instances
+  
+  def __repr__(self): return "OneOf([%s])" % ", ".join(repr(x) for x in self.instances) 
+
+  
+_PY_FACETS   = {}
+_RDFS_FACETS = {}
+def _facets(py_name, rdfs_name, value_datatype, value_datatype_abbrev):
+  _PY_FACETS  [py_name  ] = (rdfs_name, value_datatype, value_datatype_abbrev)
+  _RDFS_FACETS[rdfs_name] = (py_name  , value_datatype, value_datatype_abbrev)
+  
+_facets("length", xmls_length, int, _universal_iri_2_abbrev["http://www.w3.org/2001/XMLSchema#nonNegativeInteger"])
+_facets("min_length", xmls_minlength, int, _universal_iri_2_abbrev["http://www.w3.org/2001/XMLSchema#nonNegativeInteger"])
+_facets("max_length", xmls_maxlength, int, _universal_iri_2_abbrev["http://www.w3.org/2001/XMLSchema#nonNegativeInteger"])
+_facets("pattern", xmls_pattern, str, _universal_iri_2_abbrev["http://www.w3.org/2001/XMLSchema#string"])
+_facets("white_space", xmls_whitespace, str, "")
+_facets("max_inclusive", xmls_maxinclusive, int, "__datatype__")
+_facets("max_exclusive", xmls_maxexclusive, int, "__datatype__")
+_facets("min_inclusive", xmls_mininclusive, int, "__datatype__")
+_facets("min_exclusive", xmls_minexclusive, int, "__datatype__")
+_facets("total_digits", xmls_totaldigits, int, _universal_iri_2_abbrev["http://www.w3.org/2001/XMLSchema#positiveInteger"])
+_facets("fraction_digits", xmls_fractiondigits, int, _universal_iri_2_abbrev["http://www.w3.org/2001/XMLSchema#nonNegativeInteger"])
+
+class ConstrainedDatatype(ClassConstruct):
+  def __init__(self, base_datatype, ontology = None, bnode = None, list_bnode = None, **kargs):
+    ClassConstruct.__init__(self, ontology, bnode)
+    self.__dict__["base_datatype"] = base_datatype
+    self._list_bnode               = list_bnode
+    
+    if list_bnode:
+      l = ontology._parse_list_as_rdf(list_bnode)
+      for bn in l:
+        for p,o in ontology.get_triples_s(bn):
+          if p in _RDFS_FACETS:
+            py_name, value_datatype, value_datatype_abbrev = _RDFS_FACETS[p]
+            self.__dict__[py_name] = from_literal(o)
+    else:
+      for k, v in kargs.items():
+        if not k in _PY_FACETS: raise ValueError("No facet '%s'!" % k)
+        self.__dict__[k] = v
+        
+  def __setattr__(self, attr, value):
+    self.__dict__[attr] = value
+    if (not LOADING) and self.ontology and ((attr in _PY_FACETS) or (attr == "base_datatype")):
+      self._destroy_triples(self.ontology)
+      self._create_triples (self.ontology)
+      
+  def __repr__(self):
+    s = []
+    for k in _PY_FACETS:
+      v = getattr(self, k, None)
+      if not v is None:
+        s.append("%s = %s" % (k, v))
+    return "ConstrainedDatatype(%s, %s)" % (self.base_datatype.__name__, ", ".join(s))
+  
+  def _destroy_triples(self, ontology):
+    ClassConstruct._destroy_triples(self, ontology)
+    ontology._del_list(self._list_bnode)
+    
+  def _create_triples (self, ontology):
+    ClassConstruct._create_triples(self, ontology)
+    if self._list_bnode is None: self._list_bnode = ontology.world.new_blank_node()
+    ontology.set_triple(self.storid, rdf_type, rdfs_datatype)
+    ontology.set_triple(self.storid, owl_ondatatype, _universal_datatype_2_abbrev[self.base_datatype])
+    ontology.set_triple(self.storid, owl_withrestrictions, self._list_bnode)
+    l = []
+    for k, (rdfs_name, value_datatype, value_datatype_abbrev) in _PY_FACETS.items():
+      v = getattr(self, k, None)
+      if not v is None:
+        if value_datatype_abbrev == "__datatype__":
+          value_datatype_abbrev = _universal_datatype_2_abbrev[self.base_datatype]
+        bn = ontology.world.new_blank_node()
+        ontology.set_triple(bn, rdfs_name, '"%s"%s' % (v, value_datatype_abbrev))
+        l.append(bn)
+    ontology._set_list_as_rdf(self._list_bnode, l)
+    
