@@ -38,12 +38,16 @@ What can I do with Owlready2?
 
 Load an ontology from a local repository, or from Internet:
 
+::
+
   >>> from owlready2 import *
   >>> onto_path.append("/path/to/your/local/ontology/repository")
   >>> onto = get_ontology("http://www.lesfleursdunormal.fr/static/_downloads/pizza_onto.owl")
   >>> onto.load()
 
 Create new classes in the ontology, possibly mixing OWL constructs and Python methods:
+
+::
 
   >>> class NonVegetarianPizza(onto.Pizza):
   ...   equivalent_to = [
@@ -55,6 +59,8 @@ Create new classes in the ontology, possibly mixing OWL constructs and Python me
 
 Access ontology class, and create new instances / individuals:
 
+::
+
   >>> onto.Pizza
   pizza_onto.Pizza
   >>> test_pizza = onto.Pizza("test_pizza_owl_identifier")
@@ -63,6 +69,8 @@ Access ontology class, and create new instances / individuals:
   ...                            onto.MeatTopping  () ]
 
 Export to OWL/XML file:
+
+::
 
   >>> test_onto.save()
 
