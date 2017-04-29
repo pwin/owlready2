@@ -68,7 +68,7 @@ Access ontology class, and create new instances / individuals:
   ...                            onto.TomatoTopping(),
   ...                            onto.MeatTopping  () ]
 
-Export to OWL/XML file:
+Export to RDF/XML file:
 
 ::
 
