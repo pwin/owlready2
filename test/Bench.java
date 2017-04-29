@@ -27,7 +27,10 @@ class Bench {
     
     t = (new Date().getTime());
 
-    IRI iri = IRI.create("file:///home/jiba/telechargements/base_med/go.owl");
+    //IRI iri = IRI.create("file:///home/jiba/telechargements/base_med/go.owl");
+    //IRI iri = IRI.create("file:///home/jiba/telechargements/base_med/obi.owl");
+    //IRI iri = IRI.create("file:///home/jiba/telechargements/base_med/vto.owl");
+    IRI iri = IRI.create("file:///home/jiba/telechargements/base_med/uberon.owl");
     //IRI iri = IRI.create("file:///home/jiba/src/owlready2/test/test.owl");
     OWLOntology o = m.loadOntologyFromOntologyDocument(iri);
     
@@ -37,8 +40,10 @@ class Bench {
     
     
     t = (new Date().getTime());
-    
+
+    int nb = 0;
     for (OWLClass cls : o.getClassesInSignature()) {
+      nb += 1;
       System.out.println(cls_2_str(df, o, cls));
       Set<OWLClassExpression> superClasses = cls.getSuperClasses(o);
       for (OWLClassExpression desc : superClasses) {
@@ -66,9 +71,14 @@ class Bench {
       }
     }
     
+    System.err.print("NB ");
+    System.err.println(nb);
+    
     t = (new Date().getTime()) - t;
     System.err.print("Listing ");
     System.err.println(t / 1000.0f);
+    
+    Thread.sleep(40000);
   }
   
   public static String cls_2_str(OWLDataFactory df, OWLOntology o, OWLEntity cls) {

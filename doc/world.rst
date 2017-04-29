@@ -72,3 +72,25 @@ Finally, the reasoner can be executed on a specific World:
 ::
 
    >>> sync_reasoner(my_world)
+
+
+Working with RDFlib for performing SPARQL queries
+-------------------------------------------------
+
+Owlready2 uses an optimized RDF quadstore. This quadstore can also be acessed
+as an RDFlib graph as follows:
+
+::
+
+   >>> graph = default_world.as_rdflib_graph()
+
+
+In particular, the RDFlib graph can be used for performing SPARQL queries:
+
+::
+
+   >>> r = list(graph.query("""SELECT ?p WHERE {
+     <http://www.semanticweb.org/jiba/ontologies/2017/0/test#ma_pizza> <http://www.semanticweb.org/jiba/ontologies/2017/0/test#price> ?p .
+   }"""))
+
+

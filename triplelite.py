@@ -62,9 +62,14 @@ class Graph(BaseGraph):
         
       self.execute("SELECT current_blank, current_resource FROM store")
       self.current_blank, self.current_resource = self.fetchone()
-
+      
     self.current_changes = self.db.total_changes
-    
+
+  def ontologies_iris(self):
+    self.execute("SELECT iri FROM ontologies")
+    for (iri,) in self.fetchall():
+      yield iri
+      
   def abbreviate(self, iri):
     r = self.execute("SELECT storid FROM resources WHERE iri=? LIMIT 1", (iri,)).fetchone()
     if r: return r[0]
@@ -251,6 +256,11 @@ class Graph(BaseGraph):
     #print(req, params)
     self.execute(req, params)
     return self.fetchall()
+
+  def _punned_entities(self):
+    from owlready2.base import rdf_type, owl_class, owl_named_individual
+    self.execute("SELECT q1.s FROM quads q1, quads q2 WHERE q1.s=q2.s AND q1.p=? AND q2.p=? AND q1.o=? AND q2.o=?", (rdf_type, rdf_type, owl_class, owl_named_individual))
+    return [storid for (storid,) in self.fetchall()]
   
   def __len__(self):
     return self.execute("SELECT COUNT(s) FROM quads").fetchone()[0]
@@ -308,8 +318,13 @@ class SubGraph(BaseGraph):
     elif format == "rdfxml":
       if _has_rapper and not force_rdflib:
         import subprocess
-        rapper = subprocess.Popen([owlready2.RAPPER_EXE, "-q", "-g", "-", getattr(f, "url", "http://test.org/xxx.owl")], stdin = f, stdout = subprocess.PIPE)
         
+        url = getattr(f, "url", "")
+        if url:
+          rapper = subprocess.Popen([owlready2.RAPPER_EXE, "-q", "-g", url], stdout = subprocess.PIPE)
+        else:
+          rapper = subprocess.Popen([owlready2.RAPPER_EXE, "-q", "-g", "-", "http://test.org/xxx.owl"], stdin = f, stdout = subprocess.PIPE)
+          
         def get_triple():
           line = rapper.stdout.readline()
           while line:

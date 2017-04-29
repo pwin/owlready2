@@ -23,8 +23,9 @@ from rdflib import URIRef, BNode, Literal
 class TripleLiteRDFlibStore(rdflib.store.Store):
   context_aware = True
   
-  def __init__(self, triplelite):
-    self.triplelite = triplelite
+  def __init__(self, world):
+    self.world      = world
+    self.triplelite = world.graph
     super().__init__()
     
     self.main_graph            = rdflib.Graph(store = self)
@@ -36,6 +37,11 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
       graph.triplelite = triplelite
       self.context_graphs[onto] = graph
       
+  def _2_python(self, x):
+    if   isinstance(x, rdflib.term.URIRef ): return self.world[str(x)]
+    elif isinstance(x, rdflib.term.BNode  ): return str(x)
+    elif isinstance(x, rdflib.term.Literal): return x.toPython()
+    
   def _rdflib_2_owlready(self, spo):
     s,p,o = spo
     if   isinstance(s, rdflib.term.URIRef ): s = self.triplelite.abbreviate(s)
@@ -68,6 +74,7 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
   
   def add(self, xxx_todo_changeme, context, quoted = False):
     s,p,o = self._rdflib_2_owlready(xxx_todo_changeme)
+
     context.triplelite._add_triple(s,p,o)
     #super().add(xxx_todo_changeme, context, quoted)
     

@@ -138,7 +138,7 @@ class EntityClass(type):
   equivalent_to = property(get_equivalent_to, set_equivalent_to)
   
   def _class_equivalent_to_changed(Class, old):
-    for Subclass in Class.descendants(True, False):
+    for Subclass in Class.descendants(True, True):
       _FUNCTIONAL_FOR_CACHE.pop(Subclass, None)
       
     new = frozenset(Class._equivalent_to)
@@ -169,7 +169,7 @@ class EntityClass(type):
     type.__setattr__(Class, attr, value)
     
   def _class_is_a_changed(Class, old):
-    for Subclass in Class.descendants(True, False):
+    for Subclass in Class.descendants(True, True):
       _FUNCTIONAL_FOR_CACHE.pop(Subclass, None)
       
     new = frozenset(Class.is_a)
@@ -226,16 +226,30 @@ class EntityClass(type):
           descendant = Class.namespace.world._entities.get(x)
           if descendant is None: continue
         else:
-          descendant = Class.namespace.world._get_by_storid(x, None, EntityClass, Class.namespace.ontology.graph.c)
+          descendant = Class.namespace.world._get_by_storid(x, None, Class.__class__, Class.namespace.ontology.graph.c)
         if (descendant is Class) and (not include_self): continue
         if not descendant in s:
           s.add(descendant)
           for equivalent in descendant.equivalent_to:
-            if isinstance(equivalent, EntityClass):
+            if isinstance(equivalent, Class.__class__):
               if not equivalent in s:
                 equivalent._fill_descendants(s, True)
                 
-                
+  def subclasses(Class, only_loaded = False):
+    if only_loaded:
+      r = []
+      for x in Class.namespace.world.get_triples_po(Class._rdfs_is_a, Class.storid):
+        if not x.startswith("_"):
+          subclass = Class.namespace.world._entities.get(x)
+          if not descendant is None: r.append(subclass)
+      return r
+      
+    else:
+      return [
+        Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology.graph.c)
+        for x in Class.namespace.world.get_triples_po(Class._rdfs_is_a, Class.storid)
+        if not x.startswith("_")
+      ]
 
 
 def issubclass_owlready(Class, Parent_or_tuple):
@@ -316,8 +330,28 @@ class ThingClass(EntityClass):
         return RoleFilerList(
           (r.value for r in _inherited_property_value_restrictions(Class, Prop) if (r.type == VALUE)),
           Class, Prop)
-
-
+      
+      
+  def constructs(Class, Prop = None):
+    def _top_bn(s):
+      try:
+        construct = onto._parse_bnode(s)
+        return construct
+      except:
+        for relation in [rdf_first, rdf_rest, owl_complementof, owl_unionof, owl_intersectionof, owl_onclass]:
+          s2 = Class.namespace.world.get_triple_po(relation, s)
+          if not s2 is None:
+            return _top_bn(s2)
+          
+    if Prop: Prop = Prop.storid
+    for s,p,o,c in Class.namespace.world.get_quads(None, Prop, Class.storid, None):
+      if s.startswith("_"):
+        
+        onto = Class.namespace.world.graph.context_2_user_context(c)
+        construct = _top_bn(s)
+        if not construct is None:
+          yield construct
+          
   # Role-fillers as class properties
   
   #def _get_prop_for_self(self, attr):
@@ -380,6 +414,10 @@ class RoleFilerList(CallbackListWithLanguage):
 
 
 def _inherited_property_value_restrictions(Class, Prop):
+  if isinstance(Class, Restriction):
+    yield Class
+    return
+  
   for parent in itertools.chain(Class.is_a, Class.equivalent_to):
     if isinstance(parent, Restriction) and (parent.property is Prop):
       yield parent

@@ -43,12 +43,30 @@ class ClassConstruct(object):
       elif ontology and self.ontology:
         raise OwlReadySharedBlankNodeError("A ClassConstruct cannot be shared by two ontologies, because it correspond to a RDF blank node. Please create a dupplicate.")
     self.ontology = ontology
+    if self.ontology: self.ontology._bnodes[self.storid] = self
     
   def _destroy_triples(self, ontology):
     ontology.del_triple(self.storid, None, None)
     
   def _create_triples (self, ontology):
     pass
+  
+  def subclasses(self, only_loaded = False):
+    if only_loaded:
+      r = []
+      for x in self.ontology.world.get_triples_po(rdfs_subclassof, self.storid):
+        if not x.startswith("_"):
+          subclass = self.ontology.world._entities.get(x)
+          if not descendant is None: r.append(subclass)
+      return r
+    
+    else:
+      return [
+        self.ontology.world._get_by_storid(x, None, ThingClass, self.ontology.graph.c)
+        for x in self.ontology.world.get_triples_po(rdfs_subclassof, self.storid)
+        if not x.startswith("_")
+      ]
+  
 
 class Not(ClassConstruct):
   def __init__(self, Class, ontology = None, bnode = None):
@@ -238,9 +256,11 @@ class Restriction(ClassConstruct):
         v = self.ontology.get_triple_sp(self.storid, self.type)
         v = self.__dict__["value"] = _universal_abbrev_2_datatype.get(v) or self.ontology.world._to_python(v)
       else:
-        v = self.ontology.get_triple_sp(self.storid, owl_onclass)
-        if v is None: v = self.ontology.get_triple_sp(self.storid, owl_ondatarange)
-        v = self.__dict__["value"] = _universal_abbrev_2_datatype.get(v) or self.ontology.world._to_python(v)
+        v = self.ontology.get_triple_sp(self.storid, owl_onclass) or self.ontology.get_triple_sp(self.storid, owl_ondatarange)
+        if v is None:
+          v = self.__dict__["value"] = None
+        else:
+          v = self.__dict__["value"] = _universal_abbrev_2_datatype.get(v) or self.ontology.world._to_python(v)
       return v
     return super().__getattribute__(attr)
   

@@ -174,6 +174,7 @@ class Property(metaclass = PropertyClass):
       
     ranges  = set(Prop.range)
     singles = set()
+
     for restriction in _inherited_property_value_restrictions(Class, Prop):
       if     restriction.type == ONLY:
         ranges.add(restriction.value)

@@ -130,8 +130,11 @@ class _GraphManager(object):
   
   def individuals(self):
     for s in self.get_triples_po(rdf_type, owl_named_individual):
-      if not s.startswith("_"): yield self.world._get_by_storid(s)
-      
+      if not s.startswith("_"):
+        i = self.world._get_by_storid(s)
+        if isinstance(i, Thing):
+          yield i
+          
   def disjoint_classes(self):
     for s in self.get_triples_po(rdf_type, owl_alldisjointclasses):
       yield self._parse_bnode(s)
@@ -189,23 +192,29 @@ class World(_GraphManager):
     global owl_world
     
     assert backend == "sqlite"
-    self.world    = self
-    self.filename = filename
+    
+    self.world            = self
+    self.filename         = filename
+    self.ontologies       = {}
+    self._props           = {}
+    self._reasoning_props = {}
+    self._entities        = weakref.WeakValueDictionary()
+    self._rdflib_store    = None
+    
     if filename:
       self.graph = Graph(filename)
       for method in self.graph.__class__.READ_METHODS: setattr(self, method, getattr(self.graph, method))
     else:
       self.graph = None
       
-    self.ontologies      = {}
-    self._props           = {}
-    self._reasoning_props = {}
-    self._entities        = weakref.WeakValueDictionary()
-    
     if not owl_world is None:
       self._entities .update(owl_world._entities) # add OWL entities in the world
       self._props.update(owl_world._props)
       
+    if self.graph:
+      for iri in self.graph.ontologies_iris():
+        self.get_ontology(iri) # Create all possible ontologies
+        
   def set_backend(self, backend = "sqlite", filename = ":memory:"):
     assert backend == "sqlite"
     if len(self.graph):
@@ -219,7 +228,10 @@ class World(_GraphManager):
       ontology.graph = self.graph.sub_graph(ontology)
       for method in ontology.graph.__class__.READ_METHODS + ontology.graph.__class__.WRITE_METHODS:
         setattr(ontology, method, getattr(ontology.graph, method))
-        
+      
+    for iri in self.graph.ontologies_iris():
+      self.get_ontology(iri) # Create all possible ontologies if not yet done
+      
   def new_blank_node(self): return self.graph.new_blank_node()
   
   def save(self, file = None, format = "rdfxml", **kargs):
@@ -235,10 +247,18 @@ class World(_GraphManager):
       self.graph.save(file, format, **kargs)
       
   def as_rdflib_graph(self):
-    import owlready2.rdflib_store
-    store = owlready2.rdflib_store.TripleLiteRDFlibStore(self.graph)
-    return store.main_graph
-  
+    if self._rdflib_store is None:
+      import owlready2.rdflib_store
+      self._rdflib_store = owlready2.rdflib_store.TripleLiteRDFlibStore(self)
+    return self._rdflib_store.main_graph
+
+  def sparql_query(self, sparql):
+    g = self.as_rdflib_graph()
+    r = g.query(sparql)
+    for row in r:
+      yield tuple(g.store._2_python(x) for x in row)
+      
+      
   def get_ontology(self, base_iri):
     if (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
     if base_iri in self.ontologies: return self.ontologies[base_iri]
@@ -265,7 +285,8 @@ class World(_GraphManager):
         elif obj == owl_object_property:     main_type = ObjectPropertyClass;     types.append(ObjectProperty)
         elif obj == owl_data_property:       main_type = DataPropertyClass;       types.append(DataProperty)
         elif obj == owl_annotation_property: main_type = AnnotationPropertyClass; types.append(AnnotationProperty)
-        elif obj == owl_named_individual:    main_type = Thing
+        elif (obj == owl_named_individual) or (obj == owl_thing):
+          if main_type is None: main_type = Thing
         else:
           if not main_type: main_type = Thing
           if obj.startswith("_"): isa_bnodes.append((graph, obj))
@@ -289,10 +310,16 @@ class World(_GraphManager):
         splitted = full_iri.rsplit("#", 1)
         if len(splitted) == 2:
           namespace = self.graph.context_2_user_context(main_graph).get_namespace("%s#" % splitted[0])
+          name = splitted[1]
         else:
           splitted = full_iri.rsplit("/", 1)
-          namespace = self.graph.context_2_user_context(main_graph).get_namespace("%s/" % splitted[0])
-        name = splitted[1]
+          if len(splitted) == 2:
+            namespace = self.graph.context_2_user_context(main_graph).get_namespace("%s/" % splitted[0])
+            name = splitted[1]
+          else:
+            namespace = self.graph.context_2_user_context(main_graph).get_namespace("")
+            name = full_iri
+            
         
       # Read and create with classes first, but not construct, in order to break cycles.
       if   main_type is ThingClass:
@@ -575,6 +602,9 @@ class Ontology(Namespace, _GraphManager):
         elif pred == EXACTLY: restriction_type = EXACTLY; restriction_cardinality = self._to_python(obj)
         elif pred == MIN:     restriction_type = MIN;     restriction_cardinality = self._to_python(obj)
         elif pred == MAX:     restriction_type = MAX;     restriction_cardinality = self._to_python(obj)
+        elif pred == owl_cardinality:     restriction_type = EXACTLY; restriction_cardinality = self._to_python(obj)
+        elif pred == owl_min_cardinality: restriction_type = MIN;     restriction_cardinality = self._to_python(obj)
+        elif pred == owl_max_cardinality: restriction_type = MAX;     restriction_cardinality = self._to_python(obj)
         
         elif pred == owl_oneof: r = OneOf(self._parse_list(obj), self, bnode); break
         
@@ -590,6 +620,8 @@ class Ontology(Namespace, _GraphManager):
           elif obj == owl_alldisjointproperties: Disjoint = AllDisjoint
           elif obj == owl_alldifferent:          Disjoint = AllDisjoint
           
+          elif obj == owl_axiom:                 return None
+          
         elif pred == owl_ondatatype:       on_datatype = _universal_abbrev_2_datatype[obj]
         elif pred == owl_withrestrictions: with_restriction = obj
         
@@ -603,7 +635,6 @@ class Ontology(Namespace, _GraphManager):
         else:
           raise ValueError("Cannot parse blank node %s: unknown node type!" % bnode)
         
-    self._bnodes[bnode] = r
     return r
 
   def _del_list(self, bnode):

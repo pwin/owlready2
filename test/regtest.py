@@ -466,6 +466,38 @@ class Test(BaseTest, unittest.TestCase):
     
     assert set(n.Topping.descendants(only_loaded = True)) == { n.Topping, n.Vegetable, n.Tomato }
     
+  def test_class_19(self):
+    world = self.new_world()
+    n     = world.get_ontology("http://test.org/test")
+    
+    with n:
+      class p(ObjectProperty): pass
+      class A(Thing): pass
+      class B(Thing): pass
+      class C(Thing): pass
+      class M(Thing):
+        is_a = [
+          p.some(A),
+          B & C
+          ]
+
+    assert set(A.constructs()) == { M.is_a[-2] }
+    assert set(B.constructs()) == { M.is_a[-1] }
+    assert set(C.constructs()) == { M.is_a[-1] }
+    
+  def test_class_20(self):
+    world = self.new_world()
+    n     = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+
+    n.Pizza # Loads Pizza
+    nb = len(world._entities)
+    
+    with n:
+      class Pizza(Thing):
+        def f(self): pass
+        
+    assert len(world._entities) == nb # Check that the redefinition did not load additional classes
+    
     
   def test_individual_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
