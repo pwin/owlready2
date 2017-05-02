@@ -40,8 +40,7 @@ def close_world(self, Properties = None, close_instance_list = True, recursive =
         elif (r.type == VALUE): range_instances.append(r.value)
       if range_instances: range_classes.append(OneOf(range_instances))
       
-      #if not range_classes:                      self.is_a.append(Not(Prop.some(Thing)))
-      if not range_classes:                      self.is_a.append(Prop.only(Nothing))
+      if not range_classes:                      self.is_a.append(Not(Prop.some(Thing)))
       elif issubclass_python(Prop, FunctionalProperty): pass
       elif len(range_classes) == 1:              self.is_a.append(Prop.only(range_classes[0]))
       else:                                      self.is_a.append(Prop.only(Or(range_classes)))
@@ -78,8 +77,7 @@ def close_world(self, Properties = None, close_instance_list = True, recursive =
       if range_instances: range_classes.append(OneOf(range_instances))
       if   len(range_classes) == 1: self.is_a.append(Prop.only(range_classes[0]))
       elif range_classes:           self.is_a.append(Prop.only(Or(range_classes)))
-      #else:                         self.is_a.append(Not(Prop.some(Thing)))
-      else:                         self.is_a.append(Prop.only(Nothing))
+      else:                         self.is_a.append(Not(Prop.some(Thing)))
       
     if recursive:
       subclasses.discard(self)

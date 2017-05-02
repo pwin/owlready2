@@ -1780,10 +1780,11 @@ class Test(BaseTest, unittest.TestCase):
     
     restr = [c for c in O.is_a if isinstance(c, OneOf)][0]
     assert set(restr.instances) == { o1, o2 }
-    restr = [c for c in O.is_a if isinstance(c, Restriction)][0]
+    restr = [c for c in O.is_a if isinstance(c, Not)][0]
+    restr = restr.Class
     assert restr.property is has_for_p
-    assert restr.type == ONLY
-    assert restr.value is Nothing
+    assert restr.type == SOME
+    assert restr.value is Thing
     
   def test_close_5(self):
     w = self.new_world()
