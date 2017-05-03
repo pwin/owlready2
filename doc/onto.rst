@@ -205,7 +205,7 @@ When a single return value is expected, the .search_one() method can be used. It
    >>> onto.search_one(label = "my label")
    
    
-For more complex queries, SQPARQL can be used with RDFlib (see :doc:`rdflib`).
+For more complex queries, SQPARQL can be used with RDFlib (see :doc:`world`).
 
 
 Importing other ontologies

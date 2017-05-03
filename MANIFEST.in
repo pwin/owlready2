@@ -28,7 +28,10 @@ global-exclude catalog-v001.xml
 global-exclude __pycache__
 global-exclude test*.py
 
-
+exclude test/*
 include test/regtest.py
 include test/bench.py
 include test/Bench.java
+include test/test_mixed.py
+include test/*.ntriples
+include test/*.owl

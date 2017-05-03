@@ -37,7 +37,7 @@ distutils.core.setup(
   
   author       = "Lamy Jean-Baptiste (Jiba)",
   author_email = "jibalamy@free.fr",
-  url          = "https://bitbucket.org/jibalamy/owlready",
+  url          = "https://bitbucket.org/jibalamy/owlready2",
   classifiers  = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

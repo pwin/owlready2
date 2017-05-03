@@ -19,7 +19,8 @@ fileno, filename = tempfile.mkstemp()
 TMPFILES.append(filename)
 default_world.set_backend(filename = filename)
 
-onto_path.append(os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__)) or "."
+onto_path.append(HERE)
 get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
 
 
@@ -2046,15 +2047,15 @@ class Test(BaseTest, unittest.TestCase):
   def test_format_1(self):
     from owlready2.triplelite import _guess_format
     
-    f = open("./owlready2/test/test_owlxml.ntriples", "r")
+    f = open(os.path.join(HERE, "test_owlxml.ntriples"), "r")
     assert _guess_format(f) == "ntriples"
     f.close()
     
-    f = open("./owlready2/test/test.owl", "r")
+    f = open(os.path.join(HERE, "test.owl"), "r")
     assert _guess_format(f) == "rdfxml"
     f.close()
     
-    f = open("./owlready2/test/test_owlxml.owl", "r")
+    f = open(os.path.join(HERE, "test_owlxml.owl"), "r")
     assert _guess_format(f) == "owlxml"
     f.close()
     
@@ -2065,9 +2066,9 @@ class Test(BaseTest, unittest.TestCase):
     def on_triple(s,p,o):
       nonlocal triples1
       triples1 += "%s %s %s .\n" % (s,p,o)
-    owlready2.owlxml_2_ntriples.parse("./owlready2/test/test_owlxml.owl", on_triple)
+    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_owlxml.owl"), on_triple)
     
-    f = open("./owlready2/test/test_owlxml.ntriples", "rb")
+    f = open(os.path.join(HERE, "test_owlxml.ntriples"), "rb")
     triples2 = f.read().decode("unicode-escape")
     f.close()
     
@@ -2118,7 +2119,7 @@ class Test(BaseTest, unittest.TestCase):
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
     import subprocess
-    rapper = subprocess.Popen(["rapper", "-q", "-g", "./owlready2/test/test.owl"], stdout = subprocess.PIPE)
+    rapper = subprocess.Popen(["rapper", "-q", "-g", os.path.join(HERE, "test.owl")], stdout = subprocess.PIPE)
     triples1 = rapper.stdout.read().decode("unicode-escape")
     rapper.stdout.close()
     rapper.wait()
@@ -2147,7 +2148,7 @@ class Test(BaseTest, unittest.TestCase):
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
     import subprocess
-    rapper = subprocess.Popen(["rapper", "-q", "-g", "./owlready2/test/test.owl"], stdout = subprocess.PIPE)
+    rapper = subprocess.Popen(["rapper", "-q", "-g", os.path.join(HERE, "test.owl")], stdout = subprocess.PIPE)
     triples1 = rapper.stdout.read().decode("unicode-escape")
     rapper.stdout.close()
     rapper.wait()
@@ -2178,9 +2179,9 @@ class Test(BaseTest, unittest.TestCase):
     def on_triple(s,p,o):
       nonlocal triples1
       triples1 += "%s %s %s .\n" % (s,p,o)
-    owlready2.owlxml_2_ntriples.parse("./owlready2/test/test_owlxml_2.owl", on_triple)
+    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_owlxml_2.owl"), on_triple)
     
-    f = open("./owlready2/test/test_owlxml_2.ntriples", "rb")
+    f = open(os.path.join(HERE, "test_owlxml_2.ntriples"), "rb")
     triples2 = f.read().decode("unicode-escape")
     f.close()
     
