@@ -1080,7 +1080,7 @@ class Test(BaseTest, unittest.TestCase):
     
   def test_construct_restriction_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
-    assert len(n.VegetarianPizza.is_a) == 3
+    assert len(n.VegetarianPizza.is_a) == 2
     for p in n.VegetarianPizza.is_a:
       if isinstance(p, Not): r = p.Class; break
     assert isinstance(r, Restriction)
@@ -1205,7 +1205,7 @@ class Test(BaseTest, unittest.TestCase):
   def test_and_or_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     
-    assert len(n.Vegetable.is_a) == 3
+    assert len(n.Vegetable.is_a) == 2
     assert isinstance(n.Vegetable.is_a[-1], Or)
     assert set(n.Vegetable.is_a[-1].Classes) == { n.Tomato, n.Eggplant, n.Olive }
     

@@ -271,16 +271,16 @@ class World(_GraphManager):
   def __getitem__(self, iri):
     return self._get_by_storid(self.abbreviate(iri), iri)
   
-  def _get_by_storid(self, storid, full_iri = None, main_type = None, main_graph = None):
+  def _get_by_storid(self, storid, full_iri = None, main_type = None, main_onto = None):
     entity = self._entities.get(storid)
     if not entity is None: return entity
     
     with LOADING:
-      types              = []
-      isa_bnodes         = []
+      types       = []
+      is_a_bnodes = []
       for obj, graph in self.get_quads_sp(storid, rdf_type):
         #print(self.unabbreviate(iri), "    QUAD", subj, pred, self.unabbreviate(obj), graph)
-        main_graph = graph
+        if main_onto is None: main_onto = self.graph.context_2_user_context(graph)
         if   obj == owl_class:               main_type = ThingClass
         elif obj == owl_object_property:     main_type = ObjectPropertyClass;     types.append(ObjectProperty)
         elif obj == owl_data_property:       main_type = DataPropertyClass;       types.append(DataProperty)
@@ -289,41 +289,44 @@ class World(_GraphManager):
           if main_type is None: main_type = Thing
         else:
           if not main_type: main_type = Thing
-          if obj.startswith("_"): isa_bnodes.append((graph, obj))
+          if obj.startswith("_"): is_a_bnodes.append((self.graph.context_2_user_context(graph), obj))
           else:
-            Class = self._get_by_storid(obj, None, ThingClass, main_graph)
+            Class = self._get_by_storid(obj, None, ThingClass, main_onto)
             if isinstance(Class, EntityClass): types.append(Class)
             elif Class is None: raise ValueError("Cannot get '%s'!" % obj)
+            
       if   main_type is ThingClass:
         is_a_entities = []
         for obj, graph in self.get_quads_sp(storid, rdfs_subclassof):
-          if obj.startswith("_"): isa_bnodes   .append((graph, obj))
-          else:                   is_a_entities.append(self._get_by_storid(obj, None, ThingClass, main_graph))
+          if obj.startswith("_"): is_a_bnodes  .append((self.graph.context_2_user_context(graph), obj))
+          else:                   is_a_entities.append(self._get_by_storid(obj, None, ThingClass, main_onto))
+          
       elif not main_type is Thing:
         is_a_entities = []
         for obj, graph in self.get_quads_sp(storid, rdfs_subpropertyof):
-          if obj.startswith("_"): isa_bnodes   .append((graph, obj))
-          else:                   is_a_entities.append(self._get_by_storid(obj, None, main_type, main_graph))
+          if obj.startswith("_"): is_a_bnodes  .append((self.graph.context_2_user_context(graph), obj))
+          else:                   is_a_entities.append(self._get_by_storid(obj, None, main_type, main_onto))
           
-      if main_graph:
+      if main_onto:
         full_iri = full_iri or self.unabbreviate(storid)
         splitted = full_iri.rsplit("#", 1)
         if len(splitted) == 2:
-          namespace = self.graph.context_2_user_context(main_graph).get_namespace("%s#" % splitted[0])
+          namespace = main_onto.get_namespace("%s#" % splitted[0])
           name = splitted[1]
         else:
           splitted = full_iri.rsplit("/", 1)
           if len(splitted) == 2:
-            namespace = self.graph.context_2_user_context(main_graph).get_namespace("%s/" % splitted[0])
+            namespace = main_onto.get_namespace("%s/" % splitted[0])
             name = splitted[1]
           else:
-            namespace = self.graph.context_2_user_context(main_graph).get_namespace("")
+            namespace = main_onto.get_namespace("")
             name = full_iri
             
-        
+            
       # Read and create with classes first, but not construct, in order to break cycles.
       if   main_type is ThingClass:
-        entity = ThingClass(name, (Thing,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
+        #entity = ThingClass(name, (Thing,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
+        entity = ThingClass(name, tuple(is_a_entities) or (Thing,), { "namespace" : namespace, "storid" : storid } )
         
       elif main_type is ObjectPropertyClass:
         entity = ObjectPropertyClass(name, tuple(types) or (ObjectProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
@@ -342,8 +345,8 @@ class World(_GraphManager):
         
       else: return None
       
-      if isa_bnodes:
-        list.extend(entity.is_a, (self.graph.context_2_user_context(graph)._parse_bnode(bnode) for graph, bnode in isa_bnodes))
+      if is_a_bnodes:
+        list.extend(entity.is_a, (onto._parse_bnode(bnode) for onto, bnode in is_a_bnodes))
         
     global _cache, _cache_index
     _cache[_cache_index] = entity

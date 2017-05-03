@@ -27,10 +27,10 @@ class Bench {
     
     t = (new Date().getTime());
 
-    //IRI iri = IRI.create("file:///home/jiba/telechargements/base_med/go.owl");
+    IRI iri = IRI.create("file:///home/jiba/telechargements/base_med/go.owl");
     //IRI iri = IRI.create("file:///home/jiba/telechargements/base_med/obi.owl");
     //IRI iri = IRI.create("file:///home/jiba/telechargements/base_med/vto.owl");
-    IRI iri = IRI.create("file:///home/jiba/telechargements/base_med/uberon.owl");
+    //IRI iri = IRI.create("file:///home/jiba/telechargements/base_med/uberon.owl");
     //IRI iri = IRI.create("file:///home/jiba/src/owlready2/test/test.owl");
     OWLOntology o = m.loadOntologyFromOntologyDocument(iri);
     

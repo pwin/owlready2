@@ -54,7 +54,6 @@ class EntityClass(type):
   def _find_base_classes(is_a):
     bases = tuple(Class for Class in is_a if not isinstance(Class, ClassConstruct))
     if len(bases) > 1:
-      #print(bases)
       # Must use sorted() and not sort(), because bases is accessed during the sort
       return tuple(sorted(bases, key = lambda Class: sum(issubclass_python(Other, Class) for Other in bases)))
     return bases or (Thing,)
@@ -73,16 +72,21 @@ class EntityClass(type):
     namespace = obj_dict.get("namespace") or CURRENT_NAMESPACES[-1] or superclasses[0].namespace
     storid    = obj_dict.get("storid")    or namespace.world.abbreviate("%s%s" % (namespace.base_iri, name))
     
-    if LOADING: Class = namespace.world._entities.get (storid)
-    else:       Class = namespace.world._get_by_storid(storid)
-    
-    _is_a = obj_dict.pop("is_a", None)
-    if _is_a is None: _is_a = superclasses
+    if "is_a" in obj_dict:
+      _is_a = [*superclasses, *obj_dict["is_a"]]
+      superclasses = MetaClass._find_base_classes(_is_a)
+    else:
+      if len(superclasses) > 1:
+        _is_a = superclasses = MetaClass._find_base_classes(superclasses)
+      else:
+        _is_a = superclasses
+        
+    if LOADING:
+      Class = namespace.world._entities.get (storid)
     else:
       for base in _is_a:
-        if isinstance(base, ClassConstruct) and not LOADING: base._set_ontology(namespace.ontology)
-      _is_a = [*superclasses, *_is_a]
-      superclasses = MetaClass._find_base_classes(_is_a)
+        if isinstance(base, ClassConstruct): base._set_ontology(namespace.ontology)
+      Class = namespace.world._get_by_storid(storid)
       
     if Class is None:
       _is_a = CallbackList(_is_a, None, MetaClass._class_is_a_changed)
@@ -96,8 +100,9 @@ class EntityClass(type):
       Class = namespace.world._entities[storid] = _is_a._obj = type.__new__(MetaClass, name, superclasses, obj_dict)
       
       if not LOADING:
-        namespace.ontology.add_triple(storid, rdf_type, Class._owl_type)
+        namespace.ontology.add_triple(storid, rdf_type, MetaClass._owl_type)
         for parent in _is_a: Class._add_is_a_triple(parent)
+        
     else:
       if Class.is_a != _is_a: Class.is_a.extend([i for i in _is_a if not i in Class.is_a])
       
@@ -226,7 +231,7 @@ class EntityClass(type):
           descendant = Class.namespace.world._entities.get(x)
           if descendant is None: continue
         else:
-          descendant = Class.namespace.world._get_by_storid(x, None, Class.__class__, Class.namespace.ontology.graph.c)
+          descendant = Class.namespace.world._get_by_storid(x, None, Class.__class__, Class.namespace.ontology)
         if (descendant is Class) and (not include_self): continue
         if not descendant in s:
           s.add(descendant)
@@ -246,7 +251,7 @@ class EntityClass(type):
       
     else:
       return [
-        Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology.graph.c)
+        Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
         for x in Class.namespace.world.get_triples_po(Class._rdfs_is_a, Class.storid)
         if not x.startswith("_")
       ]
@@ -291,7 +296,7 @@ class ThingClass(EntityClass):
         
   def instances(Class):
     for s in Class.namespace.world.get_triples_po(rdf_type, Class.storid):
-      if not s.startswith("_"): yield Class.namespace.world._get_by_storid(s, None, Thing, Class.namespace.ontology.graph.c)
+      if not s.startswith("_"): yield Class.namespace.world._get_by_storid(s, None, Thing, Class.namespace.ontology)
       
       
   def __and__(a, b): return And([a, b])

@@ -1,7 +1,4 @@
-#python -OO ./owlready2/test/bench.py > /dev/null
-
-
-
+#python ./owlready2/test/bench.py > /dev/null
 
 import sys, time#, cProfile
 

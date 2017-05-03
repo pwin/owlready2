@@ -29,8 +29,7 @@ class Graph(BaseGraph):
     exists        = os.path.exists(filename) and os.path.getsize(filename)
     self.db       = sqlite3.connect(filename, check_same_thread = False)
     
-    self.db.execute("""PRAGMA journal_mode = OFF""")
-    #self.db.rollback() # Cancel the transaction begined by execute() -- this does not cancel the pragma, but set in_transaction to False as expected
+    self.db.execute("""PRAGMA locking_mode = EXCLUSIVE""")
     
     self.sql      = self.db.cursor()
     self.execute  = self.sql.execute
