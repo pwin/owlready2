@@ -2212,6 +2212,58 @@ class Test(BaseTest, unittest.TestCase):
     assert isinstance(c, Inverse)
     assert c.property is onto.P2
     
+  def test_format_10(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test_owlxml_bug.owl")
+    ok    = 0
+    try:
+      onto.load()
+    except OwlReadyOntologyParsingError:
+      ok = 1
+      
+    assert ok == 1
+    assert not onto.loaded
+    assert len(world.graph) == 1
+    
+  def test_format_11(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test_rdfxml_bug.owl")
+    ok    = 0
+    try:
+      onto.load()
+    except OwlReadyOntologyParsingError:
+      ok = 1
+      
+    assert ok == 1
+    assert not onto.loaded
+    assert len(world.graph) == 1
+    
+  def test_format_12(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test_rdfxml_bug.owl")
+    ok    = 0
+    try:
+      onto.load(force_rdflib = True)
+    except OwlReadyOntologyParsingError:
+      ok = 1
+      
+    assert ok == 1
+    assert not onto.loaded
+    assert len(world.graph) == 1
+    
+  def test_format_13(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test_ntriples_bug.ntriples")
+    ok    = 0
+    try:
+      onto.load()
+    except OwlReadyOntologyParsingError:
+      ok = 1
+      
+    assert ok == 1
+    assert not onto.loaded
+    assert len(world.graph) == 1
+    
     
   def test_search_1(self):
     world = self.new_world()

@@ -73,7 +73,7 @@ class EntityClass(type):
     namespace = obj_dict.get("namespace") or CURRENT_NAMESPACES[-1] or superclasses[0].namespace
     storid    = obj_dict.get("storid")    or namespace.world.abbreviate("%s%s" % (namespace.base_iri, name))
     
-    if LOADING: Class = namespace.world._entities.get(storid)
+    if LOADING: Class = namespace.world._entities.get (storid)
     else:       Class = namespace.world._get_by_storid(storid)
     
     _is_a = obj_dict.pop("is_a", None)

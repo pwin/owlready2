@@ -412,20 +412,20 @@ class Ontology(Namespace, _GraphManager):
       if self.graph.get_last_update_time() == 0.0: # Never loaded
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
         fileobj = urllib.request.urlopen(f)
-        self.graph.parse(fileobj, **args)
-        fileobj.close()
+        try:     self.graph.parse(fileobj, **args)
+        finally: fileobj.close()
     elif fileobj:
       if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, getattr(fileobj, "name", "") or getattr(fileobj, "url", "???")), file = sys.stderr)
-      self.graph.parse(fileobj, **args)
-      fileobj.close()
+      try:     self.graph.parse(fileobj, **args)
+      finally: fileobj.close()
     else:
       if os.path.getmtime(f) <= self.graph.get_last_update_time():
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s (cached)..." % self.name, file = sys.stderr)
       else:
         fileobj = open(f, "r")
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
-        self.graph.parse(fileobj, **args)
-        fileobj.close()
+        try:     self.graph.parse(fileobj, **args)
+        finally: fileobj.close()
       
     self.loaded = True
     

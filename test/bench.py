@@ -32,10 +32,10 @@ def render(entity):
   return entity.name
 set_render_func(render)
 
-#for c in go.classes():
-#  print(c)
-#  for parent in c.is_a:
-#    print("    is a %s" % parent)
+for c in go.classes():
+  print(c)
+  for parent in c.is_a:
+    print("    is a %s" % parent)
 
 #go.save("/tmp/t.ntriples", "ntriples")
 #go.save("/tmp/t.owl", "rdfxml")

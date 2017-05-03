@@ -297,7 +297,7 @@ class SubGraph(BaseGraph):
     format = format or _guess_format(f)
     
     rapper = None
-
+    
     splitter = re.compile("\s")
     #splitter = re.compile(r"^([^#].*?)\s+(.*?)\s+(.*?)\s*\.$", re.MULTILINE)
     #splitter = re.compile(r"^(.*?)\s+(.*?)\s+(.*?)\s*\.$")
@@ -313,6 +313,7 @@ class SubGraph(BaseGraph):
             #line = line.rsplit(" ", 1)[0]
             #yield line.split(" ", 2)
           line = f.readline()
+          
       triples = get_triple()
       
     elif format == "rdfxml":
@@ -321,22 +322,31 @@ class SubGraph(BaseGraph):
         
         url = getattr(f, "url", "")
         if url:
-          rapper = subprocess.Popen([owlready2.RAPPER_EXE, "-q", "-g", url], stdout = subprocess.PIPE)
+          rapper = subprocess.Popen([owlready2.RAPPER_EXE, "-q", "-g", url], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
         else:
-          rapper = subprocess.Popen([owlready2.RAPPER_EXE, "-q", "-g", "-", "http://test.org/xxx.owl"], stdin = f, stdout = subprocess.PIPE)
+          rapper = subprocess.Popen([owlready2.RAPPER_EXE, "-q", "-g", "-", "http://test.org/xxx.owl"], stdin = f, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
           
         def get_triple():
           line = rapper.stdout.readline()
           while line:
             yield line.rsplit(b" ", 1)[0].decode("unicode-escape").split(" ", 2)
-            #yield line[:line.rfind(b" ")].decode("unicode-escape").split(" ", 2)
             line = rapper.stdout.readline()
         triples = get_triple()
         
       else:
         import rdflib, rdflib.term
         g = rdflib.Graph()
-        g.parse(f)
+        try:
+          g.parse(f)
+        except Exception as e:
+          self.execute("UPDATE ontologies SET last_update=? WHERE c=?", (0, self.c,))
+          line = getattr(e, "getLineNumber", None)
+          if callable(line): line = line()
+          if line:
+            raise OwlReadyOntologyParsingError("%s: line %s" % (e.args[0], line)) from e
+          else:
+            raise OwlReadyOntologyParsingError(*e.args) from e
+          
         def get_triple():
           for s,p,o in g:
             if   isinstance(s, rdflib.term.URIRef ): s = "<%s>" % s
@@ -352,17 +362,41 @@ class SubGraph(BaseGraph):
       triples = []
       def on_triple(s,p,o): triples.append((s,p,o))
       import owlready2.owlxml_2_ntriples
-      owlready2.owlxml_2_ntriples.parse(f, on_triple)
-
+      try:
+        owlready2.owlxml_2_ntriples.parse(f, on_triple)
+      except Exception as e:
+        self.execute("UPDATE ontologies SET last_update=? WHERE c=?", (0, self.c,))
+        line = getattr(e, "getLineNumber", None)
+        if callable(line): line = line()
+        if line:
+          raise OwlReadyOntologyParsingError("%s: line %s" % (e.args[0], line)) from e
+        else:
+          raise OwlReadyOntologyParsingError(*e.args) from e
+        
     else:
-      raise ValueError(format)
+      raise ValueError("Unsupported format %s." % format)
       
-    self.parse_from_ntriples_triples(triples, getattr(f, "name", ""), delete_existing_triples)
+    try:
+      self.parse_from_ntriples_triples(triples, getattr(f, "name", ""), delete_existing_triples)
+    except Exception as e:
+      self.execute("UPDATE ontologies SET last_update=? WHERE c=?", (0, self.c,))
+      self.execute("DELETE FROM quads WHERE c=?", (self.c,))
+      self._add_triple(self.onto.storid, rdf_type, owl_ontology)
+      raise OwlReadyOntologyParsingError("Error while parsing NTriple file: line %s" % self._current_line) from e
     
     if rapper:
+      error = rapper.stderr.read()
       rapper.stdout.close()
+      rapper.stderr.close()
       rapper.wait()
       
+      if b"Error" in error:
+        self.execute("UPDATE ontologies SET last_update=? WHERE c=?", (0, self.c,))
+        self.execute("DELETE FROM quads WHERE c=?", (self.c,))
+        self._add_triple(self.onto.storid, rdf_type, owl_ontology)
+        raise OwlReadyOntologyParsingError("Error when parsing %s file with rapper." % format)
+        
+        
   def parse_from_ntriples_triples(self, triples, filename = None, delete_existing_triples = True):
     values       = []
     bn_src_2_sql = {}
@@ -381,6 +415,7 @@ class SubGraph(BaseGraph):
       abbrevs[iri] = storid
       return storid
     
+    self._current_line = 1
     for s,p,o in triples:
       if   s.startswith("<"): s = abbreviate(s[1:-1])
       elif s.startswith("_"):
@@ -404,6 +439,7 @@ class SubGraph(BaseGraph):
         if l.startswith("^"): o = '%s"%s' % (v, abbreviate(l[3:-1])) # Abbreviate datatype's iri
       
       values.append((s,p,o))
+      self._current_line += 1
       
       #if (len(values) % 100000) == 0: print(len(values), file = sys.stderr)
       
@@ -417,6 +453,8 @@ class SubGraph(BaseGraph):
     if owlready2.namespace._LOG_LEVEL: print("* OwlReady 2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
     self.sql.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
     self.sql.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
+    
+    del self._current_line
     
   def get_last_update_time(self):
     return self.execute("SELECT last_update FROM ontologies WHERE c=?", (self.c,)).fetchone()[0]
