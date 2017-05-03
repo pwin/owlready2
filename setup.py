@@ -23,12 +23,9 @@ HERE = os.path.dirname(sys.argv[0]) or "."
 
 if len(sys.argv) <= 1: sys.argv.append("install")
 
+import setuptools
 
-import distutils.core, distutils.sysconfig
-if ("upload_docs" in sys.argv) or ("build_sphinx" in sys.argv): import setuptools
-
-
-distutils.core.setup(
+setuptools.setup(
   name         = "Owlready2",
   version      = "0.1",
   license      = "LGPLv3+",
@@ -53,5 +50,7 @@ distutils.core.setup(
   
   package_dir  = {"owlready2" : "."},
   packages     = ["owlready2"],
-  package_data = {"owlready2" : ["owlready_ontology.owl", "hermit/*.*", "hermit/org/semanticweb/HermiT/cli/*"]}
-  )
+  package_data = {"owlready2" : ["owlready_ontology.owl", "hermit/*.*", "hermit/org/semanticweb/HermiT/cli/*"]},
+  
+  install_requires=['rdflib'],
+)
