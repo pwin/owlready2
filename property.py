@@ -50,6 +50,7 @@ class PropertyClass(EntityClass):
     
     type.__setattr__(Prop, "_domain", None)
     type.__setattr__(Prop, "_range", None)
+    type.__setattr__(Prop, "_property_chain", None)
     type.__setattr__(Prop, "_inverse_property", False)
     type.__setattr__(Prop, "_python_name", name)
     
@@ -101,6 +102,7 @@ class PropertyClass(EntityClass):
     for parent_prop in Prop.__bases__:
       if isinstance(parent_prop, PropertyClass): yield from parent_prop.domains_indirect()
       
+      
   def get_range(Prop):
     if Prop._range is None:
       Prop._range = CallbackList(
@@ -125,6 +127,30 @@ class PropertyClass(EntityClass):
       x2 = _universal_datatype_2_abbrev.get(x) or x.storid
       Prop.namespace.ontology.add_triple(Prop.storid, rdf_range, x2)
       
+      
+  def get_property_chain(Prop):
+    if Prop._property_chain is None:
+      Prop._property_chain = CallbackList(
+        (PropertyChain(o, Prop.namespace.ontology)
+          for o in Prop.namespace.world.get_triples_sp(Prop.storid, owl_propertychain)),
+        Prop, PropertyClass._property_chain_changed)
+    return Prop._property_chain
+  
+  def set_property_chain(Prop, value): Prop.property_chain.reinit(value)
+  
+  property_chain = property(get_property_chain, set_property_chain)
+  
+  def _property_chain_changed(Prop, old):
+    new = frozenset(Prop._property_chain)
+    old = frozenset(old)
+    for x in old - new:
+      Prop.namespace.ontology.del_triple(Prop.storid, owl_propertychain, x.storid)
+      x._set_ontology(None)
+    for x in new - old:
+      x._set_ontology(Prop.namespace.ontology)
+      Prop.namespace.ontology.add_triple(Prop.storid, owl_propertychain, x.storid)
+    
+    
   def __getattr__(Prop, attr):
     Annot = Prop.namespace.world._props.get(attr)
     if Annot is None:
@@ -247,3 +273,49 @@ class IrreflexiveProperty      (Property): pass
 
 _CLASS_PROPS = { DataProperty, ObjectProperty }
 _TYPE_PROPS  = { FunctionalProperty, InverseFunctionalProperty, TransitiveProperty, SymmetricProperty, AsymmetricProperty, ReflexiveProperty, IrreflexiveProperty }
+
+
+class PropertyChain(object):
+  def __init__(self, Properties, ontology = None):
+    if isinstance(Properties, str):
+      self.storid = Properties
+    else:
+      self.storid = None
+      self.properties = CallbackList(Properties, self, PropertyChain._callback)
+    self.ontology = ontology
+    if ontology and not LOADING: self._create_triples(ontology)
+    
+  def _set_ontology(self, ontology):
+    if not LOADING:
+      if   self.ontology and not ontology:
+        self._destroy_triples(self.ontology)
+      elif ontology and not self.ontology:
+        if self.storid is None: self.storid = ontology.world.new_blank_node()
+        self._create_triples(ontology)
+      elif ontology and self.ontology:
+        raise OwlReadySharedBlankNodeError("A PropertyChain cannot be shared by two ontologies. Please create a dupplicate.")
+      
+    self.ontology = ontology
+    for Prop in self.properties:
+      if hasattr(Prop, "_set_ontology"): Prop._set_ontology(ontology)
+      
+  def __getattr__(self, attr):
+    if attr == "properties":
+      self.properties = CallbackList(self.ontology._parse_list(self.storid), self, PropertyChain._callback)
+      return self.properties
+    return super().__getattribute__(attr)
+  
+  def _callback(self, old):
+    if self.ontology:
+      self._destroy_triples(self.ontology)
+      self._create_triples (self.ontology)
+      
+  def _destroy_triples(self, ontology):
+    ontology._del_list(self.storid)
+    
+  def _create_triples(self, ontology):
+    ontology._set_list(self.storid, self.properties)
+    
+  def __repr__(self):
+    return "PropertyChain([%s])" % (", ".join(repr(x) for x in self.properties))
+  

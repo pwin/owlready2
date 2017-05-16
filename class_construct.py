@@ -133,7 +133,7 @@ class Inverse(ClassConstruct):
   def max    (self, nb, value = None): return Restriction(self, MAX    , nb  , value)
   
   
-  
+
 
 class LogicalClassConstruct(ClassConstruct):
   def __init__(self, Classes, ontology = None, bnode = None):

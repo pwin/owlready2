@@ -2551,6 +2551,47 @@ class Test(BaseTest, unittest.TestCase):
     assert Inverse(IP2) is P2
     
     
+  def test_propchain_1(self):
+    w = self.new_world()
+    o = w.get_ontology("http://test/test_propchain.owl").load()
+    
+    obo = o.get_namespace("http://purl.obolibrary.org/obo/")
+    
+    assert len(obo.BFO_0000066.property_chain) == 1
+    assert obo.BFO_0000066.property_chain[0].properties == [obo.BFO_0000050, obo.BFO_0000066]
+    
+  def test_propchain_2(self):
+    w = self.new_world()
+    o = w.get_ontology("http://test/test_propchain.owl")
+
+    with o:
+      class C(Thing): pass
+      
+      class P1(C >> C): pass
+      class P2(C >> C): pass
+      class P3(C >> C): pass
+      class P4(C >> C): pass
+      
+      class P(C >> C): pass
+      
+    P.property_chain.append(PropertyChain([P1, P2]))
+    
+    bns = list(w.get_triples_sp(P.storid, owl_propertychain))
+    assert len(bns) == 1
+    assert o._parse_list(bns[0]) == [P1, P2]
+    
+    P.property_chain.append(PropertyChain([P3, P4]))
+    
+    bns = list(w.get_triples_sp(P.storid, owl_propertychain))
+    assert len(bns) == 2
+    assert o._parse_list(bns[0]) == [P1, P2]
+    assert o._parse_list(bns[1]) == [P3, P4]
+    
+    del P.property_chain[0]
+    
+    bns = list(w.get_triples_sp(P.storid, owl_propertychain))
+    assert len(bns) == 1
+    assert o._parse_list(bns[0]) == [P3, P4]
     
     
 class Paper(BaseTest, unittest.TestCase):

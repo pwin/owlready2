@@ -180,6 +180,7 @@ xmls_mininclusive         = _universal_abbrev("http://www.w3.org/2001/XMLSchema#
 xmls_minexclusive         = _universal_abbrev("http://www.w3.org/2001/XMLSchema#minExclusive")
 xmls_totaldigits          = _universal_abbrev("http://www.w3.org/2001/XMLSchema#totalDigits")
 xmls_fractiondigits       = _universal_abbrev("http://www.w3.org/2001/XMLSchema#fractionDigits")
+owl_propertychain         = _universal_abbrev("http://www.w3.org/2002/07/owl#propertyChainAxiom")
 
 _universal_abbrev("http://www.w3.org/2002/07/owl#TransitiveProperty")
 _universal_abbrev("http://www.w3.org/2002/07/owl#SymmetricProperty")
