@@ -111,6 +111,11 @@ version 2 - 0.1
 
 * Full rewrite, including an optimized quadstore
 
+version 2 - 0.x
+***************
+
+* Property chain support
+
 
 Links
 -----
