@@ -146,10 +146,6 @@ class OWLXMLHandler(sax.handler.ContentHandler):
     if not (o.startswith("_") or o.startswith('"')): o = "<%s>" % o
     self._on_triple(s,p,o)
     
-    
-    if (s == "<http://purl.obolibrary.org/obo/BFO_0000050>") and (p == "<http://www.w3.org/2000/01/rdf-schema#subPropertyOf>"):
-      print(self.get_loc(), file = sys.stderr)
-      
   def _on_triple(self, s,p,o):
     print("%s %s %s ." % (s,p,o))
     
