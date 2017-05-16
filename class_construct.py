@@ -45,6 +45,8 @@ class ClassConstruct(object):
     self.ontology = ontology
     if self.ontology: self.ontology._bnodes[self.storid] = self
     
+  def destroy(self): self._destroy_triples()
+  
   def _destroy_triples(self, ontology):
     ontology.del_triple(self.storid, None, None)
     
@@ -81,6 +83,10 @@ class Not(ClassConstruct):
       return C
     return super().__getattribute__(attr)
   
+  def destroy(self):
+    if isinstance(self.Class, ClassConstruct): self.Class.destroy()
+    ClassConstruct.destory(self)
+    
   def _set_ontology(self, ontology):
     if isinstance(self.Class, ClassConstruct): self.Class._set_ontology(ontology)
     super()._set_ontology(ontology)

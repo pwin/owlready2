@@ -38,6 +38,19 @@ class Bench {
     System.err.print("Loading ");
     System.err.println(t / 1000.0f);
     
+    /*
+    File saveas = new File("/home/jiba/telechargements/base_med/go2.owl");
+    OWLOntologyFormat format = m.getOntologyFormat(o);
+    OWLXMLOntologyFormat owlxmlFormat = new OWLXMLOntologyFormat();
+    if (format.isPrefixOWLOntologyFormat()) { 
+      owlxmlFormat.copyPrefixesFrom(format.asPrefixOWLOntologyFormat()); 
+    }
+    m.saveOntology(o, owlxmlFormat, IRI.create(saveas.toURI()));    
+    
+    System.err.println("saved");
+    */
+    
+    
     
     t = (new Date().getTime());
 

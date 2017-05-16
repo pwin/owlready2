@@ -394,8 +394,17 @@ class SubGraph(BaseGraph):
         self.execute("DELETE FROM quads WHERE c=?", (self.c,))
         self._add_triple(self.onto.storid, rdf_type, owl_ontology)
         raise OwlReadyOntologyParsingError("Error when parsing %s file with rapper." % format)
-        
-        
+
+
+
+
+      
+    self.parent.commit()
+
+
+
+    
+    
   def parse_from_ntriples_triples(self, triples, filename = None, delete_existing_triples = True):
     values       = []
     bn_src_2_sql = {}

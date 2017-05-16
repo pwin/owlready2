@@ -2265,6 +2265,31 @@ class Test(BaseTest, unittest.TestCase):
     assert not onto.loaded
     assert len(world.graph) == 1
     
+  def test_format_14(self):
+    import re, owlready2.owlxml_2_ntriples
+    
+    triples1 = ""
+    def on_triple(s,p,o):
+      nonlocal triples1
+      triples1 += "%s %s %s .\n" % (s,p,o)
+    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_propchain_owlxml.owl"), on_triple)
+    
+    f = open(os.path.join(HERE, "test_propchain.ntriples"), "rb")
+    triples2 = f.read().decode("unicode-escape")
+    f.close()
+    
+    triples1 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples1)
+    triples2 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples2)
+    
+    triples1 = triples1.split("\n")
+    triples2 = triples2.split("\n")
+    
+    missing = set(triples2) - set(triples1)
+    exceed  = set(triples1) - set(triples2)
+    
+    assert not missing
+    assert not exceed
+    
     
   def test_search_1(self):
     world = self.new_world()

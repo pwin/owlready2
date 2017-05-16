@@ -112,6 +112,7 @@ class OWLXMLHandler(sax.handler.ContentHandler):
     self.current_lang           = None
     self.current_blank          = 0
     self.in_declaration         = False
+    self.in_prop_chain          = False
     self.before_declaration     = True
     if on_triple:
       self._on_triple            = on_triple
@@ -145,6 +146,10 @@ class OWLXMLHandler(sax.handler.ContentHandler):
     if not (o.startswith("_") or o.startswith('"')): o = "<%s>" % o
     self._on_triple(s,p,o)
     
+    
+    if (s == "<http://purl.obolibrary.org/obo/BFO_0000050>") and (p == "<http://www.w3.org/2000/01/rdf-schema#subPropertyOf>"):
+      print(self.get_loc(), file = sys.stderr)
+      
   def _on_triple(self, s,p,o):
     print("%s %s %s ." % (s,p,o))
     
@@ -191,7 +196,11 @@ class OWLXMLHandler(sax.handler.ContentHandler):
       
     elif (tag == "AnonymousIndividual"): self.push(self.new_blank())
     
+    elif (tag == "SubObjectPropertyOf"): self.in_prop_chain = False
+    
     elif (tag == "ObjectInverseOf") or (tag == "DataInverseOf") or (tag == "inverseOf"): self.push(self.new_blank())
+    
+    elif (tag == "ObjectPropertyChain"): self.push("(")
     
     elif (tag == "DatatypeRestriction"): self.push("(")
     
@@ -202,7 +211,10 @@ class OWLXMLHandler(sax.handler.ContentHandler):
     elif (tag == "Ontology"):
       self.ontology_iri = attrs["ontologyIRI"]
       self.on_triple(self.ontology_iri, rdf_type, "http://www.w3.org/2002/07/owl#Ontology")
-            
+      version_iri = attrs.get("versionIRI")
+      if version_iri:
+        self.on_triple(self.ontology_iri, "http://www.w3.org/2002/07/owl#versionIRI", version_iri)
+      
     elif (tag == "RDF") or (tag == "rdf:RDF"): raise ValueError("Not an OWL/XML file! (It seems to be an OWL/RDF file)")
     
     
@@ -222,8 +234,13 @@ class OWLXMLHandler(sax.handler.ContentHandler):
     elif (tag == "SubClassOf") or (tag == "SubObjectPropertyOf") or (tag == "SubDataPropertyOf") or (tag == "SubAnnotationPropertyOf"):
       parent = self.objs.pop()
       child  = self.objs.pop()
-      self.on_triple(child, sub_ofs[tag], parent)
-      if self.annots: self.purge_annotations((child, sub_ofs[tag], parent))
+      if (tag == "SubObjectPropertyOf") and self.in_prop_chain:
+        relation = "http://www.w3.org/2002/07/owl#propertyChainAxiom"
+        parent, child = child, parent
+      else:
+        relation = sub_ofs[tag]
+      self.on_triple(child, relation, parent)
+      if self.annots: self.purge_annotations((child, relation, parent))
       
     elif (tag == "ClassAssertion"):
       child  = self.objs.pop() # Order is reversed compared to SubClassOf!
@@ -255,6 +272,12 @@ class OWLXMLHandler(sax.handler.ContentHandler):
     elif (tag == "InverseObjectProperties") or (tag == "InverseDataProperties"):
       a, b = self.objs.pop(), self.objs.pop()
       self.on_triple(b, "http://www.w3.org/2002/07/owl#inverseOf", a)
+      
+    elif (tag == "ObjectPropertyChain"):
+      start = _rindex(self.objs, "(")
+      list_iri = self.new_list(self.objs[start + 1 : ])
+      self.in_prop_chain = True
+      self.objs[start :] = [list_iri]
       
     elif (tag in disjoints):
       start = _rindex(self.objs, "(")
