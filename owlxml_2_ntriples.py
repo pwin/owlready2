@@ -19,7 +19,6 @@
 
 import sys, os, warnings
 import xml, xml.sax as sax, xml.sax.handler
-from collections import defaultdict
 
 rdf_type                  = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 rdf_first                 = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first"
@@ -115,7 +114,7 @@ class OWLXMLHandler(sax.handler.ContentHandler):
     self.in_prop_chain          = False
     self.before_declaration     = True
     if on_triple:
-      self._on_triple            = on_triple
+      self._on_triple           = on_triple
       
   def new_blank(self):
     self.current_blank += 1

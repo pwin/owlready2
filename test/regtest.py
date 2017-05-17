@@ -6,6 +6,8 @@ import owlready2, owlready2.util
 from owlready2 import *
 from owlready2.base import _universal_abbrev_2_datatype, _universal_datatype_2_abbrev
 
+from owlready2.ntriples_diff import *
+
 set_log_level(0)
 
 next_id = 0
@@ -46,6 +48,17 @@ class BaseTest(object):
       if not (o.startswith("_") or o.startswith('"')): o = world.unabbreviate(o)
       print("UNEXPECTED TRIPLE", s, p, o)
       raise AssertionError
+
+  def assert_ntriples_equivalent(self, nt1, nt2):
+    removed, added = diff(nt1, nt2)
+    
+    for s,p,o, l in removed:
+      if l: print("-", s, p, o, ". # line", l)
+    for s,p,o, l in added:
+      if l: print("+", s, p, o, ". # line", l)
+      
+    assert not removed
+    assert not added
     
   def new_world(self):
     #global next_id
@@ -2071,18 +2084,20 @@ class Test(BaseTest, unittest.TestCase):
     f = open(os.path.join(HERE, "test_owlxml.ntriples"), "rb")
     triples2 = f.read().decode("unicode-escape")
     f.close()
+
+    self.assert_ntriples_equivalent(triples1, triples2)
     
-    triples1 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples1)
-    triples2 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples2)
+    #triples1 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples1)
+    #triples2 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples2)
     
-    triples1 = triples1.split("\n")
-    triples2 = triples2.split("\n")
+    #triples1 = triples1.split("\n")
+    #triples2 = triples2.split("\n")
     
-    missing = set(triples2) - set(triples1)
-    exceed  = set(triples1) - set(triples2)
+    #missing = set(triples2) - set(triples1)
+    #exceed  = set(triples1) - set(triples2)
     
-    assert not missing
-    assert not exceed
+    #assert not missing
+    #assert not exceed
     
   def test_format_3(self):
     world = self.new_world()
@@ -2131,17 +2146,7 @@ class Test(BaseTest, unittest.TestCase):
     rapper.stdout.close()
     rapper.wait()
     
-    triples1 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples1)
-    triples2 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples2)
-    
-    triples1 = triples1.split("\n")
-    triples2 = triples2.split("\n")
-    
-    missing = set(triples2) - set(triples1)
-    exceed  = set(triples1) - set(triples2)
-    
-    assert not missing
-    assert not exceed
+    self.assert_ntriples_equivalent(triples1, triples2)
     
   def test_format_7(self):
     world = self.new_world()
@@ -2160,18 +2165,8 @@ class Test(BaseTest, unittest.TestCase):
     rapper.stdout.close()
     rapper.wait()
     
-    triples1 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples1)
-    triples2 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples2)
-    
-    triples1 = triples1.split("\n")
-    triples2 = triples2.split("\n")
-    
-    missing = set(triples2) - set(triples1)
-    exceed  = set(triples1) - set(triples2)
-    
-    assert not missing
-    assert not exceed
-    
+    self.assert_ntriples_equivalent(triples1, triples2)
+        
   def test_format_8(self):
     import re, owlready2.owlxml_2_ntriples
     
@@ -2185,17 +2180,7 @@ class Test(BaseTest, unittest.TestCase):
     triples2 = f.read().decode("unicode-escape")
     f.close()
     
-    triples1 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples1)
-    triples2 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples2)
-    
-    triples1 = triples1.split("\n")
-    triples2 = triples2.split("\n")
-    
-    missing = set(triples2) - set(triples1)
-    exceed  = set(triples1) - set(triples2)
-    
-    assert not missing
-    assert not exceed
+    self.assert_ntriples_equivalent(triples1, triples2)
     
   def test_format_9(self):
     world = self.new_world()
@@ -2278,17 +2263,7 @@ class Test(BaseTest, unittest.TestCase):
     triples2 = f.read().decode("unicode-escape")
     f.close()
     
-    triples1 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples1)
-    triples2 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples2)
-    
-    triples1 = triples1.split("\n")
-    triples2 = triples2.split("\n")
-    
-    missing = set(triples2) - set(triples1)
-    exceed  = set(triples1) - set(triples2)
-    
-    assert not missing
-    assert not exceed
+    self.assert_ntriples_equivalent(triples1, triples2)
     
     
   def test_search_1(self):
