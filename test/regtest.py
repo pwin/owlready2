@@ -2274,7 +2274,7 @@ class Test(BaseTest, unittest.TestCase):
     
     assert onto.C.comment.first() == """Comment long
 on
-multiple lines."""
+multiple lines with "."""
     
     f = BytesIO()
     onto.save(f, format = "ntriples")
@@ -2283,8 +2283,9 @@ multiple lines."""
     assert s.count("\n") <= 4
     assert s == """<http://www.test.org/test_breakline.owl> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Ontology> .
 <http://www.test.org/test_breakline.owl#C> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
-<http://www.test.org/test_breakline.owl#C> <http://www.w3.org/2000/01/rdf-schema#comment> "Comment long\\non\\nmultiple lines."@en .
+<http://www.test.org/test_breakline.owl#C> <http://www.w3.org/2000/01/rdf-schema#comment> "Comment long\\non\\nmultiple lines with \\"."@en .
 """
+    
     
   def test_search_1(self):
     world = self.new_world()

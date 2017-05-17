@@ -35,7 +35,7 @@
     <owl:Class rdf:about="http://www.test.org/test_breakline.owl#C">
         <rdfs:comment xml:lang="en">Comment long
 on
-multiple lines.</rdfs:comment>
+multiple lines with ".</rdfs:comment>
     </owl:Class>
 </rdf:RDF>
 
