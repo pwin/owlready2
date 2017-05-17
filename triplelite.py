@@ -582,7 +582,7 @@ def _save(f, format, graph, c = None, force_rdflib = False):
       elif o.startswith('"'):
         if not o.endswith('"'):
           v, l = o.rsplit('"', 1)
-          v = v[1:].replace('"', '\\"')
+          v = v[1:].replace('"', '\\"').replace('\n', '\\n')
           if   l.startswith("@"): o = '"%s"%s' % (v, l)
           else:                   o = '"%s"^^<%s>' % (v, unabbreviate(l)) # Unabbreviate datatype's iri
       else: o = "<%s>" % unabbreviate(o)

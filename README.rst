@@ -116,7 +116,8 @@ version 2 - 0.x
 
 * Property chain support
 * Add ntriples_diff.py utility
-
+* Bugfixes:
+  * Fix breaklines in literal when exporting to NTriples
 
 Links
 -----

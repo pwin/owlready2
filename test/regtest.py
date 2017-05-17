@@ -1,5 +1,6 @@
 
 import sys, os, unittest, tempfile, atexit, datetime, rdflib
+from io import StringIO, BytesIO
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import owlready2, owlready2.util
@@ -59,15 +60,17 @@ class BaseTest(object):
       
     assert not removed
     assert not added
-    
-  def new_world(self):
-    #global next_id
-    #next_id += 1
+
+  def new_tmp_file(self):
     fileno, filename = tempfile.mkstemp()
     TMPFILES.append(filename)
+    return filename
+    
+  def new_world(self):
+    filename = self.new_tmp_file()
     world = World(filename = filename)
     return world
-  
+
   def new_ontology(self):
     global next_id
     next_id += 1
@@ -2265,6 +2268,23 @@ class Test(BaseTest, unittest.TestCase):
     
     self.assert_ntriples_equivalent(triples1, triples2)
     
+  def test_format_15(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.test.org/test_breakline.owl").load()
+    
+    assert onto.C.comment.first() == """Comment long
+on
+multiple lines."""
+    
+    f = BytesIO()
+    onto.save(f, format = "ntriples")
+    s = f.getvalue().decode("utf8")
+    
+    assert s.count("\n") <= 4
+    assert s == """<http://www.test.org/test_breakline.owl> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Ontology> .
+<http://www.test.org/test_breakline.owl#C> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://www.test.org/test_breakline.owl#C> <http://www.w3.org/2000/01/rdf-schema#comment> "Comment long\\non\\nmultiple lines."@en .
+"""
     
   def test_search_1(self):
     world = self.new_world()
