@@ -115,6 +115,7 @@ version 2 - 0.x
 ***************
 
 * Property chain support
+* Add ntriples_diff.py utility
 
 
 Links
