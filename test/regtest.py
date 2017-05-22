@@ -50,7 +50,7 @@ class BaseTest(object):
       print("UNEXPECTED TRIPLE", s, p, o)
       raise AssertionError
 
-  def assert_ntriples_equivalent(self, nt1, nt2):
+  def assert_ntriples_equivalent(self, nt2, nt1):
     removed, added = diff(nt1, nt2)
     
     for s,p,o, l in removed:
@@ -269,8 +269,43 @@ class Test(BaseTest, unittest.TestCase):
     assert set(n.annotation_properties()) == { n.annot }
     assert set(n.properties()) == { n.price, n.has_topping, n.has_main_topping, n.main_topping_of, n.topping_of, n.annot }
     assert set(n.individuals()) == { n.mon_frometon, n.ma_tomate, n.ma_pizza }
-
     
+  def test_ontology_4(self):
+    world = self.new_world()
+    n = world.get_ontology("test").load()
+    
+    assert n.base_iri == "http://www.semanticweb.org/jiba/ontologies/2017/0/test#"
+    assert set(n.classes()) == { n.Meat, n.Tomato, n.Eggplant, n.Olive, n.Vegetable, n.NonPizza, n.Pizza, n.Cheese, n.VegetarianPizza, n.Topping }
+    assert n.Tomato.iri == "http://www.semanticweb.org/jiba/ontologies/2017/0/test#Tomato"
+    
+  def test_ontology_5(self):
+    filename = os.path.abspath(os.path.join(os.path.dirname(__file__), "test.owl"))
+    
+    onto_path_save = onto_path[:]
+    for i in onto_path: onto_path.remove(i)
+    
+    try:
+      world = self.new_world()
+      n = world.get_ontology("file://" + filename).load()
+      
+      assert n.base_iri == "http://www.semanticweb.org/jiba/ontologies/2017/0/test#"
+      assert set(n.classes()) == { n.Meat, n.Tomato, n.Eggplant, n.Olive, n.Vegetable, n.NonPizza, n.Pizza, n.Cheese, n.VegetarianPizza, n.Topping }
+      assert n.Tomato.iri == "http://www.semanticweb.org/jiba/ontologies/2017/0/test#Tomato"
+      
+    finally:
+      onto_path.extend(onto_path_save)
+      
+  def test_ontology_6(self):
+    world = self.new_world()
+    filename = os.path.abspath(os.path.join(os.path.dirname(__file__), "test.owl"))
+    n1 = world.get_ontology("file://" + filename).load()
+    nb_triple = len(world.graph)
+    
+    n2 = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    assert n2 is n1
+    assert len(world.graph) == nb_triple
+    
+      
   def test_class_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     assert issubclass(n.Tomato, n.Vegetable)
@@ -2087,7 +2122,7 @@ class Test(BaseTest, unittest.TestCase):
     f = open(os.path.join(HERE, "test_owlxml.ntriples"), "rb")
     triples2 = f.read().decode("unicode-escape")
     f.close()
-
+    
     self.assert_ntriples_equivalent(triples1, triples2)
     
     #triples1 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples1)
@@ -2272,9 +2307,9 @@ class Test(BaseTest, unittest.TestCase):
     world = self.new_world()
     onto  = world.get_ontology("http://www.test.org/test_breakline.owl").load()
     
-    assert onto.C.comment.first() == """Comment long
+    assert onto.C.comment.first() == r"""Comment long
 on
-multiple lines with "."""
+multiple lines with " and ’ and \ and & and < and > and é."""
     
     f = BytesIO()
     onto.save(f, format = "ntriples")
@@ -2283,7 +2318,7 @@ multiple lines with "."""
     assert s.count("\n") <= 4
     assert s == """<http://www.test.org/test_breakline.owl> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Ontology> .
 <http://www.test.org/test_breakline.owl#C> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
-<http://www.test.org/test_breakline.owl#C> <http://www.w3.org/2000/01/rdf-schema#comment> "Comment long\\non\\nmultiple lines with \\"."@en .
+<http://www.test.org/test_breakline.owl#C> <http://www.w3.org/2000/01/rdf-schema#comment> "Comment long\\non\\nmultiple lines with \\" and ’ and \\\\ and & and < and > and é."@en .
 """
     
     

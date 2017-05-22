@@ -34,7 +34,6 @@ class OwlReadyOntologyIRIWarning          (OwlReadyWarning): pass
 class OwlReadyMROWarning                  (OwlReadyWarning): pass
 class OwlReadyGeneratedNameWarning        (OwlReadyWarning): pass
 class OwlReadyDupplicatedNameWarning      (OwlReadyWarning): pass
-class OwlReadyRangelessDataPropertyWarning(OwlReadyWarning): pass
 
 class OwlReadyError(Exception): pass
 class OwlReadySharedBlankNodeError(OwlReadyError): pass

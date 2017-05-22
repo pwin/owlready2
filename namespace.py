@@ -36,7 +36,7 @@ class Namespace(object):
   def __init__(self, ontology, base_iri, name = None):
     if not(base_iri.endswith("#") or base_iri.endswith("/")): raise ValueError("base_iri must end with '#' or '/' !")
     name = name or base_iri[:-1].rsplit("/", 1)[-1]
-    if name.endswith(".owl"): name = name[:-4]
+    if name.endswith(".owl") or name.endswith(".rdf"): name = name[:-4]
     self.ontology = ontology
     self.world    = ontology and ontology.world
     self.base_iri = base_iri
@@ -402,36 +402,38 @@ class Ontology(Namespace, _GraphManager):
   def load(self, only_local = False, fileobj = None, **args):
     if self.loaded: return self
     if self.base_iri == "http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#":
-      #f = open(os.path.join(os.path.dirname(__file__), "owlready_ontology.owl"))
       f = os.path.join(os.path.dirname(__file__), "owlready_ontology.owl")
-    #else:
-    #  f = fileobj or _open_onto_file(self.base_iri, self.name, "r", only_local)
     elif not fileobj:
       f = fileobj or _get_onto_file(self.base_iri, self.name, "r", only_local)
     else:
       f = ""
-
+      
+    new_base_iri = None
     if f.startswith("http:"):
       if self.graph.get_last_update_time() == 0.0: # Never loaded
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
         fileobj = urllib.request.urlopen(f)
-        try:     self.graph.parse(fileobj, **args)
+        try:     new_base_iri = self.graph.parse(fileobj, **args)
         finally: fileobj.close()
     elif fileobj:
       if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, getattr(fileobj, "name", "") or getattr(fileobj, "url", "???")), file = sys.stderr)
-      try:     self.graph.parse(fileobj, **args)
+      try:     new_base_iri = self.graph.parse(fileobj, **args)
       finally: fileobj.close()
     else:
       if os.path.getmtime(f) <= self.graph.get_last_update_time():
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s (cached)..." % self.name, file = sys.stderr)
       else:
-        fileobj = open(f, "r")
+        fileobj = open(f, "rb")
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
-        try:     self.graph.parse(fileobj, **args)
+        try:     new_base_iri = self.graph.parse(fileobj, **args)
         finally: fileobj.close()
-      
+        
     self.loaded = True
     
+    if new_base_iri and (new_base_iri != self.base_iri):
+      self.base_iri = new_base_iri
+      self._namespaces[self.base_iri] = self.world.ontologies[self.base_iri] = self
+      
     # Search for property names
     props = []
     for prop_storid in itertools.chain(self.get_triples_po(rdf_type, owl_object_property), self.get_triples_po(rdf_type, owl_data_property), self.get_triples_po(rdf_type, owl_annotation_property)):
@@ -688,8 +690,10 @@ def _open_onto_file(base_iri, name, mode = "r", only_local = False):
   raise FileNotFoundError
 
 def _get_onto_file(base_iri, name, mode = "r", only_local = False):
-  if base_iri.startswith("file://"): return base_iri[7:]
+  if base_iri.startswith("file://"): return base_iri[7:-1]
   for dir in onto_path:
+    filename = os.path.join(dir, base_iri[:-1].rsplit("/", 1)[-1])
+    if os.path.exists(filename): return filename
     for ext in ["", ".nt", ".ntriples", ".rdf", ".owl"]:
       filename = os.path.join(dir, "%s%s" % (name, ext))
       if os.path.exists(filename): return filename

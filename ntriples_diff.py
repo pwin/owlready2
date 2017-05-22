@@ -17,6 +17,16 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#cp -f ./owlready2/test/test.owl /tmp/t.owl
+#cp -f ./owlready2/test/test_inverse.owl /tmp/t.owl
+#cp -f ./owlready2/test/test_reasoning.owl /tmp/t.owl
+#cp -f ./owlready2/test/test_breakline.owl /tmp/t.owl
+#cp -f ~/telechargements/base_med/obi.owl /tmp/t.owl
+
+#rapper /tmp/t.owl > /tmp/rap.nt   ; python -c 'b = open("/tmp/rap.nt", "rb").read(); lb = b.split(b"\n"); ls = [i.replace(b"\\" + b"\"", b"\\\\" + b"\"").decode("unicode-escape").replace("\n", "\\n") for i in lb]; s = "\n".join(ls); open("/tmp/rap2.nt", "w").write(s)'
+#python ./owlready2/rdfxml_2_ntriples.py /tmp/t.owl > /tmp/py.nt
+#python ./owlready2/ntriples_diff.py /tmp/rap.nt /tmp/py.nt --short
+
 """ntriples_diff.py
 
 Compute the differences between 2 NTriples files. Take care of symmetric relations
@@ -57,6 +67,16 @@ symmetric_predicates = {
   "<http://www.w3.org/2002/07/owl#sameAs>",
   }
 
+useless_triples = {
+  ("<http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2000/01/rdf-schema#Datatype>"),
+  ("<http://www.w3.org/2000/01/rdf-schema#Literal>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2000/01/rdf-schema#Datatype>"),
+  ("<http://www.w3.org/2001/XMLSchema#float>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2000/01/rdf-schema#Datatype>"),
+  ("<http://www.w3.org/2001/XMLSchema#integer>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2000/01/rdf-schema#Datatype>"),
+  ("<http://www.w3.org/2001/XMLSchema#nonNegativeInteger>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2000/01/rdf-schema#Datatype>"),
+  ("<http://www.w3.org/2001/XMLSchema#string>", "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>", "<http://www.w3.org/2000/01/rdf-schema#Datatype>"),
+
+  }
+
 class Blank(object):
   def __init__(self):
     self.triples = set()
@@ -77,10 +97,13 @@ def canonize(nt):
   blanks  = {}
   l       = 0
   for line in nt.split("\n"):
+    if not line: continue
     l += 1
+    #print(l, line)
     if line.startswith("#") or not line: continue
     line = line[:-1].strip()
     s,p,o = line.split(None, 2)
+    if o.endswith("^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral>"): o = o.rsplit("^^", 1)[0]
     if s.startswith("_"): s = blanks.get(s) or Blank()
     if o.startswith("_"): o = blanks.get(o) or Blank()
     if isinstance(s, Blank): s.add_triple(s,p,o)
@@ -113,10 +136,12 @@ def diff(nt1, nt2):
   added   = []
   
   for s,p,o, l in triples1:
+    if (s,p,o) in useless_triples: continue
     if not (s,p,o) in triples2_set:
       removed.append((s,p,o, l))
       
   for s,p,o, l in triples2:
+    if (s,p,o) in useless_triples: continue
     if not (s,p,o) in triples1_set:
       added.append((s,p,o, l))
       

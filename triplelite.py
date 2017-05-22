@@ -19,10 +19,14 @@
 
 import sys, os, os.path, sqlite3, time, datetime, re
 from functools import lru_cache
+from collections import defaultdict
 
 from owlready2.driver import *
 from owlready2.util import _int_base_62
 from owlready2.base import _universal_abbrev_2_iri
+
+import owlready2.rdfxml_2_ntriples
+import owlready2.owlxml_2_ntriples
 
 class Graph(BaseGraph):
   def __init__(self, filename, clone = None):
@@ -308,6 +312,7 @@ class SubGraph(BaseGraph):
           if not line.startswith("#"):
             #print(splitter.findall(line))
             #splitter.findall(line)[0]
+            #if line.endswith(".\n"):
             yield splitter.split(line[:-3], 2)
             #line = line.rsplit(" ", 1)[0]
             #yield line.split(" ", 2)
@@ -395,16 +400,6 @@ class SubGraph(BaseGraph):
         self._add_triple(self.onto.storid, rdf_type, owl_ontology)
         raise OwlReadyOntologyParsingError("Error when parsing %s file with rapper." % format)
 
-
-
-
-      
-    self.parent.commit()
-
-
-
-    
-    
   def parse_from_ntriples_triples(self, triples, filename = None, delete_existing_triples = True):
     values       = []
     bn_src_2_sql = {}
@@ -435,7 +430,7 @@ class SubGraph(BaseGraph):
         
       p = abbreviate(p[1:-1])
       
-      if o.startswith("<"): o = abbreviate(o[1:-1])
+      if   o.startswith("<"): o = abbreviate(o[1:-1])
       elif o.startswith("_"):
         bn = bn_src_2_sql.get(o)
         if bn is None:
@@ -463,6 +458,135 @@ class SubGraph(BaseGraph):
     self.sql.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
     
     del self._current_line
+
+
+
+
+
+  def create_parse_func(self, filename = None, delete_existing_triples = True, datatype_attr = "http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype"):
+    values       = []
+    abbrevs      = {}
+    new_abbrevs  = []
+    def abbreviate(iri): # Re-implement for speed
+      storid = abbrevs.get(iri)
+      if not storid is None: return storid
+      r = self.execute("SELECT storid FROM resources WHERE iri=? LIMIT 1", (iri,)).fetchone()
+      if r:
+        abbrevs[iri] = r[0]
+        return r[0]
+      self.parent.current_resource += 1
+      storid = _int_base_62(self.parent.current_resource)
+      new_abbrevs.append((storid, iri))
+      abbrevs[iri] = storid
+      return storid
+    
+    def on_prepare_triple(s, p, o):
+      if not s.startswith("_"): s = abbreviate(s)
+      p = abbreviate(p)
+      if not (o.startswith("_") or o.startswith('"')): o = abbreviate(o)
+      
+      values.append((s,p,o))
+      
+    def new_literal(value, attrs):
+      lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
+      if lang: return '"%s"@%s' % (value, lang)
+      datatype = attrs.get(datatype_attr)
+      if datatype: return '"%s"%s' % (value, abbreviate(datatype))
+      return '"%s"' % (value)
+    
+    def on_finish():
+      if filename: date = os.path.getmtime(filename)
+      else:        date = time.time()
+      
+      if delete_existing_triples: self.execute("DELETE FROM quads WHERE c=?", (self.c,))
+      
+      if owlready2.namespace._LOG_LEVEL: print("* OwlReady 2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
+      self.sql.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
+      self.sql.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
+      
+      onto_base_iri = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND quads.o=? AND resources.storid=quads.s LIMIT 1", (self.c, owl_ontology)).fetchone()
+      
+      if onto_base_iri:
+        onto_base_iri = onto_base_iri[0]
+        use_hash = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (self.c, onto_base_iri + "#%")).fetchone()
+        if use_hash: onto_base_iri = onto_base_iri + "#"
+        else:
+          use_slash = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (self.c, onto_base_iri + "/%")).fetchone()
+          if use_slash: onto_base_iri = onto_base_iri + "/"
+          else:         onto_base_iri = onto_base_iri + "#"
+        self.execute("UPDATE ontologies SET last_update=?,iri=? WHERE c=?", (date, onto_base_iri, self.c,))
+      else:
+        self.execute("UPDATE ontologies SET last_update=? WHERE c=?", (date, self.c,))
+        
+      return onto_base_iri
+      
+    return on_prepare_triple, self.parent.new_blank_node, new_literal, abbreviate, on_finish
+  
+  
+  def parse(self, f, format = None, delete_existing_triples = True, force_rdflib = False):
+    format = format or _guess_format(f)
+    
+    if   format == "ntriples":
+      on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)
+
+      try:
+        splitter = re.compile("\s")
+        bn_src_2_sql = {}
+        
+        line = f.readline().decode("utf8")
+        current_line = 0
+        while line:
+          current_line += 1
+          if not line.startswith("#"):
+            s,p,o = splitter.split(line[:-3], 2)
+            
+            if   s.startswith("<"): s = s[1:-1]
+            elif s.startswith("_"):
+              bn = bn_src_2_sql.get(s)
+              if bn is None: bn = bn_src_2_sql[s] = new_blank()
+              s = bn
+              
+            p = p[1:-1]
+            
+            if   o.startswith("<"): o = o[1:-1]
+            elif o.startswith("_"):
+              bn = bn_src_2_sql.get(o)
+              if bn is None: bn = bn_src_2_sql[o] = new_blank()
+              o = bn
+            elif o.startswith('"'):
+              v, l = o.rsplit('"', 1)
+              v = v[1:].encode("raw-unicode-escape").decode("unicode-escape")
+              if   l.startswith("^"): o = new_literal(v, { "http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype" : l[3:-1] })
+              elif l.startswith("@"): o = new_literal(v, { "http://www.w3.org/XML/1998/namespacelang" : l[1:] })
+              else:                   o = new_literal(v, {})
+              
+            on_prepare_triple(s, p, o)
+            
+          line = f.readline().decode("utf8")
+          
+        onto_base_iri = on_finish()
+        
+      except Exception as e:
+        raise OwlReadyOntologyParsingError("NTriples parsing error in file %s, line %s." % (getattr(f, "name", "???"), current_line)) from e
+      
+    elif format == "rdfxml":
+      on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)
+      owlready2.rdfxml_2_ntriples.parse(f, None, on_prepare_triple, new_blank, new_literal)
+      onto_base_iri = on_finish()
+      
+    elif format == "owlxml":
+      on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples, "datatypeIRI")
+      owlready2.owlxml_2_ntriples.parse(f, None, on_prepare_triple, new_blank, new_literal)
+      onto_base_iri = on_finish()
+      
+    else:
+      raise ValueError("Unsupported format %s." % format)
+    
+    return onto_base_iri
+      
+
+
+
     
   def get_last_update_time(self):
     return self.execute("SELECT last_update FROM ontologies WHERE c=?", (self.c,)).fetchone()[0]
@@ -620,6 +744,246 @@ def _save(f, format, graph, c = None, force_rdflib = False):
         
       g.serialize(f, "xml")
       
+
+def _save(f, format, graph, c = None, force_rdflib = False):
+  if   format == "ntriples":
+    unabbreviate = lru_cache(None)(graph.unabbreviate)
+    
+    if c is None: graph.sql.execute("SELECT s,p,o FROM quads")
+    else:         graph.sql.execute("SELECT s,p,o FROM quads WHERE c=?", (c,))
+    for s,p,o in graph.sql.fetchall():
+      if   s.startswith("_"): s = "_:bn%s" % s[1:]
+      else:                   s = "<%s>" % unabbreviate(s)
+      p = "<%s>" % unabbreviate(p)
+      if   o.startswith("_"): o = "_:bn%s" % o[1:]
+      elif o.startswith('"'):
+        v, l = o.rsplit('"', 1)
+        v = v[1:].replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        if   l.startswith("@"): o = '"%s"%s' % (v, l)
+        elif l:                 o = '"%s"^^<%s>' % (v, unabbreviate(l)) # Unabbreviate datatype's iri
+        else:                   o = '"%s"' % v
+        
+      else: o = "<%s>" % unabbreviate(o)
+      f.write(("%s %s %s .\n" % (s, p, o)).encode("utf8"))
+      
+  elif format == "rdfxml":
+    @lru_cache(None)
+    def unabbreviate(storid):
+      return graph.unabbreviate(storid).replace("&", "&amp;")
+    
+    base_iri = graph.sql.execute("SELECT iri FROM ontologies WHERE c=?", (c,)).fetchone()[0]
+    
+    dup_blanks = set()
+    dup_blanks = { bn for (bn,) in graph.sql.execute("SELECT o FROM quads WHERE c=? AND substr(o, 1, 1)='_' GROUP BY o HAVING COUNT(o) > 1", (c,)) }
+    
+    if c is None: graph.sql.execute("SELECT s,p,o FROM quads ORDER BY s")
+    else:         graph.sql.execute("SELECT s,p,o FROM quads WHERE c=? ORDER BY s", (c,))
+    
+    xmlns = {
+      base_iri[:-1] : "",
+      base_iri : "#",
+      "http://www.w3.org/1999/02/22-rdf-syntax-ns#" : "rdf:",
+      "http://www.w3.org/2001/XMLSchema#" : "xsd:",
+      "http://www.w3.org/2000/01/rdf-schema#" : "rdfs:",
+      "http://www.w3.org/2002/07/owl#" : "owl:",
+    }
+    xmlns_abbbrevs = set(xmlns.values())
+    @lru_cache(None)
+    def abbrev(x):
+      splitted   = x.rsplit("#", 1)
+      splitted_s = x.rsplit("/", 1)
+      if   (len(splitted  ) == 2) and (len(splitted[1]) < len(splitted_s[1])):
+        left = splitted[0] + "#"
+      elif (len(splitted_s) == 2):
+        splitted = splitted_s
+        left = splitted[0] + "/"
+      else: return x
+      
+      #splitted = x.rsplit("#", 1)
+      #if len(splitted) == 2: left = splitted[0] + "#"
+      #else:
+      #  splitted = x.rsplit("/", 1)
+      #  if len(splitted) == 1: return x
+      #  left = splitted[0] + "/"
+      xmln = xmlns.get(left)
+      if not xmln:
+        xmln0 = splitted[0].rsplit("/", 1)[1][:4]
+        if not xmln0[0] in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ": xmln0 = "x_" + xmln0
+        xmln  = xmln0 + ":"
+        i = 2
+        while xmln in xmlns_abbbrevs:  xmln = "%s%s:" % (xmln0, i) ; i += 1
+          
+        #print("NEW XMLN", left, xmln0, xmln, "   ", x, xmlns_abbbrevs)
+        xmlns[left] = xmln = xmln
+        xmlns_abbbrevs.add(xmln)
+        
+      return xmln + splitted[1]
+    
+    lines  = []
+    liness = {}
+    for type in [
+        "owl:Ontology",
+        "owl:ObjectProperty",
+        "owl:DataProperty",
+        "owl:AnnotationProperty",
+        "owl:AllDisjointProperties",
+        "owl:Class",
+        "owl:AllDisjointClasses",
+        "owl:NamedIndividual",
+        "owl:AllDifferent",
+        "", ]:
+      liness[type] = l = []
+      lines.append(l)
+    
+    bn_2_inner_list = defaultdict(list)
+    inner_lists_used = set()
+    
+    tags_with_list = {
+      "owl:intersectionOf",
+      "owl:unionOf",
+      "owl:members",
+      "owl:distinctMembers",
+      }
+    bad_types = {
+      "rdf:Description",
+      "owl:FunctionalProperty",
+      "owl:InverseFunctionalProperty",
+      "owl:TransitiveProperty",
+      "owl:SymmetricProperty",
+      "owl:ReflexiveProperty",
+      "owl:IrreflexiveProperty",
+      "owl:NamedIndividual",
+      }
+    
+    def parse_list(bn):
+      inner_lists_used.add(id(bn_2_inner_list[bn]))
+      while bn and (bn != rdf_nil):
+        first = graph.get_triple_sp(bn, rdf_first)
+        if first != rdf_nil: yield first
+        bn = graph.get_triple_sp(bn, rdf_rest)
+        
+    def purge():
+      nonlocal s_lines, current_s, type
+      
+      if current_s.startswith("_") and (not current_s in dup_blanks):
+        l = bn_2_inner_list[current_s]
+        current_s = ""
+      else:
+        l = liness.get(type) or lines[-1]
+        
+      if s_lines:
+        if current_s.startswith("_"):
+          l.append("""<%s rdf:nodeID="%s">""" % (type, current_s))
+          
+        elif current_s:
+          current_s = unabbreviate(current_s)
+          if current_s.startswith(base_iri): current_s = current_s[len(base_iri)-1 :]
+          l.append("""<%s rdf:about="%s">""" % (type, current_s))
+          
+        else:
+          l.append("""<%s>""" % type)
+          
+        l.extend(s_lines)
+        s_lines = []
+        
+        l.append("""</%s>""" % type)
+        
+      else:
+        if current_s.startswith("_"):
+          l.append("""<%s rdf:nodeID="%s"/>""" % (type, current_s))
+          
+        elif current_s:
+          current_s = unabbreviate(current_s)
+          if current_s.startswith(base_iri): current_s = current_s[len(base_iri)-1 :]
+          l.append("""<%s rdf:about="%s"/>""" % (type, current_s))
+          
+        else:
+          l.append("""<%s/>""" % type)
+
+      if current_s: l.append("")
+      
+      
+    type      = "rdf:Description"
+    s_lines   = []
+    current_s = ""
+    for s,p,o in graph.sql.fetchall():
+      if s != current_s:
+        if current_s: purge()
+        current_s = s
+        type = "rdf:Description"
+        
+      if (p == rdf_type) and (type == "rdf:Description") and (not o.startswith("_")):
+        t = abbrev(unabbreviate(o))
+        if not t in bad_types:
+          type = t
+          if type.startswith("#"): type = type[1:]
+          continue
+        
+      p = abbrev(unabbreviate(p))
+      if p.startswith("#"): p = p[1:]
+      
+      if   o.startswith('"'):
+        v, l = o.rsplit('"', 1)
+        v = v[1:].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        if   l.startswith("@"): s_lines.append("""  <%s xml:lang="%s">%s</%s>""" % (p, l[1:], v, p))
+        elif l:                 s_lines.append("""  <%s rdf:datatype="%s">%s</%s>""" % (p, unabbreviate(l), v, p))
+        else:                   s_lines.append("""  <%s>%s</%s>""" % (p, v, p))
+        
+      elif o.startswith('_'):
+        if o in dup_blanks:
+          s_lines.append("""  <%s rdf:nodeID="%s"/>""" % (p, o))
+          
+        else:
+          if p in tags_with_list:
+            s_lines.append("""  <%s rdf:parseType="Collection">""" % p)
+            for i in parse_list(o):
+              if i.startswith("_"):
+                l = bn_2_inner_list[i]
+                inner_lists_used.add(id(l))
+                s_lines.append(l)
+              elif i.startswith('"'):
+                pass
+              else:
+                i = unabbreviate(i)
+                if i.startswith(base_iri): i = i[len(base_iri)-1 :]
+                s_lines.append("""    <rdf:Description rdf:about="%s"/>""" % i)
+          else:
+            l = bn_2_inner_list[o]
+            inner_lists_used.add(id(l))
+            s_lines.append("""  <%s>""" % p)
+            s_lines.append(l)
+          s_lines.append("""  </%s>""" % p)
+          
+      else:
+        o = unabbreviate(o)
+        if o.startswith(base_iri): o = o[len(base_iri)-1 :]
+        s_lines.append("""  <%s rdf:resource="%s"/>""" % (p, o))
+        
+    purge()
+    
+    lines.append([])
+    for l in bn_2_inner_list.values():
+      if not id(l) in inner_lists_used:
+        lines[-1].extend(l)
+        lines[-1].append("")
+        
+    def flatten(l, deep = ""):
+      for i in l:
+        if isinstance(i, list): yield from flatten(i, deep + "    ")
+        else:                   yield deep + i
+        
+    decls = []
+    for iri, abbrev in xmlns.items():
+      if   abbrev == "":  decls.append('xml:base="%s"' % iri)
+      elif abbrev == "#": decls.append('xmlns="%s"' % iri)
+      else:               decls.append('xmlns:%s="%s"' % (abbrev[:-1], iri))
+      
+    f.write(b"""<?xml version="1.0"?>\n""")
+    f.write(("""<rdf:RDF %s>\n\n""" % "\n         ".join(decls)).encode("utf8"))
+    f.write( """\n""".join(flatten(sum(lines, []))).encode("utf8"))
+    f.write(b"""\n\n</rdf:RDF>\n""")
+    
+    
 def _guess_format(f):
   if f.seekable():
     s = f.read(1000)
