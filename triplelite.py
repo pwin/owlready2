@@ -699,10 +699,10 @@ def _save(f, format, graph, c = None, force_rdflib = False):
     if c is None: graph.sql.execute("SELECT s,p,o FROM quads")
     else:         graph.sql.execute("SELECT s,p,o FROM quads WHERE c=?", (c,))
     for s,p,o in graph.sql.fetchall():
-      if   s.startswith("_"): s = "_:bn%s" % s[1:]
+      if   s.startswith("_"): s = "_:%s" % s[1:]
       else:                   s = "<%s>" % unabbreviate(s)
       p = "<%s>" % unabbreviate(p)
-      if   o.startswith("_"): o = "_:bn%s" % o[1:]
+      if   o.startswith("_"): o = "_:%s" % o[1:]
       elif o.startswith('"'):
         if not o.endswith('"'):
           v, l = o.rsplit('"', 1)
@@ -752,10 +752,10 @@ def _save(f, format, graph, c = None, force_rdflib = False):
     if c is None: graph.sql.execute("SELECT s,p,o FROM quads")
     else:         graph.sql.execute("SELECT s,p,o FROM quads WHERE c=?", (c,))
     for s,p,o in graph.sql.fetchall():
-      if   s.startswith("_"): s = "_:bn%s" % s[1:]
+      if   s.startswith("_"): s = "_:%s" % s[1:]
       else:                   s = "<%s>" % unabbreviate(s)
       p = "<%s>" % unabbreviate(p)
-      if   o.startswith("_"): o = "_:bn%s" % o[1:]
+      if   o.startswith("_"): o = "_:%s" % o[1:]
       elif o.startswith('"'):
         v, l = o.rsplit('"', 1)
         v = v[1:].replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')

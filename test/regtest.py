@@ -2321,6 +2321,40 @@ multiple lines with " and ’ and \ and & and < and > and é."""
 <http://www.test.org/test_breakline.owl#C> <http://www.w3.org/2000/01/rdf-schema#comment> "Comment long\\non\\nmultiple lines with \\" and ’ and \\\\ and & and < and > and é."@en .
 """
     
+  def test_format_16(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.test.org/test_annot_on_bn.owl").load()
+    
+    assert len(onto.graph) == 16
+    
+    s = comment[onto.C, owl_equivalentclass, onto.C.equivalent_to[0]].first()
+    assert s == "Test"
+    
+  def test_format_17(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.test.org/test_annot_on_bn2.owl").load()
+    
+    assert len(onto.graph) == 29
+    
+    c = comment[onto.C, rdfs_subclassof, onto.C.is_a[-1]].first()
+    d = comment[onto.D, rdfs_subclassof, onto.D.is_a[-1]].first()
+    assert c == "Annot on C"
+    assert d == "Annot on D"
+    
+  def test_format_18(self):
+    world = self.new_world()
+    onto1 = world.get_ontology("http://www.test.org/test_annotated_axiom1.owl").load()
+    onto2 = world.get_ontology("http://www.test.org/test_annotated_axiom2.owl").load()
+    
+    assert len(onto1.graph) == 20
+    assert len(onto2.graph) == 20
+    
+  def test_format_19(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.test.org/test_annotated_axiom3.owl").load()
+    
+    assert len(onto.graph) == 9
+    
     
   def test_search_1(self):
     world = self.new_world()

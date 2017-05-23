@@ -263,7 +263,7 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
       o2 = objs.pop()
       if o1.startswith("_"): o1, o2 = o2, o1 # Swap in order to have blank node at third position -- rapper seems to do that
       on_prepare_triple(o1, equivs[tag], o2)
-      if annots: purge_annotations((o2, equivs[tag], o1))
+      if annots: purge_annotations((o1, equivs[tag], o2))
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectPropertyDomain") or (tag == "http://www.w3.org/2002/07/owl#DataPropertyDomain") or (tag == "http://www.w3.org/2002/07/owl#AnnotationPropertyDomain"):
       val = objs.pop(); obj = objs.pop();

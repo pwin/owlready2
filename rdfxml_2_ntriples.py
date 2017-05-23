@@ -26,15 +26,23 @@ except:
   class OwlReadyOntologyParsingError(OwlReadyError): pass
 
 def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_literal = None):
-  parser                 = xml.parsers.expat.ParserCreate(None, "")
-  stack                  = [["", ""]] # List of [parse type, value] pairs
-  prefixes               = {}
-  prefixess              = [prefixes]
-  tag_is_predicate       = False
-  current_blank          = 0
-  current_content        = ""
-  current_attrs          = None
-  nb_triple              = 0
+  parser                   = xml.parsers.expat.ParserCreate(None, "")
+  stack                    = [["", ""]] # List of [parse type, value] pairs
+  prefixes                 = {}
+  prefixess                = [prefixes]
+  tag_is_predicate         = False
+  current_blank            = 0
+  current_fake_blank       = 0
+  current_content          = ""
+  current_attrs            = None
+  nb_triple                = 0
+  bns                      = defaultdict(set)
+  content_2_bns            = defaultdict(list)
+  dont_create_unnamed_bn   = False
+  axiom_annotation_sources = {}
+  axiom_annotation_props   = {}
+  axiom_annotation_targets = {}
+  triples_with_unnamed_bn  = defaultdict(list)
   
   if not on_triple:
     def on_triple(s,p,o):
@@ -54,8 +62,14 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
       current_blank += 1
       return "_:%s" % current_blank
     
+  def new_fake_blank():
+    nonlocal current_fake_blank
+    current_fake_blank += 1
+    return "_ %s" % current_fake_blank
+  
   node_2_blanks = defaultdict(new_blank)
-    
+  known_nodes   = set()
+  
   if not new_literal:
     def new_literal(value, attrs):
       value = value.replace('"', '\\"').replace("\n", "\\n")
@@ -83,6 +97,26 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
       
     return bn0
   
+  def add_to_bn(bn, x):
+    if x[0] == "COL":
+      x = tuple(frozenset(bns[v])
+                if v.startswith("_") and (not v in known_nodes)
+                else v
+                for v in x)
+    else:
+      v = x[-1]
+      if v.startswith("_") and (not v in known_nodes): x = x[:-1] + (frozenset(bns[v]),)
+      
+    #print(" ADD", bn, x)
+    
+    if bn.startswith("_ "):
+      bns[bn].add(x)
+    else:
+      content = bns[bn]
+      if content: content_2_bns[frozenset(content)].remove(bn)
+      content.add(x)
+      content_2_bns[frozenset(content)].append(bn)
+      
   def startNamespace(prefix, uri):
     nonlocal prefixes
     prefixes = prefixes.copy()
@@ -101,7 +135,8 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
     prefixes = prefixess[-1]
     
   def startElement(tag, attrs):
-    nonlocal tag_is_predicate, current_content, current_attrs
+    nonlocal tag_is_predicate, current_content, current_attrs, dont_create_unnamed_bn
+    
     tag_is_predicate = not tag_is_predicate
     if tag_is_predicate:
       
@@ -124,11 +159,15 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
           
           if iri:
             iri = node_2_blanks[iri]
+            known_nodes.add(iri)
             stack.append(["Resource", iri])
           else:
             stack.append(["Literal", ""])
             current_content = ""
             current_attrs   = attrs
+            
+          if (tag == "http://www.w3.org/2002/07/owl#annotatedSource") or (tag == "http://www.w3.org/2002/07/owl#annotatedTarget"):
+            dont_create_unnamed_bn = True
             
     else:
       iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#about")
@@ -138,12 +177,19 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
           else:                     iri = prefixes["<dir>" ] + iri
       else:
         iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#nodeID")
-        if iri: iri = node_2_blanks[iri]
-        else:   iri = new_blank()
-        
+        if iri:
+          iri = node_2_blanks[iri]
+          known_nodes.add(iri)
+        else:
+          if dont_create_unnamed_bn: iri = new_fake_blank()
+          else:                      iri = new_blank()
+          
       if tag != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Description":
-        on_prepare_triple(iri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
-        
+        if not iri.startswith("_ "):
+          on_prepare_triple(iri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
+        if iri.startswith("_"):
+          add_to_bn(iri, ("http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag))
+          
       if stack[-1][0] == "Collection":
         stack[-1][1].append(iri)
         
@@ -151,24 +197,70 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
         if stack[-1][0] == "Literal": stack[-1][0] = "Resource"
         stack[-1][1] = iri
         
-      
+        
   def endElement(tag):
-    nonlocal tag_is_predicate
+    nonlocal tag_is_predicate, dont_create_unnamed_bn
+    
     if tag_is_predicate:
       parse_type, value = stack.pop()
       
       if stack[-1][0] == "Collection": iri = stack[-1][1][-1]
       else:                            iri = stack[-1][1]
       
+      if   tag == "http://www.w3.org/2002/07/owl#annotatedSource":
+        dont_create_unnamed_bn = False
+        axiom_annotation_sources[iri] = value
+        if isinstance(value, str) and value.startswith("_ "):
+          triples_with_unnamed_bn[iri].insert(0, (tag, value, parser.CurrentLineNumber, parser.CurrentColumnNumber))
+          
+          tag_is_predicate = not tag_is_predicate
+          return
+        
+      elif tag == "http://www.w3.org/2002/07/owl#annotatedProperty":
+        axiom_annotation_props  [iri] = value
+      
+      elif tag == "http://www.w3.org/2002/07/owl#annotatedTarget":
+        dont_create_unnamed_bn = False
+        axiom_annotation_targets[iri] = value
+        if isinstance(value, str) and value.startswith("_ "):
+          triples_with_unnamed_bn[iri].append((tag, value, parser.CurrentLineNumber, parser.CurrentColumnNumber))
+          
+          tag_is_predicate = not tag_is_predicate
+          return
+        
+      
       if   parse_type == "Resource":
-        on_prepare_triple(iri, tag, value)
-        
+        if not iri.startswith("_ "):
+          on_prepare_triple(iri, tag, value)
+          
+        if iri.startswith("_"):
+          #if value.startswith("_") and (not value in known_nodes):
+          #  add_to_bn(iri, (tag, frozenset(bns[value])))
+          #else:
+            add_to_bn(iri, (tag, value))
+            
+        if value.startswith("_"):
+          #if iri.startswith("_"):
+          #  add_to_bn(value, ("INV", tag, frozenset(bns[iri])))
+          #else:
+            add_to_bn(value, ("INV", tag, iri))
+          
+          
       elif parse_type == "Literal":
-        on_prepare_triple(iri, tag, new_literal(current_content, current_attrs))
-        
+        value = new_literal(current_content, current_attrs)
+        if not iri.startswith("_ "):
+          on_prepare_triple(iri, tag, value)
+        if iri.startswith("_"):
+          add_to_bn(iri, (tag, value))
+          
       elif parse_type == "Collection":
-        on_prepare_triple(iri, tag, new_list(value))
-        
+        if not iri.startswith("_ "):
+          on_prepare_triple(iri, tag, new_list(value))
+        if iri.startswith("_"):
+          #add_to_bn(iri, ("COL", tag,) +  tuple((x.startswith("_") and frozenset(bns[x])) or x for x in value))
+          add_to_bn(iri, ["COL", tag] +  value)
+          
+          
     tag_is_predicate = not tag_is_predicate
     
     
@@ -194,12 +286,70 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
   except Exception as e:
     raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), parser.CurrentLineNumber, parser.CurrentColumnNumber)) from e
   
+  
+  #print(file = sys.stderr)
+  #print("    bns", file = sys.stderr)
+  #for k, v in bns.items(): print(k, v, file = sys.stderr)
+  #print("\n    content_2_bns", file = sys.stderr)
+  #for k, v in content_2_bns.items():
+  #  if v: print(k, v, file = sys.stderr)
+  #print(file = sys.stderr)
+  
+  
+  def rebuild_bn(content):
+    bn = new_blank()
+    content_2_bns[frozenset(content)].append(bn)
+    
+    for i in content:
+      if   len(i) == 2:
+        p, o = i
+        if not isinstance(o, str): o = rebuild_bn(o)
+        on_prepare_triple(bn, p, o)
+      elif i[0] == "INV":
+        drop, p, o = i
+        if not isinstance(o, str): o = rebuild_bn(o)
+        on_prepare_triple(o, p, bn)
+      elif i[0] == "COL":
+        drop, p, *l = i
+        l = [(isinstance(x, str) and x) or rebuild_bn(x) for x in l]
+        o = new_list(l)
+        on_prepare_triple(bn, p, o)
+        
+    return bn
+  
+  for axiom_iri, triples in triples_with_unnamed_bn.items():
+    for p, o, line, column in triples:
+      try:
+        content = set(bns[o])
+        if p == "http://www.w3.org/2002/07/owl#annotatedSource":
+          target = axiom_annotation_targets[axiom_iri]
+          if target.startswith("_"): target = frozenset(bns[target])
+          candidates_bn = content_2_bns[frozenset(content | { (axiom_annotation_props[axiom_iri], target) })]
+          
+        else:
+          source = axiom_annotation_sources[axiom_iri]
+          if source.startswith("_"):
+            source = frozenset(bns[source] | { (axiom_annotation_props[axiom_iri], target) })
+          candidates_bn = (content_2_bns[frozenset(content | { ("INV", axiom_annotation_props[axiom_iri], source) })] or
+                           content_2_bns[frozenset(content)])
+          
+        if candidates_bn: o = candidates_bn[-1]
+        else:
+          #print()
+          #print("rebuild", o, content)
+          o = rebuild_bn(content)
+          #print()
+        on_prepare_triple(axiom_iri,p,o)
+      except Exception as e:
+        raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), line, column)) from e
+      
+    
   return nb_triple
 
 
 if __name__ == "__main__":
   filename = sys.argv[-1]
-
+  
   import time
   t = time.time()
   nb_triple = parse(filename)
