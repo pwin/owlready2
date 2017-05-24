@@ -42,6 +42,8 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
   axiom_annotation_props   = {}
   axiom_annotation_targets = {}
   triples_with_unnamed_bn  = defaultdict(list)
+  xml_base                 = ""
+  xml_dir                  = ""
   
   if not on_triple:
     def on_triple(s,p,o):
@@ -112,12 +114,8 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
     prefixes = prefixes.copy()
     prefixess.append(prefixes)
     
-    if prefix:
-      prefixes[prefix  ] = uri
-    else:
-      prefixes[""      ] = uri
-      prefixes["<base>"] = uri[:-1]
-      prefixes["<dir>" ] = uri.rsplit("/", 1)[0] + "/"
+    if prefix: prefixes[prefix  ] = uri
+    else:      prefixes[""      ] = uri
       
   def endNamespace(prefix):
     nonlocal prefixes
@@ -125,7 +123,7 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
     prefixes = prefixess[-1]
     
   def startElement(tag, attrs):
-    nonlocal tag_is_predicate, current_content, current_attrs, dont_create_unnamed_bn
+    nonlocal tag_is_predicate, current_content, current_attrs, dont_create_unnamed_bn, xml_base, xml_dir
     
     tag_is_predicate = not tag_is_predicate
     if tag_is_predicate:
@@ -136,12 +134,19 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
       elif tag == "http://www.w3.org/1999/02/22-rdf-syntax-ns#RDF":
         stack.append(["RDF", ""])
         
+        namespace_base = attrs.get("http://www.w3.org/XML/1998/namespacebase")
+        if namespace_base:
+          xml_base = namespace_base
+          xml_dir  = namespace_base.rsplit("/", 1)[0] + "/"
+          
       else:
         iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#resource")
         if iri:
           if not ":" in iri:
-            if   iri.startswith("#"): iri = prefixes["<base>"] + iri
-            else:                     iri = prefixes["<dir>" ] + iri
+            if not iri:                 iri = xml_base
+            elif   iri.startswith("#"): iri = xml_base + iri
+            elif   iri.startswith("/"): iri = xml_dir  + iri[1:]
+            else:                       iri = xml_dir  + iri
           stack.append(["Resource", iri])
           
         else:
@@ -160,12 +165,8 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
             dont_create_unnamed_bn = True
             
     else:
-      iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#about")
-      if iri:
-        if not ":" in iri:
-          if   iri.startswith("#"): iri = prefixes["<base>"] + iri
-          else:                     iri = prefixes["<dir>" ] + iri
-      else:
+      iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#about", None)
+      if iri is None:
         iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#nodeID")
         if iri:
           iri = node_2_blanks[iri]
@@ -173,6 +174,12 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
         else:
           if dont_create_unnamed_bn: iri = new_fake_blank()
           else:                      iri = new_blank()
+      else:
+        if not ":" in iri:
+          if not iri:                 iri = xml_base
+          elif   iri.startswith("#"): iri = xml_base + iri
+          elif   iri.startswith("/"): iri = xml_dir  + iri[1:]
+          else:                       iri = xml_dir  + iri
           
       if tag != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Description":
         if not iri.startswith("_ "):

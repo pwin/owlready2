@@ -114,6 +114,7 @@ version 2 - 0.1
 version 2 - 0.x
 ***************
 
+* implement RDFXML parser and generator in Python (no longer use rapper or rdflib)
 * Property chain support
 * Add ntriples_diff.py utility
 * Bugfixes:

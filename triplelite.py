@@ -355,7 +355,7 @@ class SubGraph(BaseGraph):
     return on_prepare_triple, self.parent.new_blank_node, new_literal, abbreviate, on_finish
   
   
-  def parse(self, f, format = None, delete_existing_triples = True, force_rdflib = False):
+  def parse(self, f, format = None, delete_existing_triples = True):
     format = format or _guess_format(f)
     
     if   format == "ntriples":
@@ -524,7 +524,7 @@ class SubGraph(BaseGraph):
     print(s.getvalue().decode("utf8"))
   
   
-def _save(f, format, graph, c = None, force_rdflib = False):
+def _save(f, format, graph, c = None):
   if   format == "ntriples":
     unabbreviate = lru_cache(None)(graph.unabbreviate)
     

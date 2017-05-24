@@ -65,6 +65,7 @@ symmetric_predicates = {
   "<http://www.w3.org/2002/07/owl#equivalentClass>",
   "<http://www.w3.org/2002/07/owl#equivalentProperty>",
   "<http://www.w3.org/2002/07/owl#sameAs>",
+  "<http://www.w3.org/2002/07/owl#disjointWith>",
   }
 
 useless_triples = {

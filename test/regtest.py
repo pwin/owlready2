@@ -2147,7 +2147,7 @@ class Test(BaseTest, unittest.TestCase):
     
   def test_format_4(self):
     world = self.new_world()
-    n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load(force_rdflib = True)
+    n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
     assert set(world.data_properties()) == { n.price }
     assert set(world.classes()) == { n.Meat, n.Tomato, n.Eggplant, n.Olive, n.Vegetable, n.NonPizza, n.Pizza, n.Cheese, n.VegetarianPizza, n.Topping }
@@ -2186,25 +2186,6 @@ class Test(BaseTest, unittest.TestCase):
     
     self.assert_ntriples_equivalent(triples1, triples2)
     
-  def test_format_7(self):
-    world = self.new_world()
-    n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
-    
-    import subprocess
-    rapper = subprocess.Popen(["rapper", "-q", "-g", os.path.join(HERE, "test.owl")], stdout = subprocess.PIPE)
-    triples1 = rapper.stdout.read().decode("unicode-escape")
-    rapper.stdout.close()
-    rapper.wait()
-    
-    rapper = subprocess.Popen(["rapper", "-q", "-g", "-", "http://test/xxx.owl"], stdin = subprocess.PIPE, stdout = subprocess.PIPE)
-    n.save(rapper.stdin, "rdfxml", force_rdflib = True)
-    rapper.stdin.close()
-    triples2 = rapper.stdout.read().decode("unicode-escape")
-    rapper.stdout.close()
-    rapper.wait()
-    
-    self.assert_ntriples_equivalent(triples1, triples2)
-        
   def test_format_8(self):
     import re, owlready2.owlxml_2_ntriples
     
@@ -2255,19 +2236,6 @@ class Test(BaseTest, unittest.TestCase):
     ok    = 0
     try:
       onto.load()
-    except OwlReadyOntologyParsingError:
-      ok = 1
-      
-    assert ok == 1
-    assert not onto.loaded
-    assert len(world.graph) == 1
-    
-  def test_format_12(self):
-    world = self.new_world()
-    onto  = world.get_ontology("http://test.org/test_rdfxml_bug.owl")
-    ok    = 0
-    try:
-      onto.load(force_rdflib = True)
     except OwlReadyOntologyParsingError:
       ok = 1
       
@@ -2355,6 +2323,24 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     onto  = world.get_ontology("http://www.test.org/test_annotated_axiom3.owl").load()
     
     assert len(onto.graph) == 9
+    
+  def test_format_20(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.test.org/test_ns.owl").load()
+    
+    import subprocess
+    rapper = subprocess.Popen(["rapper", "-q", "-g", os.path.join(HERE, "test_ns.owl")], stdout = subprocess.PIPE)
+    triples1 = rapper.stdout.read().decode("unicode-escape")
+    rapper.stdout.close()
+    rapper.wait()
+    
+    triples2 = ""
+    def on_triple(s,p,o):
+      nonlocal triples2
+      triples2 += "%s %s %s .\n" % (s,p,o)
+    owlready2.rdfxml_2_ntriples.parse(os.path.join(HERE, "test_ns.owl"), on_triple)
+    
+    self.assert_ntriples_equivalent(triples1, triples2)
     
     
   def test_search_1(self):

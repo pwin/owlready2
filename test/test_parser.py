@@ -54,6 +54,7 @@ def make_variants(orig_filename, force_variant = None):
   if (not force_variant) or (force_variant == "owlapi-rdfxml"):
     rm("/tmp/t.rdf")
     do("java -cp ./antibio_arcenciel/owlready_cas_dut_1/owlapi-3.4.3.jar:./owlready2/test Save %s rdf /tmp/t.rdf 2> /dev/null" % orig_filename)
+    rapper("/tmp/t.rdf", "/tmp/control.nt")
     yield "owlapi-rdfxml"
     
   if (not force_variant) or (force_variant == "owlapi-owlxml"):
@@ -127,19 +128,17 @@ elif len(sys.argv) > 1:
 else:
   rdf_files = [
     "/home/jiba/src/owlready2/test/test.owl",
+    "/home/jiba/src/owlready2/test/test_ns.owl",
     "/home/jiba/src/owlready2/test/test_breakline.owl",
+    "/home/jiba/telechargements/base_med/aeo.owl",
+    "/home/jiba/telechargements/base_med/agro.owl",
+    "/home/jiba/telechargements/base_med/bfo.owl",
+    "/home/jiba/telechargements/base_med/bfo-1.1.owl",
     "/home/jiba/telechargements/base_med/obi.owl",
     "/home/jiba/telechargements/base_med/uberon.owl",
+    "/home/jiba/telechargements/base_med/doid.owl",
     "/home/jiba/telechargements/base_med/vto.owl",
     "/home/jiba/telechargements/base_med/go.owl",
-    "/home/jiba/telechargements/base_med/dron.owl",
-    "/home/jiba/telechargements/base_med/dron-chebi.owl",
-    "/home/jiba/telechargements/base_med/dron-hand.owl",
-    "/home/jiba/telechargements/base_med/dron-ingredient.owl",
-    "/home/jiba/telechargements/base_med/dron-ndc.owl",
-    "/home/jiba/telechargements/base_med/dron-pro.owl",
-    "/home/jiba/telechargements/base_med/dron-rxnorm.owl",
-    "/home/jiba/telechargements/base_med/dron-upper.owl",
   ]
   force_variant = None
   

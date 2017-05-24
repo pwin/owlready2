@@ -176,7 +176,7 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
     if "IRI" in attrs:
       iri = attrs["IRI"]
       if not iri: return ontology_iri
-      if iri.startswith("#"): iri = "%s#%s" % (ontology_iri, iri[1:])
+      if   iri.startswith("#") or iri.startswith("/"): iri = ontology_iri + iri
       return iri
     return unabbreviate_IRI(attrs["abbreviatedIRI"])
   
@@ -374,7 +374,7 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
       iri = current_content
       if not iri: iri = ontology_iri
       else:
-        if iri.startswith("#"): iri = "%s#%s" % (ontology_iri, iri[1:])
+        if iri.startswith("#") or iri.startswith("/"): iri = ontology_iri + iri
       objs.append(iri)
       
     elif (tag == "http://www.w3.org/2002/07/owl#AbbreviatedIRI"):
