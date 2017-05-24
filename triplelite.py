@@ -552,7 +552,6 @@ def _save(f, format, graph, c = None, force_rdflib = False):
     
     base_iri = graph.sql.execute("SELECT iri FROM ontologies WHERE c=?", (c,)).fetchone()[0]
     
-    dup_blanks = set()
     #dup_blanks = { bn for (bn,) in graph.sql.execute("SELECT o FROM quads WHERE c=? AND substr(o, 1, 1)='_' GROUP BY o HAVING COUNT(o) > 1", (c,)) }
     
     if c is None: graph.sql.execute("SELECT s,p,o FROM quads ORDER BY s")
@@ -644,7 +643,8 @@ def _save(f, format, graph, c = None, force_rdflib = False):
     def purge():
       nonlocal s_lines, current_s, type
       
-      if current_s.startswith("_") and (not current_s in dup_blanks):
+      #if current_s.startswith("_") and (not current_s in dup_blanks):
+      if current_s.startswith("_"):
         l = bn_2_inner_list[current_s]
         current_s = ""
       else:
@@ -709,10 +709,10 @@ def _save(f, format, graph, c = None, force_rdflib = False):
         else:                   s_lines.append("""  <%s>%s</%s>""" % (p, v, p))
         
       elif o.startswith('_'):
-        if o in dup_blanks:
-          s_lines.append("""  <%s rdf:nodeID="%s"/>""" % (p, o))
-          
-        else:
+        #if o in dup_blanks:
+        #  s_lines.append("""  <%s rdf:nodeID="%s"/>""" % (p, o))
+        #  
+        #else:
           if p in tags_with_list:
             s_lines.append("""  <%s rdf:parseType="Collection">""" % p)
             for i in parse_list(o):
