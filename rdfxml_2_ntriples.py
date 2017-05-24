@@ -265,7 +265,6 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
   parser.EndElementHandler         = endElement
   parser.CharacterDataHandler      = characters
   
-  if isinstance(f, str): f = open(f, "rb")
   try:
     if isinstance(f, str):
       f = open(f, "rb")
