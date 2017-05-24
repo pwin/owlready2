@@ -1,0 +1,273 @@
+<?xml version="1.0"?>
+
+
+<!DOCTYPE rdf:RDF [
+    <!ENTITY owl "http://www.w3.org/2002/07/owl#" >
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
+    <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#" >
+    <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+]>
+
+
+<rdf:RDF xmlns="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#"
+     xml:base="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <owl:Ontology rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Annotation properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#annot -->
+
+    <owl:AnnotationProperty rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#annot"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Object Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#has_main_topping -->
+
+    <owl:ObjectProperty rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#has_main_topping">
+        <rdf:type rdf:resource="&owl;FunctionalProperty"/>
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Pizza"/>
+        <rdfs:range rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Topping"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#has_topping -->
+
+    <owl:ObjectProperty rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#has_topping">
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Pizza"/>
+        <rdfs:range rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Topping"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#main_topping_of -->
+
+    <owl:ObjectProperty rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#main_topping_of">
+        <rdfs:range rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Pizza"/>
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Topping"/>
+        <owl:inverseOf rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#has_main_topping"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#topping_of -->
+
+    <owl:ObjectProperty rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#topping_of">
+        <rdfs:range rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Pizza"/>
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Topping"/>
+        <owl:inverseOf rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#has_topping"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Data properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#price -->
+
+    <owl:DatatypeProperty rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#price">
+        <rdf:type rdf:resource="&owl;FunctionalProperty"/>
+        <rdfs:domain rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Pizza"/>
+        <rdfs:range rdf:resource="&xsd;float"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Cheese -->
+
+    <owl:Class rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Cheese">
+        <rdfs:subClassOf rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Topping"/>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Eggplant -->
+
+    <owl:Class rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Eggplant">
+        <rdfs:subClassOf rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Vegetable"/>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Meat -->
+
+    <owl:Class rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Meat">
+        <rdfs:subClassOf rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Topping"/>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#NonPizza -->
+
+    <owl:Class rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#NonPizza">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:complementOf rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Pizza"/>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Olive -->
+
+    <owl:Class rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Olive">
+        <rdfs:subClassOf rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Vegetable"/>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Pizza -->
+
+    <owl:Class rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Pizza">
+        <rdfs:comment xml:lang="en">Comment on Pizza</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Tomato -->
+
+    <owl:Class rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Tomato">
+        <rdfs:subClassOf rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Vegetable"/>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Topping -->
+
+    <owl:Class rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Topping"/>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Vegetable -->
+
+    <owl:Class rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Vegetable">
+        <rdfs:subClassOf rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Topping"/>
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Eggplant"/>
+                    <rdf:Description rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Olive"/>
+                    <rdf:Description rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Tomato"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#VegetarianPizza -->
+
+    <owl:Class rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#VegetarianPizza">
+        <rdfs:subClassOf rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Pizza"/>
+        <rdfs:subClassOf
+            <owl:Class>
+                <owl:complementOf>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#has_topping"/>
+                        <owl:someValuesFrom rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Meat"/>
+                    </owl:Restriction>
+                </owl:complementOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Individuals
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#ma_pizza -->
+
+    <owl:NamedIndividual rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#ma_pizza">
+        <rdf:type rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Pizza"/>
+        <price rdf:datatype="&xsd;float">9.9</price>
+        <annot rdf:datatype="&xsd;string">Test annot</annot>
+        <rdfs:comment xml:lang="en">Comment</rdfs:comment>
+        <rdfs:comment xml:lang="fr">Commentaire</rdfs:comment>
+        <has_topping rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#ma_tomate"/>
+        <has_main_topping rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#ma_tomate"/>
+        <has_topping rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#mon_frometon"/>
+    </owl:NamedIndividual>
+    <owl:Axiom>
+        <rdfs:comment xml:lang="en">Comment on a triple</rdfs:comment>
+        <rdfs:comment xml:lang="fr">Commentaire sur un triplet</rdfs:comment>
+        <owl:annotatedTarget rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Pizza"/>
+        <owl:annotatedSource rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#ma_pizza"/>
+        <owl:annotatedProperty rdf:resource="&rdf;type"/>
+    </owl:Axiom>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#ma_tomate -->
+
+    <owl:NamedIndividual rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#ma_tomate">
+        <rdf:type rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Tomato"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#mon_frometon -->
+
+    <owl:NamedIndividual rdf:about="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#mon_frometon">
+        <rdf:type rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug#Cheese"/>
+    </owl:NamedIndividual>
+</rdf:RDF>
+
+
+
+<!-- Generated by the OWL API (version 3.4.2) http://owlapi.sourceforge.net -->
+
