@@ -2342,10 +2342,11 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert d == "Annot on D"
     
   def test_format_18(self):
-    world = self.new_world()
-    onto1 = world.get_ontology("http://www.test.org/test_annotated_axiom1.owl").load()
-    onto2 = world.get_ontology("http://www.test.org/test_annotated_axiom2.owl").load()
-    
+    world1 = self.new_world()
+    onto1  = world1.get_ontology("http://www.test.org/test_annotated_axiom1.owl").load()
+    world2 = self.new_world()
+    onto2  = world2.get_ontology("http://www.test.org/test_annotated_axiom2.owl").load()
+
     assert len(onto1.graph) == 20
     assert len(onto2.graph) == 20
     
