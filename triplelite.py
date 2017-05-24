@@ -774,7 +774,7 @@ def _save(f, format, graph, c = None, force_rdflib = False):
     base_iri = graph.sql.execute("SELECT iri FROM ontologies WHERE c=?", (c,)).fetchone()[0]
     
     dup_blanks = set()
-    dup_blanks = { bn for (bn,) in graph.sql.execute("SELECT o FROM quads WHERE c=? AND substr(o, 1, 1)='_' GROUP BY o HAVING COUNT(o) > 1", (c,)) }
+    #dup_blanks = { bn for (bn,) in graph.sql.execute("SELECT o FROM quads WHERE c=? AND substr(o, 1, 1)='_' GROUP BY o HAVING COUNT(o) > 1", (c,)) }
     
     if c is None: graph.sql.execute("SELECT s,p,o FROM quads ORDER BY s")
     else:         graph.sql.execute("SELECT s,p,o FROM quads WHERE c=? ORDER BY s", (c,))

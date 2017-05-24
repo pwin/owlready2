@@ -37,7 +37,7 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
   current_attrs            = None
   nb_triple                = 0
   bns                      = defaultdict(set)
-  content_2_bns            = defaultdict(list)
+  #content_2_bns            = defaultdict(list)
   dont_create_unnamed_bn   = False
   axiom_annotation_sources = {}
   axiom_annotation_props   = {}
@@ -97,26 +97,17 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
       
     return bn0
   
-  def add_to_bn(bn, x):
-    if x[0] == "COL":
-      x = tuple(frozenset(bns[v])
-                if v.startswith("_") and (not v in known_nodes)
-                else v
-                for v in x)
+  def add_to_bn(bn, type, rel, value):
+    if type == "COL":
+      value = tuple(frozenset(bns[v])
+                    if v.startswith("_") and (not v in known_nodes)
+                    else v
+                    for v in value)
     else:
-      v = x[-1]
-      if v.startswith("_") and (not v in known_nodes): x = x[:-1] + (frozenset(bns[v]),)
+      if value.startswith("_") and (not value in known_nodes): value = frozenset(bns[value])
       
-    #print(" ADD", bn, x)
+    bns[bn].add((type, rel, value))
     
-    if bn.startswith("_ "):
-      bns[bn].add(x)
-    else:
-      content = bns[bn]
-      if content: content_2_bns[frozenset(content)].remove(bn)
-      content.add(x)
-      content_2_bns[frozenset(content)].append(bn)
-      
   def startNamespace(prefix, uri):
     nonlocal prefixes
     prefixes = prefixes.copy()
@@ -185,10 +176,14 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
           else:                      iri = new_blank()
           
       if tag != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Description":
-        if not iri.startswith("_ "):
-          on_prepare_triple(iri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
+        #if not iri.startswith("_ "):
+        #  on_prepare_triple(iri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
         if iri.startswith("_"):
-          add_to_bn(iri, ("http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag))
+          add_to_bn(iri, "", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
+          if not iri.startswith("_ "):
+            on_prepare_triple(iri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
+        else:
+          on_prepare_triple(iri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
           
       if stack[-1][0] == "Collection":
         stack[-1][1].append(iri)
@@ -217,7 +212,7 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
           return
         
       elif tag == "http://www.w3.org/2002/07/owl#annotatedProperty":
-        axiom_annotation_props  [iri] = value
+        axiom_annotation_props[iri] = value
       
       elif tag == "http://www.w3.org/2002/07/owl#annotatedTarget":
         dont_create_unnamed_bn = False
@@ -234,16 +229,10 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
           on_prepare_triple(iri, tag, value)
           
         if iri.startswith("_"):
-          #if value.startswith("_") and (not value in known_nodes):
-          #  add_to_bn(iri, (tag, frozenset(bns[value])))
-          #else:
-            add_to_bn(iri, (tag, value))
-            
+          add_to_bn(iri, "", tag, value)
+          
         if value.startswith("_"):
-          #if iri.startswith("_"):
-          #  add_to_bn(value, ("INV", tag, frozenset(bns[iri])))
-          #else:
-            add_to_bn(value, ("INV", tag, iri))
+          add_to_bn(value, "INV", tag, iri)
           
           
       elif parse_type == "Literal":
@@ -251,14 +240,14 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
         if not iri.startswith("_ "):
           on_prepare_triple(iri, tag, value)
         if iri.startswith("_"):
-          add_to_bn(iri, (tag, value))
+          add_to_bn(iri, "", tag, value)
+          
           
       elif parse_type == "Collection":
         if not iri.startswith("_ "):
           on_prepare_triple(iri, tag, new_list(value))
         if iri.startswith("_"):
-          #add_to_bn(iri, ("COL", tag,) +  tuple((x.startswith("_") and frozenset(bns[x])) or x for x in value))
-          add_to_bn(iri, ["COL", tag] +  value)
+          add_to_bn(iri, "COL", tag, value)
           
           
     tag_is_predicate = not tag_is_predicate
@@ -295,54 +284,58 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
   #  if v: print(k, v, file = sys.stderr)
   #print(file = sys.stderr)
   
-  
-  def rebuild_bn(content):
-    bn = new_blank()
-    content_2_bns[frozenset(content)].append(bn)
-    
-    for i in content:
-      if   len(i) == 2:
-        p, o = i
-        if not isinstance(o, str): o = rebuild_bn(o)
-        on_prepare_triple(bn, p, o)
-      elif i[0] == "INV":
-        drop, p, o = i
-        if not isinstance(o, str): o = rebuild_bn(o)
-        on_prepare_triple(o, p, bn)
-      elif i[0] == "COL":
-        drop, p, *l = i
-        l = [(isinstance(x, str) and x) or rebuild_bn(x) for x in l]
-        o = new_list(l)
-        on_prepare_triple(bn, p, o)
-        
-    return bn
-  
-  for axiom_iri, triples in triples_with_unnamed_bn.items():
-    for p, o, line, column in triples:
-      try:
-        content = set(bns[o])
-        if p == "http://www.w3.org/2002/07/owl#annotatedSource":
-          target = axiom_annotation_targets[axiom_iri]
-          if target.startswith("_"): target = frozenset(bns[target])
-          candidates_bn = content_2_bns[frozenset(content | { (axiom_annotation_props[axiom_iri], target) })]
-          
-        else:
-          source = axiom_annotation_sources[axiom_iri]
-          if source.startswith("_"):
-            source = frozenset(bns[source] | { (axiom_annotation_props[axiom_iri], target) })
-          candidates_bn = (content_2_bns[frozenset(content | { ("INV", axiom_annotation_props[axiom_iri], source) })] or
-                           content_2_bns[frozenset(content)])
-          
-        if candidates_bn: o = candidates_bn[-1]
-        else:
-          #print()
-          #print("rebuild", o, content)
-          o = rebuild_bn(content)
-          #print()
-        on_prepare_triple(axiom_iri,p,o)
-      except Exception as e:
-        raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), line, column)) from e
+  if triples_with_unnamed_bn:
+    content_2_bns = defaultdict(list)
+    for bn, content in bns.items():
+      content_2_bns[frozenset(content)].append(bn)
       
+    def rebuild_bn(content):
+      bn = new_blank()
+      content_2_bns[frozenset(content)].append(bn)
+      
+      for i in content:
+        if   i[0] == "":
+          p, o = i
+          if not isinstance(o, str): o = rebuild_bn(o)
+          on_prepare_triple(bn, p, o)
+        elif i[0] == "INV":
+          drop, p, o = i
+          if not isinstance(o, str): o = rebuild_bn(o)
+          on_prepare_triple(o, p, bn)
+        elif i[0] == "COL":
+          drop, p, *l = i
+          l = [(isinstance(x, str) and x) or rebuild_bn(x) for x in l]
+          o = new_list(l)
+          on_prepare_triple(bn, p, o)
+          
+      return bn
+    
+    for axiom_iri, triples in triples_with_unnamed_bn.items():
+      for p, o, line, column in triples:
+        try:
+          content = set(bns[o])
+          if p == "http://www.w3.org/2002/07/owl#annotatedSource":
+            target = axiom_annotation_targets[axiom_iri]
+            if target.startswith("_"): target = frozenset(bns[target])
+            candidates_bn = content_2_bns[frozenset(content | { (axiom_annotation_props[axiom_iri], target) })]
+            
+          else:
+            source = axiom_annotation_sources[axiom_iri]
+            if source.startswith("_"):
+              source = frozenset(bns[source] | { (axiom_annotation_props[axiom_iri], target) })
+            candidates_bn = (content_2_bns[frozenset(content | { ("INV", axiom_annotation_props[axiom_iri], source) })] or
+                             content_2_bns[frozenset(content)])
+            
+          if candidates_bn: o = candidates_bn[-1]
+          else:
+            #print()
+            #print("rebuild", o, content)
+            o = rebuild_bn(content)
+            #print()
+          on_prepare_triple(axiom_iri,p,o)
+        except Exception as e:
+          raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), line, column)) from e
+        
     
   return nb_triple
 
