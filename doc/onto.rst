@@ -41,8 +41,18 @@ The IRI is a sort of URL; IRIs are used as identifier for ontologies.
 Loading an ontology from OWL files
 ----------------------------------
 
-When loading an ontology from an OWL file, Owlready2 first searches for a local copy of the OWL file and,
-if not found, tries to download it from the Internet.
+Use the .load() method of an ontology for loading it.
+
+The easiest way to load the ontology is to load a local copy. In this case, the IRI is the
+local filename prefixed with "file://", for example:
+
+::
+
+   >>> onto = get_ontology("file:///home/jiba/onto/pizza_onto.owl").load()
+
+   
+If an URL is given, Owlready2 first searches for a local copy of the OWL file and,
+if not found, tries to download it from the Internet. For example:
 
 ::
 
@@ -51,12 +61,13 @@ if not found, tries to download it from the Internet.
    >>> onto = get_ontology("http://www.lesfleursdunormal.fr/static/_downloads/pizza_onto.owl").load()
 
 The onto_path global variable contains a list of directories for searching local copies of ontologies.
-It behaves similarly to sys.path for Python modules.
+It behaves similarly to sys.path (for Python modules).
 
 The get_ontology() function returns an ontology from its IRI, and creates a new empty ontology if needed.
 
 The .load() method loads the ontology from a local copy or from Internet.
-It is **safe** to call .load() several times on the same ontology. It will be loaded only once.
+It is **safe** to call .load() several times on the same ontology.
+It will be loaded only once.
 
 .. note::
    
@@ -65,11 +76,7 @@ It is **safe** to call .load() several times on the same ontology. It will be lo
 
    NTriples is a very simple format and is natively supported by Owlready2.
    
-   RDF/XML is supported using either the `rapper command line tool <http://librdf.org/raptor/rapper.html>`_
-   from libraptor, or the Python module RDFlib.
-   Rapper is about 10 times faster and thus should be preferred. To use rapper, you need the 'rapper'
-   command line tools available in your executable path. Most Linux distributions provide package for it.
-   RDFlib can be installed from PyPI.
+   RDF/XML is the most common format; it is also natively supported by Owlready2 (since version 0.2).
    
    OWL/XML is supported using a specific parser integrated to Owlready2.
    This parser supports a large subset of OWL, but is not complete.
@@ -80,8 +87,8 @@ It is **safe** to call .load() several times on the same ontology. It will be lo
    
 
 
-Accessing to the content of an ontology
----------------------------------------
+Accessing the content of an ontology
+------------------------------------
 
 You can access to the content of an ontology using the 'dot' notation, as usual in Python or more generally
 in Object-Oriented Programming. In this way, you can access the Classes, Instances, Properties,
@@ -143,34 +150,10 @@ The IRIS pseudo-dictionary can be used for accessing an entity from its full IRI
    pizza_onto.Pizza
 
 
-Accessing to entities defined in another namespace
---------------------------------------------------
-
-Ontologies can define entities located in other namespaces.
-An example is Gene Ontology (GO): the ontology IRI is 'http://purl.obolibrary.org/obo/go.owl',
-but the IRI of GO entities are not of the form 'http://purl.obolibrary.org/obo/go.owl#GO_entity' but
-'http://purl.obolibrary.org/obo/GO_entity' (note the missing 'go.owl#').
-
-Such entities can be accessed in Owlready2 using a namespace. The .get_namepace(base_iri) method of an ontology
-returns a namespace for the given base IRI.
-
-The namespace can then be used with the dot notation, similarly to the ontology.
-
-::
-   
-   >>> # Loads Gene Ontology (~ 170 Mb), can take a while!
-   >>> go = get_ontology("http://purl.obolibrary.org/obo/go.owl").load()
-   
-   >>> print(go.GO_0000001) # Not in the right namespace
-   None
-   
-   >>> obo = go.get_namespace("http://purl.obolibrary.org/obo/")
-   
-   >>> print(obo.GO_0000001)
-   obo.GO_0000001
-   
-   >>> print(obo.GO_0000001.label)
-   ['mitochondrion inheritance']
+Ontologies can also define entities located in other namespaces, for example
+Gene Ontology (GO) has the following IRI: 'http://purl.obolibrary.org/obo/go.owl',
+but the IRI of GO entities are of the form 'http://purl.obolibrary.org/obo/GO_entity' (note the missing 'go.owl#').
+See :doc:`namespace` to learn how to access such entities.
 
 
 Simple queries
@@ -184,8 +167,7 @@ arguments. The supported keywords are:
 * **type**, for searching Individuals of a given Class
 * **subclass_of**, for searching subclasses of a given Class
 * **is_a**, for searching both Individuals and subclasses of a given Class
-* any object or data property name
-* any annotation property name
+* any object, data or annotation property name
 
 The value associated to each keyword can be a single value or a list of several values.
 In addition, in string values, a star * can be used as a jocker.
@@ -230,9 +212,10 @@ It will be saved in the first directory in onto_path.
 ::
 
    >>> onto.save()
+   >>> onto.save(file = "filename or fileobj", format = "rdfxml")
 
 .save() accepts two optional parameters: 'file', a file object or a filename for saving the ontology,
-and 'format', the file format.
+and 'format', the file format (default is RDF/XML).
 
 .. note::
    
@@ -240,9 +223,6 @@ and 'format', the file format.
    
    NTriples is a very simple format and is natively supported by Owlready2.
    
-   RDF/XML is supported using either the `rapper command line tool <http://librdf.org/raptor/rapper.html>`_
-   from libraptor, or the Python module RDFlib.
-   Rapper is about 10 times faster and thus should be preferred. To use rapper, you need the 'rapper'
-   command line tools available in your executable path. Most Linux distributions provide package for it.
-   RDFlib can be installed from PyPI.
+   RDF/XML is the most common format; it is also natively supported by Owlready2 (since version 0.2).
    
+   OWL/XML is not yet supported for writing.

@@ -21,7 +21,6 @@ which is defined in the 'owl' ontology).
 
 The namespace Class attribute is used to build the full IRI of the Class,
 and can be an ontology or a namespace (see :doc:`namespace`).
-
 The 'with' statement can also be used to provide the ontology (or namespace):
 
 ::
@@ -33,14 +32,14 @@ The 'with' statement can also be used to provide the ontology (or namespace):
    ...         pass
 
 
-The 'iri' attribute of the Class can be used to obtain the full IRI of the class.
+The .iri attribute of the Class can be used to obtain the full IRI of the class.
 
 ::
 
    >>> print(Drug.iri)
    http://test.org/onto.owl#Drug
 
-'name' and 'iri' attributes are writable and can be modified (this allows to change the IRI of an entity,
+.name and .iri attributes are writable and can be modified (this allows to change the IRI of an entity,
 which is sometimes called "refactoring").
 
    
@@ -54,7 +53,7 @@ Subclasses can be created by inheriting an ontology class. Multiple inheritance 
    >>> class DrugAssociation(Drug): # A drug associating several active principles
    ...     pass
 
-Owlready2 provides the 'is_a' attribute for getting the list of superclasses (__bases__ can be used, but
+Owlready2 provides the .is_a attribute for getting the list of superclasses (__bases__ can be used, but
 with some limits described in :doc:`restriction`). It can also be modified for adding or removing superclasses.
 
 ::
@@ -86,7 +85,7 @@ The 'types' Python module can be used to create classes and subclasses dynamical
 Creating equivalent classes
 ---------------------------
 
-The 'equivalent_to' Class attribute is a list of equivalent classes. It behaves like 'is_a'.
+The .equivalent_to Class attribute is a list of equivalent classes. It behaves like .is_a.
 
 
 Creating Individuals
@@ -94,7 +93,7 @@ Creating Individuals
 
 Individuals are instances in ontologies. They are created as any other Python instances.
 The first parameter is the name (or identifier) of the Individual;
-it corresponds to the 'name' attribute in Owlready2.
+it corresponds to the .name attribute in Owlready2.
 If not given, the name if automatically generated from the Class name and a number.
 
 ::
@@ -131,7 +130,7 @@ subclasses). It returns a generator.
 
    >>> for i in Drug.instances(): print(i)
 
-Finally, Individuals also have the 'equivalent_to' attribute.
+Finally, Individuals also have the .equivalent_to attribute.
    
 
 Mutli-Class Individuals
@@ -139,7 +138,7 @@ Mutli-Class Individuals
 
 In ontologies, an Individual can belong to more than one Class. This is supported in Owlready2.
 
-Individuals have a 'is_a' atribute that behaves similarly to Class 'is_a',
+Individuals have a .is_a atribute that behaves similarly to Class .is_a,
 but with the Classes of the Individual. In order to create a mutli-Class Individual,
 you need to create the Individual as a single-Class Instance first,
 and then to add the other Class(ses) in its .is_a attribute:

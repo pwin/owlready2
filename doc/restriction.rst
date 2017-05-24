@@ -52,12 +52,12 @@ Owlready provides the following types of restrictions (they have the same names 
 In addition, the Inverse(Property) construct can be used as the inverse of a given Property.
 
 Restrictions can be modified *in place* (Owlready2 updates the quadstore automatically), using the
-following attributes: 'property', 'type' (SOME, ONLY, MIN, MAX, EXACTLY or VALUE), 'cardinality'
-and 'value' (a Class, an Individual, a class contruct or another restriction).
+following attributes: .property, .type (SOME, ONLY, MIN, MAX, EXACTLY or VALUE), .cardinality
+and .value (a Class, an Individual, a class contruct or another restriction).
 
 
-Logical operators
------------------
+Logical operators (intersection, union and complement)
+------------------------------------------------------
 
 Owlready provides the following operators between Classes
 (normal Classes but also class constructs and restrictions):
@@ -67,7 +67,10 @@ Owlready provides the following operators between Classes
  * Not() : not operator (negation or complement). For example: Not(Class1)
 
 The Classes used with logical operators can be normal Classes (inheriting from Thing), restrictions or
-other logical operators.
+other logical operators. 
+
+Intersections, unions and complements can be modified *in place* using
+the .Classes (intersections and unions) or .Class (complement) attributes.
 
 
 One-Of constructs
@@ -90,4 +93,57 @@ rather than by defining its properties.
    # Assert that there is only four possible drug forms
    >>> DrugForm.is_a.append(OneOf([tablet, capsule, injectable, pomade]))
    
+The construct be modified *in place* using the .instances attribute.
 
+
+Inverse-of constructs
+---------------------
+
+Inverse-of constructs produces the inverse of a property, without creating a new property.
+
+::
+   
+   Inverse(has_for_active_principle)
+   
+The construct be modified *in place* using the .property attribute.
+
+
+ConstrainedDatatype
+-------------------
+
+A constrained datatype is a data whose value is restricted, for example an integer between 0 and 20.
+
+The global function ConstrainedDatatype() create a constrained datatype from a base datatype,
+and one or more facets:
+
+* length
+* min_length
+* max_length
+* pattern
+* white_space
+* max_inclusive
+* max_exclusive
+* min_inclusive
+* min_exclusive
+* total_digits
+* fraction_digits
+
+For example:
+
+::
+
+   ConstrainedDatatype(int, min_inclusive = 0, max_inclusive = 20)
+   ConstrainedDatatype(str, max_length = 100)
+  
+
+Property chain
+--------------
+
+Property chain allows to chain two properties (this is sometimes noted prop1 o prop2).
+The PropertyChain() function allows to create a new property chain from a list of properties:
+
+::
+   
+   PropertyChain([prop1, prop2])
+   
+The construct be modified *in place* using the .properties attribute.

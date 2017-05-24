@@ -1,11 +1,39 @@
 Namespaces
 ==========
 
-In Owlready2, a namespace represent a given base IRI inside a given ontology,
-for example 'http://test.org/onto/pharmaco' inside the ontology 'http://test.org/onto'.
-However, notice that the Semantic Web allows all ontologies to share namespaces;
-thus the base IRI of the namespace **does not** need to be a subdirectory of the
-base IRI of the ontology.
+Ontologies can define entities located in other namespaces.
+An example is Gene Ontology (GO): the ontology IRI is 'http://purl.obolibrary.org/obo/go.owl',
+but the IRI of GO entities are not of the form 'http://purl.obolibrary.org/obo/go.owl#GO_entity' but
+'http://purl.obolibrary.org/obo/GO_entity' (note the missing 'go.owl#').
+
+
+Accessing entities defined in another namespace
+-----------------------------------------------
+
+These entities can be accessed in Owlready2 using a namespace. The .get_namepace(base_iri) method of an ontology
+returns a namespace for the given base IRI.
+
+The namespace can then be used with the dot notation, similarly to the ontology.
+
+::
+   
+   >>> # Loads Gene Ontology (~ 170 Mb), can take a moment!
+   >>> go = get_ontology("http://purl.obolibrary.org/obo/go.owl").load()
+   
+   >>> print(go.GO_0000001) # Not in the right namespace
+   None
+   
+   >>> obo = go.get_namespace("http://purl.obolibrary.org/obo/")
+   
+   >>> print(obo.GO_0000001)
+   obo.GO_0000001
+   
+   >>> print(obo.GO_0000001.iri)
+   http://purl.obolibrary.org/obo/obo.GO_0000001
+   
+   >>> print(obo.GO_0000001.label)
+   ['mitochondrion inheritance']
+
 
 
 Creating classes in a specific namespace

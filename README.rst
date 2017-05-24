@@ -16,7 +16,7 @@ Owlready2 can:
 
  - Perform automatic classification of classes and instances, using the HermiT reasoner.
 
- - The quadstore is compatible with the RDFlib Pyton module, which can be used to perform SPARQL queries.
+ - In addition, the quadstore is compatible with the RDFlib Pyton module, which can be used to perform SPARQL queries.
    
 Owlready has been created by Jean-Baptiste Lamy at the LIMICS reseach lab.
 It is available under the GNU LGPL licence v3.
@@ -89,7 +89,7 @@ Perform reasoning, and classify instances and classes:
    >>> test_pizza.eat()
    Beurk! I'm vegetarian !
 
-For more documentation, look at the doc/ and doc/examples/ directories in the source.
+For more documentation, look at the doc/ directories in the source.
 
 Changelog
 ---------
@@ -111,10 +111,10 @@ version 2 - 0.1
 
 * Full rewrite, including an optimized quadstore
 
-version 2 - 0.x
+version 2 - 0.2
 ***************
 
-* implement RDFXML parser and generator in Python (no longer use rapper or rdflib)
+* Implement RDFXML parser and generator in Python (no longer use rapper or rdflib)
 * Property chain support
 * Add ntriples_diff.py utility
 * Bugfixes:

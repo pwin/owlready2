@@ -52,6 +52,7 @@ A new World can be created using the World class:
 ::
 
    >>> my_world = World()
+   >>> my_second_world = World(filename = "/path/to/quadstore.sqlite3")
 
 Ontologies are then created and loaded using the .get_ontology() methods of the World
 (when working with several Worlds, this method replaces the get_ontology() global function):
@@ -77,7 +78,7 @@ Finally, the reasoner can be executed on a specific World:
 Working with RDFlib for performing SPARQL queries
 -------------------------------------------------
 
-Owlready2 uses an optimized RDF quadstore. This quadstore can also be acessed
+Owlready2 uses an optimized RDF quadstore. This quadstore can also be accessed
 as an RDFlib graph as follows:
 
 ::

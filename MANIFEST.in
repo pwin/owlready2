@@ -32,6 +32,9 @@ exclude test/*
 include test/regtest.py
 include test/bench.py
 include test/Bench.java
+include test/Save.java
+include test/Save.class
 include test/test_mixed.py
+include test/test_parser.py
 include test/*.ntriples
 include test/*.owl

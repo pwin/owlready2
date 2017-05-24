@@ -1,6 +1,6 @@
 import sys, os
 
-#from owlready2.ntriples_diff import *
+HERE = os.path.dirname(__file__)
 
 def rm(f):
   try:    os.unlink(f)
@@ -15,12 +15,14 @@ def make_variants(orig_filename, force_variant = None):
   control(orig_filename)
   
   if (not force_variant) or (force_variant == "original"):
+    print("Test %s %s ..." % (orig_filename, "original"))
     rm("/tmp/t.rdf")
     b = open(orig_filename, "rb").read()
     open("/tmp/t.rdf", "wb").write(b)
     yield "original"
     
   if (not force_variant) or (force_variant == "owlready2-ntriples"):
+    print("Test %s %s ..." % (orig_filename, "owlready2-ntriples"))
     rm("/tmp/t.rdf")
     do("""python -c 'from owlready2 import *;\
     onto = get_ontology("file://%s").load();\
@@ -29,6 +31,7 @@ def make_variants(orig_filename, force_variant = None):
     yield "owlready2-ntriples"
     
   if (not force_variant) or (force_variant == "owlready2-rdfxml"):
+    print("Test %s %s ..." % (orig_filename, "owlready2-rdfxml"))
     rm("/tmp/t.rdf")
     do("""python -c 'from owlready2 import *;\
     onto = get_ontology("file://%s").load();\
@@ -37,31 +40,36 @@ def make_variants(orig_filename, force_variant = None):
     yield "owlready2-rdfxml"
     
   if (not force_variant) or (force_variant == "rapper-ntriples"):
+    print("Test %s %s ..." % (orig_filename, "rapper-ntriples"))
     rm("/tmp/t.rdf")
     do("rapper %s > /tmp/t.rdf 2> /dev/null" % orig_filename)
     yield "rapper-ntriples"
     
   if (not force_variant) or (force_variant == "rapper-rdfxml"):
+    print("Test %s %s ..." % (orig_filename, "rapper-rdfxml"))
     rm("/tmp/t.rdf")
     do("rapper %s -o rdfxml > /tmp/t.rdf 2> /dev/null" % orig_filename)
     yield "rapper-rdfxml"
     
   if (not force_variant) or (force_variant == "rapper-rdfxml-abbrev"):
+    print("Test %s %s ..." % (orig_filename, "rapper-rdfxml-abbrev"))
     rm("/tmp/t.rdf")
     do("rapper %s -o rdfxml-abbrev > /tmp/t.rdf 2> /dev/null" % orig_filename)
     yield "rapper-rdfxml-abbrev"
     
   if (not force_variant) or (force_variant == "owlapi-rdfxml"):
+    print("Test %s %s ..." % (orig_filename, "owlapi-rdfxml"))
     rm("/tmp/t.rdf")
-    do("java -cp ./antibio_arcenciel/owlready_cas_dut_1/owlapi-3.4.3.jar:./owlready2/test Save %s rdf /tmp/t.rdf 2> /dev/null" % orig_filename)
+    owlapi(orig_filename, "/tmp/t.rdf", "rdf")
     rapper("/tmp/t.rdf", "/tmp/control.nt")
     yield "owlapi-rdfxml"
     
   if (not force_variant) or (force_variant == "owlapi-owlxml"):
+    print("Test %s %s ..." % (orig_filename, "owlapi-owlxml"))
     rm("/tmp/t.rdf")
-    do("java -cp ./antibio_arcenciel/owlready_cas_dut_1/owlapi-3.4.3.jar:./owlready2/test Save %s owl /tmp/t.rdf 2> /dev/null" % orig_filename)
-    
-    do("java -cp ./antibio_arcenciel/owlready_cas_dut_1/owlapi-3.4.3.jar:./owlready2/test Save /tmp/t.rdf rdf /tmp/control.rdf 2> /dev/null")
+    owlapi(orig_filename, "/tmp/t.rdf", "owl")
+
+    owlapi("/tmp/t.rdf", "/tmp/control.rdf", "rdf")
     rapper("/tmp/control.rdf", "/tmp/control.nt")
     yield "owlapi-owlxml"
 
@@ -82,12 +90,16 @@ def rapper(filename, dest):
     ls.append(i)
   s = b"\n".join(ls)
   open(dest, "wb").write(s)
+
+
+def owlapi(orig, dest, format):
+  #do("java -cp ./antibio_arcenciel/owlready_cas_dut_1/owlapi-3.4.3.jar:%s/test Save %s %s %s 2> /dev/null" % (HERE, orig, format, dest))
+  do("java -cp %s/../hermit/HermiT.jar:%s Save %s %s %s 2> /dev/null" % (HERE, HERE, orig, format, dest))
   
 
 def control(filename): rapper(filename, "/tmp/control.nt")
   
 def test(filename, variant):
-  print("Test %s %s ..." % (filename, variant))
   rm("/tmp/py.nt")
   rm("/tmp/py.rdf")
   #do("python ./owlready2/rdfxml_2_ntriples.py %s > /tmp/py.nt 2> /dev/null" % tmp_filename)
@@ -98,7 +110,7 @@ def test(filename, variant):
   '""")
   
   rm("/tmp/log")
-  do("python ./owlready2/ntriples_diff.py /tmp/control.nt /tmp/py.nt > /tmp/log")
+  do("python %s/../ntriples_diff.py /tmp/control.nt /tmp/py.nt > /tmp/log" % HERE)
   s = open("/tmp/log").read()
   if s.strip() != "":
     print("    FAILED (ntriples)")
@@ -108,7 +120,7 @@ def test(filename, variant):
   rapper("/tmp/py.rdf", "/tmp/py.nt")
   
   rm("/tmp/log")
-  do("python ./owlready2/ntriples_diff.py /tmp/control.nt /tmp/py.nt > /tmp/log")
+  do("python %s/../ntriples_diff.py /tmp/control.nt /tmp/py.nt > /tmp/log" % HERE)
   s = open("/tmp/log").read()
   if s.strip() != "":
     print("    FAILED (rdfxml)")
@@ -136,7 +148,6 @@ else:
     "/home/jiba/telechargements/base_med/bfo-1.1.owl",
     "/home/jiba/telechargements/base_med/obi.owl",
     "/home/jiba/telechargements/base_med/uberon.owl",
-    "/home/jiba/telechargements/base_med/doid.owl",
     "/home/jiba/telechargements/base_med/vto.owl",
     "/home/jiba/telechargements/base_med/go.owl",
   ]
