@@ -2346,7 +2346,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     onto1  = world1.get_ontology("http://www.test.org/test_annotated_axiom1.owl").load()
     world2 = self.new_world()
     onto2  = world2.get_ontology("http://www.test.org/test_annotated_axiom2.owl").load()
-
+    
     assert len(onto1.graph) == 20
     assert len(onto2.graph) == 20
     

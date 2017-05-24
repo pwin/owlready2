@@ -37,7 +37,6 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
   current_attrs            = None
   nb_triple                = 0
   bns                      = defaultdict(set)
-  #content_2_bns            = defaultdict(list)
   dont_create_unnamed_bn   = False
   axiom_annotation_sources = {}
   axiom_annotation_props   = {}
