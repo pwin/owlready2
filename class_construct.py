@@ -58,7 +58,7 @@ class ClassConstruct(object):
       r = []
       for x in self.ontology.world.get_triples_po(rdfs_subclassof, self.storid):
         if not x.startswith("_"):
-          subclass = self.ontology.world._entities.get(x)
+          r.append(self.ontology.world._entities.get(x))
       return r
     
     else:

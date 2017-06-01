@@ -301,7 +301,7 @@ class Graph(BaseGraph):
       self.execute("DELETE FROM quads WHERE s=? OR o=?", (self.c, storid, storid))
       
     return destroyed_storids
-      
+  
 class SubGraph(BaseGraph):
   def __init__(self, parent, onto, c, db, sql):
     self.parent = parent
