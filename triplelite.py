@@ -276,29 +276,36 @@ class Graph(BaseGraph):
     
     
   def _collect_destroyed_storids(self, destroyed_storids, storid):
-    for (blank_using,) in self.execute("""SELECT s FROM quads WHERE o=? AND p IN (
-    'http://www.w3.org/2002/07/owl#someValuesFrom',
-    'http://www.w3.org/2002/07/owl#allValuesFrom',
-    'http://www.w3.org/2002/07/owl#hasValue',
-    'http://www.w3.org/2002/07/owl#onClass',
-    'http://www.w3.org/2002/07/owl#onProperty',
-    'http://www.w3.org/2002/07/owl#complementOf',
-    'http://www.w3.org/2002/07/owl#inverseOf',
-    'http://www.w3.org/2002/07/owl#onDataRange',
-    'http://www.w3.org/2002/07/owl#annotatedSource',
-    'http://www.w3.org/2002/07/owl#annotatedProperty',
-    'http://www.w3.org/2002/07/owl#annotatedTarget') AND substr(s, 1, 1)='_'""", (self.c, storid)):
-      if not storid in destroyed_storids:
+    for (blank_using,) in list(self.execute("""SELECT s FROM quads WHERE o=? AND p IN (
+    '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s') AND substr(s, 1, 1)='_'""" % (
+      SOME,
+      ONLY,
+      VALUE,
+      owl_onclass,
+      owl_onproperty,
+      owl_complementof,
+      owl_inverse_property,
+      owl_ondatarange,
+      owl_annotatedsource,
+      owl_annotatedproperty,
+      owl_annotatedtarget,
+    ), (storid,))):
+      #print("!!!", blank_using)
+      if not blank_using in destroyed_storids:
         destroyed_storids.add(blank_using)
         self._collect_destroyed_storids(destroyed_storids, blank_using)
         
-  def destroy_entity(self, storid):
+  def destroy_entity(self, storid, destroyer):
     destroyed_storids = { storid }
     self._collect_destroyed_storids(destroyed_storids, storid)
-    
+
+    # Two separate loops because high level destruction must be ended before removing from the quadstore (high level may need the quadstore)
+    for storid in destroyed_storids:
+      destroyer(storid)
+      
     for storid in destroyed_storids:
       #self.execute("SELECT s,p,o FROM quads WHERE s=? OR o=?", (self.c, storid, storid))
-      self.execute("DELETE FROM quads WHERE s=? OR o=?", (self.c, storid, storid))
+      self.execute("DELETE FROM quads WHERE s=? OR o=?", (storid, storid))
       
     return destroyed_storids
   

@@ -305,6 +305,12 @@ class Test(BaseTest, unittest.TestCase):
     assert n2 is n1
     assert len(world.graph) == nb_triple
     
+  def test_ontology_7(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    assert o._parse_bnode(o.NonPizza.is_a[-1].storid) is o.NonPizza.is_a[-1]
+    
       
   def test_class_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -2644,6 +2650,40 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     bns = list(w.get_triples_sp(P.storid, owl_propertychain))
     assert len(bns) == 1
     assert o._parse_list(bns[0]) == [P3, P4]
+    
+  def test_destroy_1(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    o.Pizza.destroy()
+    
+    assert len(w.graph) == 58
+    
+  def test_destroy_2(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    o.Pizza
+    o.NonPizza
+    assert o.Pizza
+    assert len(o.NonPizza.is_a) == 2
+    assert isinstance(o.NonPizza.is_a[-1], Not)
+    assert o.NonPizza.is_a[-1].Class is o.Pizza
+    
+    o.Pizza.destroy()
+    
+    assert len(w.graph) == 58
+    assert o.Pizza is None
+    assert len(o.NonPizza.is_a) == 1
+    assert o.NonPizza.is_a[0] is Thing
+    
+  def test_destroy_3(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    o.Meat.destroy()
+
+    assert len(w.graph) == 68
     
     
 class Paper(BaseTest, unittest.TestCase):

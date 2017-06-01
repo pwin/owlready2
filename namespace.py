@@ -640,6 +640,7 @@ class Ontology(Namespace, _GraphManager):
         else:
           raise ValueError("Cannot parse blank node %s: unknown node type!" % bnode)
         
+    self._bnodes[bnode] = r
     return r
 
   def _del_list(self, bnode):

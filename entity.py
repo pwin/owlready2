@@ -188,17 +188,21 @@ class EntityClass(type):
       if not LOADING: Class._add_is_a_triple(base)
       
   def destroy(Class):
-    destroyed_storids = Class.namespace.world.graph.destroy_entity(Class.storid)
-    destroyed_storids.remove(Class.storid)
     
-    Class.namespace.world._entities.pop(Class.storid, None)
-    for bnode in destroyed_storids:
+    def destroyer(bnode):
+      if bnode == Class.storid: return
+      
       class_construct = Class.namespace.ontology._bnodes.pop(bnode, None)
+      #print("destroy", bnode, class_construct)
       if class_construct:
         for subclass in class_construct.subclasses(True):
-          pass
-      
-      
+          if   isinstance(subclass, EntityClass) or isinstance(subclass, Thing):
+            subclass.is_a.remove(class_construct)
+            
+    destroyed_storids = Class.namespace.world.graph.destroy_entity(Class.storid, destroyer)
+    Class.namespace.world._entities.pop(Class.storid, None)
+            
+        
   def disjoints(Class):
     for s, p, o, c in Class.namespace.world.get_quads(None, rdf_type, Class._owl_alldisjoint, None):
       onto = Class.namespace.world.graph.context_2_user_context(c)
