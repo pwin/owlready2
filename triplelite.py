@@ -274,8 +274,34 @@ class Graph(BaseGraph):
     self.save(s, "ntriples")
     print(s.getvalue().decode("utf8"))
     
-
-  
+    
+  def _collect_destroyed_storids(self, destroyed_storids, storid):
+    for (blank_using,) in self.execute("""SELECT s FROM quads WHERE o=? AND p IN (
+    'http://www.w3.org/2002/07/owl#someValuesFrom',
+    'http://www.w3.org/2002/07/owl#allValuesFrom',
+    'http://www.w3.org/2002/07/owl#hasValue',
+    'http://www.w3.org/2002/07/owl#onClass',
+    'http://www.w3.org/2002/07/owl#onProperty',
+    'http://www.w3.org/2002/07/owl#complementOf',
+    'http://www.w3.org/2002/07/owl#inverseOf',
+    'http://www.w3.org/2002/07/owl#onDataRange',
+    'http://www.w3.org/2002/07/owl#annotatedSource',
+    'http://www.w3.org/2002/07/owl#annotatedProperty',
+    'http://www.w3.org/2002/07/owl#annotatedTarget') AND substr(s, 1, 1)='_'""", (self.c, storid)):
+      if not storid in destroyed_storids:
+        destroyed_storids.add(blank_using)
+        self._collect_destroyed_storids(destroyed_storids, blank_using)
+        
+  def destroy_entity(self, storid):
+    destroyed_storids = { storid }
+    self._collect_destroyed_storids(destroyed_storids, storid)
+    
+    for storid in destroyed_storids:
+      #self.execute("SELECT s,p,o FROM quads WHERE s=? OR o=?", (self.c, storid, storid))
+      self.execute("DELETE FROM quads WHERE s=? OR o=?", (self.c, storid, storid))
+      
+    return destroyed_storids
+      
 class SubGraph(BaseGraph):
   def __init__(self, parent, onto, c, db, sql):
     self.parent = parent
