@@ -386,7 +386,7 @@ class Ontology(Namespace, _GraphManager):
         self.add_triple(self.storid, rdf_type, owl_ontology)
         
   def destroy(self):
-    del world.ontologies[self.base_iri]
+    del self.world.ontologies[self.base_iri]
     self.graph.destroy()
     
   def _import_changed(self, old):
