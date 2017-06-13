@@ -39,8 +39,9 @@ class Graph(BaseGraph):
     self.execute  = self.sql.execute
     self.fetchone = self.sql.fetchone
     self.fetchall = self.sql.fetchall
-    self.c_2_onto = {}
-    self.onto_2_subgraph = {}
+    self.c_2_onto          = {}
+    self.onto_2_subgraph   = {}
+    self.last_numbered_iri = {}
     
     if (clone is None) and ((filename == ":memory:") or (not exists)):
       self.current_blank    = 0
@@ -88,12 +89,20 @@ class Graph(BaseGraph):
     return dict(self.execute("SELECT storid, iri FROM resources").fetchall())
   
   def new_numbered_iri(self, prefix):
-    self.execute("SELECT iri FROM resources WHERE iri GLOB ? ORDER BY LENGTH(iri) DESC, iri DESC", ("%s*" % prefix,))
-    while True:
-      iri = self.fetchone()
-      if not iri: break
-      num = iri[0][len(prefix):]
-      if num.isdigit(): return "%s%s" % (prefix, int(num) + 1)
+    if prefix in self.last_numbered_iri:
+      i = self.last_numbered_iri[prefix] = self.last_numbered_iri[prefix] + 1
+      return "%s%s" % (prefix, i)
+    else:
+      self.execute("SELECT iri FROM resources WHERE iri GLOB ? ORDER BY LENGTH(iri) DESC, iri DESC", ("%s*" % prefix,))
+      while True:
+        iri = self.fetchone()
+        if not iri: break
+        num = iri[0][len(prefix):]
+        if num.isdigit():
+          self.last_numbered_iri[prefix] = i = int(num) + 1
+          return "%s%s" % (prefix, i)
+        
+    self.last_numbered_iri[prefix] = 1
     return "%s1" % prefix
   
   def refactor(self, storid, new_iri):
