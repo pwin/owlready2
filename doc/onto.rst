@@ -170,7 +170,7 @@ arguments. The supported keywords are:
 * any object, data or annotation property name
 
 The value associated to each keyword can be a single value or a list of several values.
-In addition, in string values, a star * can be used as a jocker.
+A star * can be used as a jocker in string values.
 
 For example, for searching for all entities with an IRI ending with 'Topping':
 
@@ -179,6 +179,14 @@ For example, for searching for all entities with an IRI ending with 'Topping':
    >>> onto.search(iri = "*Topping")
    [pizza_onto.CheeseTopping, pizza_onto.FishTopping, pizza_onto.MeatTopping,
    pizza_onto.TomatoTopping, pizza_onto.Topping]
+
+In addition, the special value "*" can be used as a wildcard for any object.
+For example, the following line searches for all entities that are related
+to another one with the 'has_topping' relation:
+
+::
+
+   >>> onto.search(has_topping = "*")
 
 When a single return value is expected, the .search_one() method can be used. It works similarly:
 

@@ -255,17 +255,20 @@ class Graph(BaseGraph):
           params      .append(k)
           
         if "*" in v:
-          conditions.append("q%s.o GLOB ?" % i)
+          if   v.startswith('"*"'):
+            conditions.append("q%s.o GLOB '*'" % i)
+          else:
+            conditions.append("q%s.o GLOB ?" % i)
+            params      .append(v)
         else:
           conditions.append("q%s.o = ?" % i)
-        params      .append(v)
+          params      .append(v)
         
       if not c is None:
         conditions  .append("q%s.c = ?" % i)
         params      .append(c)
         
     req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions))
-    #print(req, params)
     self.execute(req, params)
     return self.fetchall()
 
