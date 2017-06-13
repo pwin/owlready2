@@ -155,6 +155,10 @@ class LogicalClassConstruct(ClassConstruct):
       return self.Classes
     return super().__getattribute__(attr)
   
+  def _invalidate_list(self):
+    try: del self.Classes
+    except: pass
+    
   def _callback(self, old):
     if self.ontology:
       self._destroy_triples(self.ontology)
@@ -185,7 +189,10 @@ class LogicalClassConstruct(ClassConstruct):
 class Or(LogicalClassConstruct):
   _owl_op = owl_unionof
   _char   = " | "
-    
+  
+  def __or__ (self, b):
+    return Or([*self.Classes, b])
+  
   def _satisfied_by(self, x):
     for Class in self.Classes:
       if Class._satisfied_by(x): return True
@@ -194,6 +201,9 @@ class Or(LogicalClassConstruct):
 class And(LogicalClassConstruct):
   _owl_op = owl_intersectionof
   _char   = " & "
+  
+  def __and__ (self, b):
+    return And([*self.Classes, b])
   
   def _satisfied_by(self, x):
     for Class in self.Classes:
@@ -318,6 +328,10 @@ class OneOf(ClassConstruct):
       return self.instances
     return super().__getattribute__(attr)
   
+  def _invalidate_list(self):
+    try: del self.instances
+    except: pass
+    
   def _callback(self, old):
     if self.ontology:
       self._destroy_triples(self.ontology)
