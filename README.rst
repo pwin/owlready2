@@ -120,6 +120,13 @@ version 2 - 0.2
 * Bugfixes:
   * Fix breaklines in literal when exporting to NTriples
 
+version 2 - 0.3
+***************
+* Greatly improve performance for individual creation
+* Bugfixes:
+  * Fix nested intersections and unions
+
+
 Links
 -----
 
