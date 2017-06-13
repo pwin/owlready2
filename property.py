@@ -42,7 +42,7 @@ class PropertyClass(EntityClass):
     else:
       domain         = obj_dict.pop("domain", False)
       range          = obj_dict.pop("range", False)
-    inverse_property = obj_dict.pop("inverse_property", False)
+    inverse_property = obj_dict.pop("inverse_property", None) or obj_dict.pop("inverse", False)
     python_name      = obj_dict.pop("python_name", None)
     super().__init__(name, bases, obj_dict)
     
@@ -248,7 +248,7 @@ class ObjectPropertyClass(ReasoningPropertyClass):
     Prop._inverse_property = value
     if value and not (value.inverse_property is Prop): value.inverse_property = Prop
     
-  inverse_property = property(get_inverse_property, set_inverse_property)
+  inverse_property = inverse = property(get_inverse_property, set_inverse_property)
   
   
 class ObjectProperty(Property, metaclass = ObjectPropertyClass): pass
@@ -305,6 +305,10 @@ class PropertyChain(object):
       return self.properties
     return super().__getattribute__(attr)
   
+  def _invalidate_list(self):
+    try: del self.properties
+    except: pass
+    
   def _callback(self, old):
     if self.ontology:
       self._destroy_triples(self.ontology)
