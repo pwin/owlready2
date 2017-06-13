@@ -1307,6 +1307,18 @@ class Test(BaseTest, unittest.TestCase):
     bnode = C.is_a[-1].value.storid
     self.assert_triple(bnode, rdf_type, rdfs_datatype)
     
+  def test_and_or_4(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C1(Thing): pass
+      class C2(Thing): pass
+      class C3(Thing): pass
+      
+    assert repr(C1 | C2 | C3) == "test.C1 | test.C2 | test.C3"
+    assert repr(C1 & C2 & C3) == "test.C1 & test.C2 & test.C3"
+    
     
   def test_one_of_1(self):
     n = self.new_ontology()
@@ -2684,6 +2696,45 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     o.Meat.destroy()
 
     assert len(w.graph) == 68
+    
+  def test_destroy_4(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class D(C):     pass
+      
+    w.graph.dump()
+    print(len(w.graph))
+    
+    C.destroy()
+    
+    w.graph.dump()
+    print(len(w.graph))
+    print(D.is_a)
+    
+    assert D.is_a == [Thing]
+    
+  def test_destroy_5(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C1(Thing): pass
+      class C2(Thing): pass
+      class C3(Thing): pass
+      
+      class D(Thing):
+        is_a = [C1 | C2 | C3]
+        
+    C2.destroy()
+    
+    #w.graph.dump()
+    #print(len(w.graph))
+    
+    assert len(w.graph) == 14
+    assert len(D.is_a[-1].Classes) == 2
     
     
 class Paper(BaseTest, unittest.TestCase):

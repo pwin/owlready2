@@ -275,7 +275,7 @@ class Graph(BaseGraph):
     print(s.getvalue().decode("utf8"))
     
     
-  def _collect_destroyed_storids(self, destroyed_storids, storid):
+  def _destroy_collect_storids(self, destroyed_storids, replaced_storids, modified_list_users, storid):
     for (blank_using,) in list(self.execute("""SELECT s FROM quads WHERE o=? AND p IN (
     '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s') AND substr(s, 1, 1)='_'""" % (
       SOME,
@@ -293,12 +293,51 @@ class Graph(BaseGraph):
       #print("!!!", blank_using)
       if not blank_using in destroyed_storids:
         destroyed_storids.add(blank_using)
-        self._collect_destroyed_storids(destroyed_storids, blank_using)
+        self._destroy_collect_storids(destroyed_storids, replaced_storids, modified_list_users, blank_using)
         
-  def destroy_entity(self, storid, destroyer):
-    destroyed_storids = { storid }
-    self._collect_destroyed_storids(destroyed_storids, storid)
-
+    for (c, blank_using) in list(self.execute("""SELECT c, s FROM quads WHERE o=? AND p=%s AND substr(s, 1, 1)='_'""" % (
+      rdf_first,
+    ), (storid,))):
+      list_user, root, previous, next_, length = self._rdf_list_analyze(blank_using)
+      print(":::", list_user, root, previous, next_, length)
+      if length >= 3:
+        #self.execute("DELETE FROM quads WHERE s=? AND p=? AND o=?", (blank_using, rdf_first, storid))
+        #self.execute("DELETE FROM quads WHERE s=? AND p=? AND o=?", (blank_using, rdf_rest, storid))
+        self.execute("DELETE FROM quads WHERE s=?", (blank_using,))
+        self.execute("UPDATE quads SET o=? WHERE s=? AND p=?", (next_, previous, rdf_rest))
+        modified_list_users.add(list_user)
+        
+  def _rdf_list_analyze(self, blank):
+    previous = None
+    next_    = None
+    length   = 1
+    b        = next_ = self.get_triple_sp(blank, rdf_rest)
+    print("prev", b)
+    while b != rdf_nil:
+      length += 1
+      b       = self.get_triple_sp(b, rdf_rest)
+      
+    b        = previous = self.get_triple_po(rdf_rest, blank)
+    print("next", b)
+    while b:
+      length += 1
+      root    = b
+      b       = self.get_triple_po(rdf_rest, b)
+      
+    self.execute("SELECT s FROM quads WHERE o=? LIMIT 1", (root,))
+    list_user = self.fetchone()
+    if list_user: list_user = list_user[0]
+    return list_user, root, previous, next_, length
+  
+  def destroy_entity(self, storid, destroyer, list_user_updater):
+    destroyed_storids   = { storid }
+    replaced_storids    = {}
+    modified_list_users = set()
+    self._destroy_collect_storids(destroyed_storids, replaced_storids, modified_list_users, storid)
+    
+    for list_user in modified_list_users:
+      list_user_updater(list_user)
+      
     # Two separate loops because high level destruction must be ended before removing from the quadstore (high level may need the quadstore)
     for storid in destroyed_storids:
       destroyer(storid)

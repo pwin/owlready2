@@ -199,10 +199,17 @@ class EntityClass(type):
           if   isinstance(subclass, EntityClass) or isinstance(subclass, Thing):
             subclass.is_a.remove(class_construct)
             
-    destroyed_storids = Class.namespace.world.graph.destroy_entity(Class.storid, destroyer)
+    def list_user_updater(list_user):
+      if list_user.startswith("_"):
+        list_user = Class.namespace.ontology._bnodes.get(list_user)
+      else:
+        list_user = Class.namespace.world._entities.get(list_user)
+      if list_user: list_user._invalidate_list()
+      
+    destroyed_storids = Class.namespace.world.graph.destroy_entity(Class.storid, destroyer, list_user_updater)
     Class.namespace.world._entities.pop(Class.storid, None)
-            
-        
+    
+    
   def disjoints(Class):
     for s, p, o, c in Class.namespace.world.get_quads(None, rdf_type, Class._owl_alldisjoint, None):
       onto = Class.namespace.world.graph.context_2_user_context(c)
