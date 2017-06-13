@@ -40,7 +40,7 @@ class ClassConstruct(object):
       elif ontology and not self.ontology:
         if self.storid is None: self.storid = ontology.world.new_blank_node()
         self._create_triples(ontology)
-      elif ontology and self.ontology and not(ontology is self.ontology):
+      elif ontology and self.ontology:
         raise OwlReadySharedBlankNodeError("A ClassConstruct cannot be shared by two ontologies, because it correspond to a RDF blank node. Please create a dupplicate.")
     self.ontology = ontology
     if self.ontology: self.ontology._bnodes[self.storid] = self

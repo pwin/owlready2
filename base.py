@@ -134,9 +134,16 @@ def _universal_abbrev_datatype(datatype, parser, unparser, *iris):
   for abb in abbs:
     _universal_abbrev_2_datatype       [abb] =  datatype
     _universal_abbrev_2_datatype_parser[abb] = (datatype, parser or datatype)
-  
+
+
+def bool_parser(s):
+  return s == "true"
+def bool_unparser(b):
+  if b: return "true"
+  return "false"
+
 _universal_abbrev_datatype(int, None, None, "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#byte", "http://www.w3.org/2001/XMLSchema#short", "http://www.w3.org/2001/XMLSchema#int", "http://www.w3.org/2001/XMLSchema#long", "http://www.w3.org/2001/XMLSchema#unsignedByte", "http://www.w3.org/2001/XMLSchema#unsignedShort", "http://www.w3.org/2001/XMLSchema#unsignedInt", "http://www.w3.org/2001/XMLSchema#unsignedLong", "http://www.w3.org/2001/XMLSchema#negativeInteger", "http://www.w3.org/2001/XMLSchema#nonNegativeInteger", "http://www.w3.org/2001/XMLSchema#positiveInteger")
-_universal_abbrev_datatype(bool, None, None, "http://www.w3.org/2001/XMLSchema#boolean")
+_universal_abbrev_datatype(bool, bool_parser, bool_unparser, "http://www.w3.org/2001/XMLSchema#boolean")
 _universal_abbrev_datatype(float, None, None, "http://www.w3.org/2001/XMLSchema#decimal", "http://www.w3.org/2001/XMLSchema#double", "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2002/07/owl#real")
 _universal_abbrev_datatype(str, None, None, "http://www.w3.org/2001/XMLSchema#string")
 _universal_abbrev_datatype(normstr, None, None, "http://www.w3.org/2001/XMLSchema#normalizedString", "http://www.w3.org/2001/XMLSchema#anyURI", "http://www.w3.org/2001/XMLSchema#Name")
