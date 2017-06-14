@@ -56,7 +56,7 @@ class EntityClass(type):
     if len(bases) > 1:
       # Must use sorted() and not sort(), because bases is accessed during the sort
       return tuple(sorted(bases, key = lambda Class: sum(issubclass_python(Other, Class) for Other in bases)))
-    return bases or (Thing,)
+    return bases
   
   def mro(Class):
     try: return type.mro(Class)
@@ -74,10 +74,10 @@ class EntityClass(type):
     
     if "is_a" in obj_dict:
       _is_a = [*superclasses, *obj_dict["is_a"]]
-      superclasses = MetaClass._find_base_classes(_is_a)
+      superclasses = MetaClass._find_base_classes(_is_a) or (Thing,)
     else:
       if len(superclasses) > 1:
-        _is_a = superclasses = MetaClass._find_base_classes(superclasses)
+        _is_a = superclasses = MetaClass._find_base_classes(superclasses) or (Thing,)
       else:
         _is_a = superclasses
         
@@ -182,7 +182,21 @@ class EntityClass(type):
     for base in old - new:
       if not LOADING: Class._del_is_a_triple(base)
       if isinstance(base, ClassConstruct): base._set_ontology(None)
-    Class.__bases__ = Class._find_base_classes(Class.is_a)
+      
+    bases = Class._find_base_classes(Class.is_a)
+    if bases:
+      Class.__bases__ = bases
+    else:
+      if   isinstance(Class, ThingClass):
+        Class.__bases__ = (Thing,)
+        list.insert(Class.is_a, 0, Thing)
+      elif isinstance(Class, ObjectPropertyClass):
+        Class.__bases__ = (ObjectProperty,)
+        list.insert(Class.is_a, 0, ObjectProperty)
+      else:
+        Class.__bases__ = (DataProperty,)
+        list.insert(Class.is_a, 0, DataProperty)
+      
     for base in new - old:
       if isinstance(base, ClassConstruct): base._set_ontology(Class.namespace.ontology)
       if not LOADING: Class._add_is_a_triple(base)
@@ -207,6 +221,11 @@ class EntityClass(type):
       if list_user: list_user._invalidate_list()
       
     destroyed_storids = Class.namespace.world.graph.destroy_entity(Class.storid, destroyer, list_user_updater)
+    
+    for subclass in list(Class.__subclasses__()):
+      subclass.is_a.remove(Class)
+      #if subclass.__bases__ == (): subclass.is_a.append(Thing)
+      
     Class.namespace.world._entities.pop(Class.storid, None)
     
     

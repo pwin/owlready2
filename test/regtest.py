@@ -1002,6 +1002,20 @@ class Test(BaseTest, unittest.TestCase):
     assert C ().p == []
     assert C2().p == None
     
+  def test_prop_24(self):
+    n = self.new_ontology()
+    with n:
+      class p(ObjectProperty): pass
+      class p2(p): pass
+      class d(DataProperty): pass
+      class d2(d): pass
+      
+    p2.is_a.remove(p)
+    d2.is_a.remove(d)
+    
+    assert p2.is_a == [ObjectProperty]
+    assert d2.is_a == [DataProperty]
+    
     
   def test_prop_inverse_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
