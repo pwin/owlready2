@@ -107,8 +107,12 @@ class Thing(metaclass = ThingClass):
     bases = ThingClass._find_base_classes(self.is_a)
     if len(bases) == 1:
       self.__class__ = bases[0]
-    else:
+    elif bases:
       self.__class__ = FusionClass._get_fusion_class(bases)
+    else:
+      self.__class__ = Thing
+      list.insert(self.is_a, 0, Thing)
+      
     for base in new - old:
       if isinstance(base, ClassConstruct): base._set_ontology(self.namespace.ontology)
       if not LOADING: self.namespace.ontology.add_triple(self.storid, rdf_type, base.storid)
