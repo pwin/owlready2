@@ -127,7 +127,8 @@ version 2 - 0.3
 * Bugfixes:
   * Fix nested intersections and unions
   * Fix boolean
-
+  * Fix bug when removing parent properties
+    
 
 Links
 -----
