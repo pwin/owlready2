@@ -90,14 +90,14 @@ class LanguageSublist(CallbackList):
 class CallbackListWithLanguage(CallbackList):
   __slots__ = []
   def __getattr__(self, attr):
-    if len(attr) != 2: raise ValueError("'%s' is not a language code (must be 2-char string)!" % attr)
+    if len(attr) != 2: raise AttributeError("'%s' is not a language code (must be 2-char string)!" % attr)
     return LanguageSublist(self, attr)
   
   def __setattr__(self, attr, values):
     if attr.startswith("_"):
       super.__setattr__(self, attr, values)
     else:
-      if len(attr) != 2: raise ValueError("'%s' is not a language code (must be 2-char string)!" % attr)
+      if len(attr) != 2: raise AttributeError("'%s' is not a language code (must be 2-char string)!" % attr)
       if isinstance(values, str): values = { locstr(values, attr) }
       else:                       values = { locstr(value , attr) for value in values }
       l = [x for x in self if not(isinstance(x, locstr) and (x.lang == attr))]
