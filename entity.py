@@ -200,35 +200,7 @@ class EntityClass(type):
     for base in new - old:
       if isinstance(base, ClassConstruct): base._set_ontology(Class.namespace.ontology)
       if not LOADING: Class._add_is_a_triple(base)
-      
-  def destroy(Class):
-    
-    def destroyer(bnode):
-      if bnode == Class.storid: return
-      
-      class_construct = Class.namespace.ontology._bnodes.pop(bnode, None)
-      #print("destroy", bnode, class_construct)
-      if class_construct:
-        for subclass in class_construct.subclasses(True):
-          if   isinstance(subclass, EntityClass) or isinstance(subclass, Thing):
-            subclass.is_a.remove(class_construct)
-            
-    def list_user_updater(list_user):
-      if list_user.startswith("_"):
-        list_user = Class.namespace.ontology._bnodes.get(list_user)
-      else:
-        list_user = Class.namespace.world._entities.get(list_user)
-      if list_user: list_user._invalidate_list()
-      
-    destroyed_storids = Class.namespace.world.graph.destroy_entity(Class.storid, destroyer, list_user_updater)
-    
-    for subclass in list(Class.__subclasses__()):
-      subclass.is_a.remove(Class)
-      #if subclass.__bases__ == (): subclass.is_a.append(Thing)
-      
-    Class.namespace.world._entities.pop(Class.storid, None)
-    
-    
+
   def disjoints(Class):
     for s, p, o, c in Class.namespace.world.get_quads(None, rdf_type, Class._owl_alldisjoint, None):
       onto = Class.namespace.world.graph.context_2_user_context(c)
@@ -471,3 +443,6 @@ def _inherited_property_value_restrictions(Class, Prop):
     if isinstance(parent, And):
       for Class2 in parent.Classes: yield from _inherited_property_value_restrictions(Class2, Prop)
     if isinstance(parent, EntityClass): yield from _inherited_property_value_restrictions(parent, Prop)
+
+
+

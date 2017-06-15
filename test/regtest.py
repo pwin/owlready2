@@ -615,7 +615,7 @@ class Test(BaseTest, unittest.TestCase):
     n = self.new_ontology()
     with n:
       class C(Thing): pass
-
+      
     i1 = C()
     i2 = C()
     
@@ -2681,7 +2681,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     w = self.new_world()
     o = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
-    o.Pizza.destroy()
+    destroy_entity(o.Pizza)
     
     assert len(w.graph) == 58
     
@@ -2696,7 +2696,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert isinstance(o.NonPizza.is_a[-1], Not)
     assert o.NonPizza.is_a[-1].Class is o.Pizza
     
-    o.Pizza.destroy()
+    destroy_entity(o.Pizza)
     
     assert len(w.graph) == 58
     assert o.Pizza is None
@@ -2707,7 +2707,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     w = self.new_world()
     o = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
-    o.Meat.destroy()
+    destroy_entity(o.Meat)
 
     assert len(w.graph) == 68
     
@@ -2719,16 +2719,18 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       class C(Thing): pass
       class D(C):     pass
       
-    w.graph.dump()
-    print(len(w.graph))
+    #w.graph.dump()
+    #print(len(w.graph))
     
-    C.destroy()
+    destroy_entity(C)
     
-    w.graph.dump()
-    print(len(w.graph))
-    print(D.is_a)
+    #w.graph.dump()
+    #print(len(w.graph))
+    #print(D.is_a)
     
     assert D.is_a == [Thing]
+    assert o.C is None
+    assert not o.D is None
     
   def test_destroy_5(self):
     w = self.new_world()
@@ -2742,13 +2744,171 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       class D(Thing):
         is_a = [C1 | C2 | C3]
         
-    C2.destroy()
+    destroy_entity(C2)
     
     #w.graph.dump()
     #print(len(w.graph))
+    #print(D.is_a)
     
-    assert len(w.graph) == 14
-    assert len(D.is_a[-1].Classes) == 2
+    assert len(w.graph) == 7
+    assert D.is_a == [Thing]
+    
+  def test_destroy_6(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      
+      class p(C >> C): pass
+
+    assert p.range  == [C]
+    assert p.domain == [C]
+    
+    destroy_entity(C)
+    
+    assert p.range  == []
+    assert p.domain == []
+    
+  def test_destroy_7(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+
+    c = C()
+    
+    destroy_entity(C)
+    
+    assert c.is_a  == [Thing]
+    
+  def test_destroy_8(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      AllDisjoint([C, D, E])
+      
+    destroy_entity(C)
+    
+    assert len(w.graph) == 5
+    assert len(list(o.disjoints())) == 0
+    
+  def test_destroy_9(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      c1 = C()
+      c2 = C()
+      c3 = C()
+      AllDisjoint([c1, c2, c3])
+      C.is_a.append(OneOf([c1, c2, c3]))
+      
+    destroy_entity(c1)
+    
+    assert len(w.graph) == 7
+    assert len(list(o.disjoints())) == 0
+    
+  def test_destroy_10(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class D(C): pass
+      label[D, rdfs_subclassof, D] = "Test"
+      
+    destroy_entity(D)
+    
+    assert len(w.graph) == 3
+    
+  def test_destroy_11(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      
+      C.equivalent_to.append(D)
+      D.equivalent_to.append(E)
+      
+    destroy_entity(D)
+    
+    assert C.equivalent_to == []
+    assert E.equivalent_to == []
+    assert len(w.graph) == 5
+    
+  def test_destroy_12(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class D(Thing): pass
+      class p(ObjectProperty): pass
+      
+      D.is_a.append(p.some(C))
+      
+    destroy_entity(C)
+    
+    assert len(w.graph) == 4
+    
+  def test_destroy_13(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class D(Thing): pass
+      class p(ObjectProperty): pass
+      class q(ObjectProperty): pass
+      
+      D.is_a.append(p.some(q.only(Not(C))))
+      
+    destroy_entity(C)
+    
+    assert D.is_a == [Thing]
+    assert len(w.graph) == 5
+    
+  def test_destroy_14(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class p(ObjectProperty): pass
+      c1 = C()
+      C.is_a.append(p.value(c1))
+      
+    destroy_entity(c1)
+    
+    assert C.is_a == [Thing]
+    assert len(w.graph) == 4
+    
+  def test_destroy_15(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class p(ObjectProperty): pass
+      c1 = C()
+      C.is_a.append(p.value(c1))
+      c1.p = [c1]
+      
+    destroy_entity(p)
+    
+    assert C.is_a == [Thing]
+    assert getattr(c1, "p", None) == None
+    assert len(w.graph) == 5
     
     
 class Paper(BaseTest, unittest.TestCase):

@@ -323,3 +323,59 @@ class PropertyChain(object):
   def __repr__(self):
     return "PropertyChain([%s])" % (", ".join(repr(x) for x in self.properties))
   
+
+
+
+
+def destroy_entity(e):
+  if isinstance(e, PropertyClass):
+    modified_entities = set()
+    for s,p,o in e.namespace.world.get_triples(None, e.storid, None):
+      modified_entities.add(s)
+    e.namespace.world.del_triple(None, e.storid, None)
+    for s in modified_entities:
+      s = e.namespace.world._entities.get(s)
+      if s:
+        delattr(s, e._python_name)
+        
+    del e.namespace.world._props[e._python_name]
+    del e.namespace.world._reasoning_props[e._python_name]
+        
+  def destroyer(bnode):
+    if bnode == e.storid: return
+
+    class_construct = e.namespace.ontology._bnodes.pop(bnode, None)
+    if class_construct:
+      for subclass in class_construct.subclasses(True):
+        if   isinstance(subclass, EntityClass) or isinstance(subclass, Thing):
+          subclass.is_a.remove(class_construct)
+
+  def relation_updater(destroyed_storids, storid, relations):
+    o = e.namespace.world._entities.get(storid)
+    if o:
+      for r in relations:
+        if  (r == rdf_type) or (r == rdfs_subpropertyof):
+          o.is_a.reinit([i for i in o.is_a if not i.storid in destroyed_storids])
+        elif r == rdfs_subclassof:
+          o.is_a.reinit([i for i in o.is_a if not i.storid in destroyed_storids])
+          for Subclass in o.descendants(True, True): _FUNCTIONAL_FOR_CACHE.pop(Subclass, None)
+
+        elif (r == owl_equivalentproperty) or (r == owl_equivalentindividual):
+          for o2 in o.equivalent_to: o2._equivalent_to = None
+          o._equivalent_to = None
+        elif r == owl_equivalentclass:
+          for o2 in o.equivalent_to: o2._equivalent_to = None
+          o._equivalent_to = None
+          for Subclass in o.descendants(True, True): _FUNCTIONAL_FOR_CACHE.pop(Subclass, None)
+
+        elif r == rdf_domain:
+          o._domain = None
+        elif r == rdf_range:
+          o._range = None
+
+        else:
+          r = e.namespace.world._entities.get(r)
+          
+  e.namespace.world.graph.destroy_entity(e.storid, destroyer, relation_updater)
+  
+  e.namespace.world._entities.pop(e.storid, None)

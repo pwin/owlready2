@@ -20,8 +20,8 @@
 from owlready2.base import *
 
 class BaseGraph(object):
-  READ_METHODS  = ["refactor", "new_numbered_iri", "abbreviate", "unabbreviate", "get_triple_sp", "get_triple_po", "get_transitive_sp", "get_transitive_po", "get_transitive_sym", "get_triples", "get_triples_s", "get_triples_sp", "get_triples_po", "get_quads", "get_quads_sp", "has_triple"]
-  WRITE_METHODS = ["_add_triple", "_del_triple", "_set_triple"]
+  READ_METHODS  = ["refactor", "new_numbered_iri", "abbreviate", "unabbreviate", "get_triple_sp", "get_triple_po", "get_transitive_sp", "get_transitive_po", "get_transitive_sym", "get_triples", "get_triples_s", "get_triples_sp", "get_triples_po", "get_quads", "get_quads_sp", "has_triple", "_del_triple"]
+  WRITE_METHODS = ["_add_triple", "_set_triple"]
   
   def sub_graph(self, user_context): return self.__class__(self, user_context)
   

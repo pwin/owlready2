@@ -225,6 +225,22 @@ class Graph(BaseGraph):
         else:         self.execute("SELECT s FROM quads WHERE s=? AND p=? AND o=? LIMIT 1", (s, p, o,))
     return not self.fetchone() is None
   
+  def _del_triple(self, s, p, o):
+    if s is None:
+      if p is None:
+        if o is None: self.execute("DELETE FROM quads")
+        else:         self.execute("DELETE FROM quads WHERE o=?", (o,))
+      else:
+        if o is None: self.execute("DELETE FROM quads WHERE p=?", (p,))
+        else:         self.execute("DELETE FROM quads WHERE p=? AND o=?", (p, o,))
+    else:
+      if p is None:
+        if o is None: self.execute("DELETE FROM quads WHERE s=?", (s,))
+        else:         self.execute("DELETE FROM quads WHERE s=? AND o=?", (s, o,))
+      else:
+        if o is None: self.execute("DELETE FROM quads WHERE s=? AND p=?", (s, p,))
+        else:         self.execute("DELETE FROM quads WHERE s=? AND p=? AND o=?", (s, p, o,))
+        
   def search(self, prop_vals, c = None):
     tables = []
     conditions = []
@@ -287,7 +303,7 @@ class Graph(BaseGraph):
     print(s.getvalue().decode("utf8"))
     
     
-  def _destroy_collect_storids(self, destroyed_storids, replaced_storids, modified_list_users, storid):
+  def _destroy_collect_storids(self, destroyed_storids, modified_relations, storid):
     for (blank_using,) in list(self.execute("""SELECT s FROM quads WHERE o=? AND p IN (
     '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s') AND substr(s, 1, 1)='_'""" % (
       SOME,
@@ -302,54 +318,56 @@ class Graph(BaseGraph):
       owl_annotatedproperty,
       owl_annotatedtarget,
     ), (storid,))):
-      #print("!!!", blank_using)
       if not blank_using in destroyed_storids:
         destroyed_storids.add(blank_using)
-        self._destroy_collect_storids(destroyed_storids, replaced_storids, modified_list_users, blank_using)
+        self._destroy_collect_storids(destroyed_storids, modified_relations, blank_using)
         
     for (c, blank_using) in list(self.execute("""SELECT c, s FROM quads WHERE o=? AND p=%s AND substr(s, 1, 1)='_'""" % (
       rdf_first,
     ), (storid,))):
-      list_user, root, previous, next_, length = self._rdf_list_analyze(blank_using)
-      print(":::", list_user, root, previous, next_, length)
-      if length >= 3:
-        #self.execute("DELETE FROM quads WHERE s=? AND p=? AND o=?", (blank_using, rdf_first, storid))
-        #self.execute("DELETE FROM quads WHERE s=? AND p=? AND o=?", (blank_using, rdf_rest, storid))
-        self.execute("DELETE FROM quads WHERE s=?", (blank_using,))
-        self.execute("UPDATE quads SET o=? WHERE s=? AND p=?", (next_, previous, rdf_rest))
-        modified_list_users.add(list_user)
+      list_user, root, previouss, nexts, length = self._rdf_list_analyze(blank_using)
+      destroyed_storids.update(previouss)
+      destroyed_storids.add   (blank_using)
+      destroyed_storids.update(nexts)
+      if not list_user in destroyed_storids:
+        destroyed_storids.add(list_user)
+        self._destroy_collect_storids(destroyed_storids, modified_relations, list_user)
         
   def _rdf_list_analyze(self, blank):
-    previous = None
-    next_    = None
-    length   = 1
-    b        = next_ = self.get_triple_sp(blank, rdf_rest)
-    print("prev", b)
+    previouss = []
+    nexts     = []
+    length    = 1
+    #b         = next_ = self.get_triple_sp(blank, rdf_rest)
+    b         = self.get_triple_sp(blank, rdf_rest)
     while b != rdf_nil:
+      nexts.append(b)
       length += 1
       b       = self.get_triple_sp(b, rdf_rest)
       
-    b        = previous = self.get_triple_po(rdf_rest, blank)
-    print("next", b)
-    while b:
-      length += 1
-      root    = b
-      b       = self.get_triple_po(rdf_rest, b)
+    b         = self.get_triple_po(rdf_rest, blank)
+    if b:
+      while b:
+        previouss.append(b)
+        length += 1
+        root    = b
+        b       = self.get_triple_po(rdf_rest, b)
+    else:
+      root = blank
       
     self.execute("SELECT s FROM quads WHERE o=? LIMIT 1", (root,))
     list_user = self.fetchone()
     if list_user: list_user = list_user[0]
-    return list_user, root, previous, next_, length
+    return list_user, root, previouss, nexts, length
   
-  def destroy_entity(self, storid, destroyer, list_user_updater):
+  def destroy_entity(self, storid, destroyer, relation_updater):
     destroyed_storids   = { storid }
-    replaced_storids    = {}
-    modified_list_users = set()
-    self._destroy_collect_storids(destroyed_storids, replaced_storids, modified_list_users, storid)
+    modified_relations  = defaultdict(set)
+    self._destroy_collect_storids(destroyed_storids, modified_relations, storid)
     
-    for list_user in modified_list_users:
-      list_user_updater(list_user)
-      
+    for s,p in self.execute("SELECT DISTINCT s,p FROM quads WHERE o IN (%s)" % ",".join(["?" for i in destroyed_storids]), tuple(destroyed_storids)):
+      if not s in destroyed_storids:
+        modified_relations[s].add(p)
+        
     # Two separate loops because high level destruction must be ended before removing from the quadstore (high level may need the quadstore)
     for storid in destroyed_storids:
       destroyer(storid)
@@ -358,7 +376,11 @@ class Graph(BaseGraph):
       #self.execute("SELECT s,p,o FROM quads WHERE s=? OR o=?", (self.c, storid, storid))
       self.execute("DELETE FROM quads WHERE s=? OR o=?", (storid, storid))
       
+    for s, ps in modified_relations.items():
+      relation_updater(destroyed_storids, s, ps)
+      
     return destroyed_storids
+  
   
 class SubGraph(BaseGraph):
   def __init__(self, parent, onto, c, db, sql):

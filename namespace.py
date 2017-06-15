@@ -89,6 +89,15 @@ class _GraphManager(object):
       else:
         yield bnode
         
+  def del_triple(self, s, p = None, o = None):
+    if CURRENT_NAMESPACES[-1] is None: self._del_triple(s, p, o)
+    else:   CURRENT_NAMESPACES[-1].ontology._del_triple(s, p, o)
+    if _LOG_LEVEL > 1:
+      if not s.startswith("_"): s = self.unabbreviate(s)
+      if p: p = self.unabbreviate(p)
+      if o and not (o.startswith("_") or o.startswith('"')): o = self.unabbreviate(o)
+      print("* Owlready2 * DEL TRIPLE", s, p, o, file = sys.stderr)
+      
   def _parse_list(self, bnode):
     l = []
     while bnode and (bnode != rdf_nil):
@@ -504,15 +513,6 @@ class Ontology(Namespace, _GraphManager):
       if p: p = self.unabbreviate(p)
       if o and not (o.startswith("_") or o.startswith('"')): o = self.unabbreviate(o)
       print("* Owlready2 * SET TRIPLE", s, p, o, file = sys.stderr)
-    
-  def del_triple(self, s, p = None, o = None):
-    if CURRENT_NAMESPACES[-1] is None: self._del_triple(s, p, o)
-    else:   CURRENT_NAMESPACES[-1].ontology._del_triple(s, p, o)
-    if _LOG_LEVEL > 1:
-      if not s.startswith("_"): s = self.unabbreviate(s)
-      if p: p = self.unabbreviate(p)
-      if o and not (o.startswith("_") or o.startswith('"')): o = self.unabbreviate(o)
-      print("* Owlready2 * DEL TRIPLE", s, p, o, file = sys.stderr)
     
   # Will be replaced by the graph methods
   def _add_triple(self, subject, predicate, object): pass

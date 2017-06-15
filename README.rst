@@ -122,6 +122,8 @@ version 2 - 0.2
 
 version 2 - 0.3
 ***************
+
+* Add destroy_entity() global function
 * Greatly improve performance for individual creation
 * When searching, allow to use "*" as a jocker for any object
 * Bugfixes:
