@@ -25,7 +25,7 @@ try:
 except:
   class OwlReadyOntologyParsingError(OwlReadyError): pass
 
-def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_literal = None):
+def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_literal = None, default_base = ""):
   parser                   = xml.parsers.expat.ParserCreate(None, "")
   stack                    = [["", ""]] # List of [parse type, value] pairs
   prefixes                 = {}
@@ -42,9 +42,14 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
   axiom_annotation_props   = {}
   axiom_annotation_targets = {}
   triples_with_unnamed_bn  = defaultdict(list)
-  xml_base                 = ""
-  xml_dir                  = ""
-  
+  if default_base:
+    xml_base = default_base
+    if xml_base.endswith("#") or xml_base.endswith("/"): xml_base = xml_base[:-1]
+    xml_dir  = xml_base.rsplit("/", 1)[0] + "/"
+  else:
+    xml_base                 = ""
+    xml_dir                  = ""
+    
   if not on_triple:
     def on_triple(s,p,o):
       print("%s %s %s ." % (s,p,o))
@@ -166,6 +171,9 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
             
     else:
       iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#about", None)
+      if iri is None:
+        iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#ID", None)
+        if iri: iri = "#%s" % iri
       if iri is None:
         iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#nodeID")
         if iri:

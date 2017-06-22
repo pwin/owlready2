@@ -426,11 +426,11 @@ class Ontology(Namespace, _GraphManager):
       if self.graph.get_last_update_time() == 0.0: # Never loaded
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
         fileobj = urllib.request.urlopen(f)
-        try:     new_base_iri = self.graph.parse(fileobj, **args)
+        try:     new_base_iri = self.graph.parse(fileobj, default_base = self.base_iri, **args)
         finally: fileobj.close()
     elif fileobj:
       if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, getattr(fileobj, "name", "") or getattr(fileobj, "url", "???")), file = sys.stderr)
-      try:     new_base_iri = self.graph.parse(fileobj, **args)
+      try:     new_base_iri = self.graph.parse(fileobj, default_base = self.base_iri, **args)
       finally: fileobj.close()
     else:
       if os.path.getmtime(f) <= self.graph.get_last_update_time():
@@ -438,7 +438,7 @@ class Ontology(Namespace, _GraphManager):
       else:
         fileobj = open(f, "rb")
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
-        try:     new_base_iri = self.graph.parse(fileobj, **args)
+        try:     new_base_iri = self.graph.parse(fileobj, default_base = self.base_iri, **args)
         finally: fileobj.close()
         
     self.loaded = True

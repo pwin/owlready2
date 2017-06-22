@@ -461,12 +461,12 @@ class SubGraph(BaseGraph):
     return on_prepare_triple, self.parent.new_blank_node, new_literal, abbreviate, on_finish
   
   
-  def parse(self, f, format = None, delete_existing_triples = True):
+  def parse(self, f, format = None, delete_existing_triples = True, default_base = ""):
     format = format or _guess_format(f)
     
     if   format == "ntriples":
       on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)
-
+      
       try:
         splitter = re.compile("\s")
         bn_src_2_sql = {}
@@ -509,7 +509,7 @@ class SubGraph(BaseGraph):
       
     elif format == "rdfxml":
       on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)
-      owlready2.rdfxml_2_ntriples.parse(f, None, on_prepare_triple, new_blank, new_literal)
+      owlready2.rdfxml_2_ntriples.parse(f, None, on_prepare_triple, new_blank, new_literal, default_base)
       onto_base_iri = on_finish()
       
     elif format == "owlxml":

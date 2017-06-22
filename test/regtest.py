@@ -2374,6 +2374,17 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
     self.assert_ntriples_equivalent(triples1, triples2)
     
+  def test_format_21(self):
+    world = self.new_world()
+    o = world.get_ontology("http://www.test.org/test_id.owl").load()
+    
+    assert issubclass(o.Prop1, ObjectProperty)
+    assert issubclass(o.Prop2, ObjectProperty)
+    assert o.Prop1.namespace == o
+    assert o.Prop2.namespace == o
+    assert o.Prop1.iri == "http://www.test.org/test_id.owl#Prop1"
+    assert o.Prop2.iri == "http://www.test.org/test_id.owl#Prop2"
+    
     
   def test_search_1(self):
     world = self.new_world()
