@@ -130,6 +130,7 @@ version 2 - 0.3
   * Fix nested intersections and unions
   * Fix boolean
   * Fix bug when removing parent properties
+  * Fix parsing of rdf:ID
     
 
 Links
