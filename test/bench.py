@@ -29,7 +29,7 @@ def render(entity):
   return entity.name
 set_render_func(render)
 
-for c in go.classes():
+for c in default_world.classes():
   print(c)
   for parent in c.is_a:
     print("    is a %s" % parent)

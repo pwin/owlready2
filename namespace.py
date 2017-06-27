@@ -444,6 +444,7 @@ class Ontology(Namespace, _GraphManager):
     self.loaded = True
     
     if new_base_iri and (new_base_iri != self.base_iri):
+      self.graph.add_ontology_alias(new_base_iri, self.base_iri)
       self.base_iri = new_base_iri
       self._namespaces[self.base_iri] = self.world.ontologies[self.base_iri] = self
       

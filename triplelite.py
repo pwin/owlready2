@@ -48,9 +48,10 @@ class Graph(BaseGraph):
       self.current_resource = 300 # 300 first values are reserved
       
       self.execute("""CREATE TABLE store (version INTEGER, current_blank INTEGER, current_resource INTEGER)""")
-      self.execute("""INSERT INTO store VALUES (1, 0, 300)""")
+      self.execute("""INSERT INTO store VALUES (2, 0, 300)""")
       self.execute("""CREATE TABLE quads (c INTEGER, s TEXT, p TEXT, o TEXT)""")
       self.execute("""CREATE TABLE ontologies (c INTEGER PRIMARY KEY, iri TEXT, last_update DOUBLE)""")
+      self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
       self.execute("""CREATE TABLE resources (storid TEXT PRIMARY KEY, iri TEXT) WITHOUT ROWID""")
       self.sql.executemany("INSERT INTO resources VALUES (?,?)", _universal_abbrev_2_iri.items())
       #self.execute("""CREATE INDEX index_resources_storid ON resources(storid)""") # Not needed because declared as primary key
@@ -64,9 +65,13 @@ class Graph(BaseGraph):
         s = "\n".join(clone.db.iterdump())
         self.sql.executescript(s)
         
-      self.execute("SELECT current_blank, current_resource FROM store")
-      self.current_blank, self.current_resource = self.fetchone()
-      
+      self.execute("SELECT version, current_blank, current_resource FROM store")
+      version, self.current_blank, self.current_resource = self.fetchone()
+      if version == 1:
+        self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
+        self.execute("""UPDATE store SET version=2""")
+        
+        
     self.current_changes = self.db.total_changes
 
   def ontologies_iris(self):
@@ -112,9 +117,12 @@ class Graph(BaseGraph):
     self.execute("SELECT c FROM ontologies WHERE iri=?", (onto.base_iri,))
     c = self.fetchone()
     if c is None:
-      self.execute("INSERT INTO ontologies VALUES (NULL, ?, 0)", (onto.base_iri,))
-      self.execute("SELECT c FROM ontologies WHERE iri=?", (onto.base_iri,))
+      self.execute("SELECT ontologies.c FROM ontologies, ontology_alias WHERE ontology_alias.alias=? AND ontologies.iri=ontology_alias.iri", (onto.base_iri,))
       c = self.fetchone()
+      if c is None:
+        self.execute("INSERT INTO ontologies VALUES (NULL, ?, 0)", (onto.base_iri,))
+        self.execute("SELECT c FROM ontologies WHERE iri=?", (onto.base_iri,))
+        c = self.fetchone()
     c = c[0]
     self.c_2_onto[c] = onto
     
@@ -524,8 +532,9 @@ class SubGraph(BaseGraph):
       
 
 
+  def add_ontology_alias(self, iri, alias):
+    self.execute("INSERT into ontology_alias VALUES (?,?)", (iri, alias))
 
-    
   def get_last_update_time(self):
     return self.execute("SELECT last_update FROM ontologies WHERE c=?", (self.c,)).fetchone()[0]
   
