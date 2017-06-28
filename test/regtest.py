@@ -1016,6 +1016,15 @@ class Test(BaseTest, unittest.TestCase):
     assert p2.is_a == [ObjectProperty]
     assert d2.is_a == [DataProperty]
     
+  def test_prop_24(self):
+    ok = False
+    try:
+      o = get_ontology("test_multiple_base_prop.owl").load()
+      o.bug_database
+    except TypeError:
+      ok = True
+    assert ok
+    
     
   def test_prop_inverse_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

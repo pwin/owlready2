@@ -7,12 +7,12 @@ from owlready2 import *
 
 t = time.time()
 
-#default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite")
+default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite")
 
 onto_path.append(os.path.dirname(__file__))
 onto_path.append("/home/jiba/telechargements/base_med/")
 
-go = get_ontology("http://purl.obolibrary.org/obo/go.owl").load()
+go = get_ontology("http://purl.obolibrary.org/obo/dron.owl").load()
 default_world.save()
 
 t = time.time() - t
@@ -29,8 +29,9 @@ def render(entity):
   return entity.name
 set_render_func(render)
 
+s = ""
 for c in default_world.classes():
-  print(c)
+  s += repr(c)
   for parent in c.is_a:
     print("    is a %s" % parent)
 

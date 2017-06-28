@@ -132,7 +132,8 @@ version 2 - 0.3
   * Fix bug when removing parent properties
   * Fix parsing of rdf:ID
   * Fix multiple loading of the same ontology whose IRI is modified by OWL file, using an ontology alias table
-    
+  * Check for properties with multiple incompatible classes (e.g. ObjectProperty and Annotation Property)
+
 
 Links
 -----

@@ -97,6 +97,7 @@ class EntityClass(type):
         is_a           = _is_a,
         _equivalent_to = None,
       )
+      
       Class = namespace.world._entities[storid] = _is_a._obj = type.__new__(MetaClass, name, superclasses, obj_dict)
       
       if not LOADING:

@@ -26,12 +26,29 @@ from owlready2.base      import _universal_abbrev_2_datatype, _universal_datatyp
 
 
 _next_domain_range = None
+_check_superclasses = False
 
 class PropertyClass(EntityClass):
   _rdfs_is_a        = rdfs_subpropertyof
   _owl_equivalent   = owl_equivalentproperty
   _owl_disjointwith = owl_propdisjointwith
   
+  def __new__(MetaClass, name, superclasses, obj_dict):
+    if _check_superclasses:
+      nb_base = 0
+      if ObjectProperty     in superclasses: nb_base += 1
+      if DataProperty       in superclasses: nb_base += 1
+      if AnnotationProperty in superclasses: nb_base += 1
+      if nb_base > 1:
+        iri = "%s%s" % (obj_dict["namespace"].base_iri, name)
+        if (ObjectProperty in superclasses) and (DataProperty in superclasses):
+          raise TypeError("Property '%s' is both an ObjectProperty and a DataProperty!" % iri)
+        if (ObjectProperty in superclasses) and (AnnotationProperty in superclasses):
+          raise TypeError("Property '%s' is both an ObjectProperty and an AnnotationProperty!" % iri)
+        if (AnnotationProperty in superclasses) and (DataProperty in superclasses):
+          raise TypeError("Property '%s' is both an AnnotationProperty and a DataProperty!" % iri)
+    return EntityClass.__new__(MetaClass, name, superclasses, obj_dict)
+    
   def __init__(Prop, name, bases, obj_dict):
     global _next_domain_range
     
