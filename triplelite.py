@@ -895,12 +895,3 @@ def _guess_format(f):
   
   return "rdfxml"
 
-
-import owlready2
-for _d in os.get_exec_path():
-  if os.path.exists(os.path.join(_d, owlready2.RAPPER_EXE)):
-    _has_rapper = True
-    break
-else: _has_rapper = False
-del _d
-
