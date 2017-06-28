@@ -63,7 +63,7 @@ class ClassConstruct(object):
     
     else:
       return [
-        self.ontology.world._get_by_storid(x, None, ThingClass, self.ontology.graph.c)
+        self.ontology.world._get_by_storid(x, None, ThingClass, self.ontology)
         for x in self.ontology.world.get_triples_po(rdfs_subclassof, self.storid)
         if not x.startswith("_")
       ]
