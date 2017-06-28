@@ -154,3 +154,17 @@ and then to add the other Class(ses) in its .is_a attribute:
 Owlready2 will automatically create a hidden Class that inherits from both Drug and BloodBasedProduct. This
 hidden class is visible in a_blood_based_drug.__class__, but not in a_blood_based_drug.is_a.
    
+
+Destroying entities
+-------------------
+
+The destroy_entity() global function can be used to destroy an entity, i.e. to remove it from the ontology and
+the quad store.
+Owlready2 behaves similarly to Protege4 when destroying entities: all relations involving the destroyed entity
+are destroyed too, as well as all class constructs and blank nodes that refer it.
+
+::
+
+   >>> destroy_entity(individual)
+   >>> destroy_entity(Klass)
+   >>> destroy_entity(Property)
