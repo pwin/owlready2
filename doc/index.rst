@@ -16,6 +16,8 @@ Jean-Baptiste Lamy. It was developed during the VIIIP research project funded by
 this is why some examples in this documentation relate to drug ;).
 
 Owlready2 is available under the GNU LGPL licence v3.
+A forum/mailing list is available for Owlready on Nabble: http://owlready.8326.n8.nabble.com
+
 
 Table of content
 ----------------

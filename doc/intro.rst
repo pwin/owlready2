@@ -93,7 +93,9 @@ dynamically from the quadstore as needed, cached in memory and destroyed when no
 Contact and links
 -----------------
 
-In case of trouble, please contact Jean-Baptiste Lamy <jean-baptiste.lamy *@* univ-paris13 *.* fr>
+A forum/mailing list is available for Owlready on Nabble: http://owlready.8326.n8.nabble.com
+
+In case of trouble, please write to the forum or contact Jean-Baptiste Lamy <jean-baptiste.lamy *@* univ-paris13 *.* fr>
 
 ::
 

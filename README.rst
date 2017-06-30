@@ -145,6 +145,9 @@ Owlready2 on PyPI (Python Package Index, stable release): https://pypi.python.or
 
 Documentation: http://pythonhosted.org/Owlready2
 
+Forum/Mailing list: http://owlready.8326.n8.nabble.com
+
+
 Mail me for any comment, problem, suggestion or help !
 
 Jiba -- Jean-Baptiste LAMY -- jibalamy @ free.fr
