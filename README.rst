@@ -143,7 +143,7 @@ Owlready2 on BitBucket (development repository): https://bitbucket.org/jibalamy/
 
 Owlready2 on PyPI (Python Package Index, stable release): https://pypi.python.org/pypi/Owlready2
 
-Documentation: http://pythonhosted.org/Owlready2
+Documentation: http://owlready2.readthedocs.io/
 
 Forum/Mailing list: http://owlready.8326.n8.nabble.com
 
