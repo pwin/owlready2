@@ -135,6 +135,12 @@ version 2 - 0.3
   * Fix ClassConstruct.subclasses()
   * Check for properties with multiple incompatible classes (e.g. ObjectProperty and Annotation Property)
 
+version 2 - 0.4
+***************
+
+* Add methods for querying the properties defined for a given individuals, the inverse properties
+  and the relation instances (.get_properties(), .get_inverse_properties() and .get_relations())
+
 
 Links
 -----

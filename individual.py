@@ -236,8 +236,20 @@ class Thing(metaclass = ThingClass):
           if not domain._satisfied_by(self): break
         else:
           yield Prop
-  
-  
+          
+  def get_properties(self):
+    for storid in self.namespace.world.get_pred(self.storid):
+      Prop = self.namespace.world._get_by_storid(storid)
+      if not Prop is None: # None is is-a
+        yield Prop
+        
+  def get_inverse_properties(self):
+    for s,p,o in self.namespace.world.get_triples(None, None, self.storid):
+      Prop    = self.namespace.world._get_by_storid(p)
+      if not Prop is None: # None is is-a
+        subject = self.namespace.world._get_by_storid(s)
+        yield subject, Prop
+        
 
 
 class Nothing(Thing): pass

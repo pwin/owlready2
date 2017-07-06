@@ -70,6 +70,8 @@ class _GraphManager(object):
   def get_triples(self, subject = None, predicate = None, object = None): return []
   get_triples_s = get_triples_sp = get_triples_po = get_triples
   
+  def get_pred(self, subject): return []
+  
   def has_triple(self, subject = None, predicate = None, object = None): return False
   
   def get_quads(self, subject = None, predicate = None, object = None, ontology_graph = None): return []

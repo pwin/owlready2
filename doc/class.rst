@@ -133,6 +133,24 @@ subclasses). It returns a generator.
 Finally, Individuals also have the .equivalent_to attribute.
    
 
+Introspecting Individuals
+-------------------------
+
+The list of properties that exist for a given individual can be obtained by the .get_properties() method.
+It returns a generator that yields the properties (without dupplicates).
+
+::
+   
+   >>> onto.drug_1.get_properties()
+
+Inverse properties can be obtained by the .get_inverse_properties() method.
+It returns a generator that yields (subject, property) tuples.
+
+::
+   
+   >>> onto.drug_1.get_inverse_properties()
+
+
 Mutli-Class Individuals
 -----------------------
 

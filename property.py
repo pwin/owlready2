@@ -228,8 +228,15 @@ class Property(metaclass = PropertyClass):
         singles.add(restriction.value)
     cache[Prop] = r = not ranges.isdisjoint(singles)
     return r
-  
 
+  @classmethod
+  def get_relations(Prop):
+    for s,p,o in Prop.namespace.world.get_triples(None, Prop.storid, None):
+      s = Prop.namespace.world._get_by_storid(s)
+      o = Prop.namespace.ontology._to_python(o)
+      yield s, o
+        
+        
 class ReasoningPropertyClass(PropertyClass):
   def __init__(Prop, name, bases, obj_dict):
     super().__init__(name, bases, obj_dict)

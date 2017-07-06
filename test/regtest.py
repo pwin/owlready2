@@ -693,6 +693,14 @@ class Test(BaseTest, unittest.TestCase):
     
     assert len(onto.pizza_tomato.is_a) == 2
     
+  def test_individual_11(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    assert set(o.ma_pizza.get_properties()) == { o.price, o.annot, comment, o.has_topping, o.has_main_topping }
+    assert set(o.ma_tomate.get_inverse_properties()) == { (o.ma_pizza, o.has_topping), (o.ma_pizza, o.has_main_topping) }
+    
+    
   def test_prop_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     assert "has_topping" in default_world._props
@@ -1024,6 +1032,13 @@ class Test(BaseTest, unittest.TestCase):
     except TypeError:
       ok = True
     assert ok
+    
+  def test_prop_25(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    assert set(o.price.get_relations()) == { (o.ma_pizza, 9.9) }
+    assert set(o.has_topping.get_relations()) == { (o.ma_pizza, o.mon_frometon), (o.ma_pizza, o.ma_tomate) }
     
     
   def test_prop_inverse_1(self):

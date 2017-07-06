@@ -198,6 +198,9 @@ class Graph(BaseGraph):
   def get_quads_sp(self, s, p):
     return self.execute("SELECT o,c FROM quads WHERE s=? AND p=?", (s, p,)).fetchall()
   
+  def get_pred(self, s):
+    for (x,) in self.execute("SELECT DISTINCT p FROM quads WHERE s=?", (s,)).fetchall(): yield x
+    
   def get_triples_s(self, s):
     return self.execute("SELECT p,o FROM quads WHERE s=?", (s,)).fetchall()
   
@@ -607,6 +610,9 @@ class SubGraph(BaseGraph):
     if r: return r[0]
     return None
   
+  def get_pred(self, s):
+    for (x,) in self.execute("SELECT DISTINCT p FROM quads WHERE c=? AND s=?", (self.c, s,)).fetchall(): yield x
+    
   def has_triple(self, s = None, p = None, o = None):
     if s is None:
       if p is None:

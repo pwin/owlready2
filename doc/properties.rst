@@ -262,3 +262,18 @@ For more information about the use of annotations, see :doc:`annotations`.
 
 The 'python_name' annotations can also be defined in ontology editors like Protégé, by importing the Owlready
 ontology (file 'owlready2/owlready_ontology.owl' in Owlready2 sources).
+
+
+Getting relation instances
+--------------------------
+
+The list of relations that exist for a given property can be obtained by the .get_relations() method.
+It returns a generator that yields (subject, object) tuples.
+
+::
+   
+   >>> onto.has_for_active_principle.get_relations()
+
+.. warning::
+   
+   The quadstore is not indexed for the .get_relations() method. Thus, it can be slow on huge ontologies.
