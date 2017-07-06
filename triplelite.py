@@ -305,7 +305,7 @@ class Graph(BaseGraph):
     return [storid for (storid,) in self.fetchall()]
   
   def __len__(self):
-    return self.execute("SELECT COUNT(s) FROM quads").fetchone()[0]
+    return self.execute("SELECT COUNT() FROM quads").fetchone()[0]
 
   def dump(self):
     import io
@@ -636,7 +636,7 @@ class SubGraph(BaseGraph):
   def search(self, prop_vals, c = None): return self.parent.search(prop_vals, self.c)
   
   def __len__(self):
-    return self.execute("SELECT COUNT(s) FROM quads WHERE c=?", (self.c,)).fetchone()[0]
+    return self.execute("SELECT COUNT() FROM quads WHERE c=?", (self.c,)).fetchone()[0]
 
   def dump(self):
     import io
