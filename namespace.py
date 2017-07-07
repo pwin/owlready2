@@ -236,10 +236,10 @@ class World(_GraphManager):
     self.filename = filename
     
     for ontology in self.ontologies.values():
-      ontology.graph = self.graph.sub_graph(ontology)
+      ontology.graph, new_in_quadstore = self.graph.sub_graph(ontology)
       for method in ontology.graph.__class__.READ_METHODS + ontology.graph.__class__.WRITE_METHODS:
         setattr(ontology, method, getattr(ontology.graph, method))
-      
+        
     for iri in self.graph.ontologies_iris():
       self.get_ontology(iri) # Create all possible ontologies if not yet done
       
@@ -385,9 +385,11 @@ class Ontology(Namespace, _GraphManager):
     if world.graph is None:
       self.graph = None
     else:
-      self.graph = world.graph.sub_graph(self)
+      self.graph, new_in_quadstore = world.graph.sub_graph(self)
       for method in self.graph.__class__.READ_METHODS + self.graph.__class__.WRITE_METHODS:
         setattr(self, method, getattr(self.graph, method))
+      if not new_in_quadstore:
+        self._load_properties()
         
     world.ontologies[self.base_iri] = self
     if _LOG_LEVEL: print("* Owlready2 * Creating new ontology %s <%s>." % (self.name, self.base_iri), file = sys.stderr)
@@ -451,19 +453,8 @@ class Ontology(Namespace, _GraphManager):
       self._namespaces[self.base_iri] = self.world.ontologies[self.base_iri] = self
       
     # Search for property names
-    props = []
-    for prop_storid in itertools.chain(self.get_triples_po(rdf_type, owl_object_property), self.get_triples_po(rdf_type, owl_data_property), self.get_triples_po(rdf_type, owl_annotation_property)):
-      Prop = self.world._get_by_storid(prop_storid)
-      python_name = self.world.get_triple_sp(prop_storid, owlready_python_name)
-      
-      if python_name is None:
-        props.append(Prop.python_name)
-      else:
-        with LOADING: Prop.python_name = python_name
-        props.append("%s (%s)" % (Prop.python_name, Prop.name))
-    if _LOG_LEVEL:
-      print("* Owlready2 *     ...%s properties found: %s" % (len(props), ", ".join(props)), file = sys.stderr)
-      
+    self._load_properties()
+    
     # Load imported ontologies
     imported_ontologies = [self.world.get_ontology(self.unabbreviate(abbrev_iri)).load() for abbrev_iri in self.world.get_triples_sp(self.storid, owl_imports)]
     self.imported_ontologies._set(imported_ontologies)
@@ -479,6 +470,21 @@ class Ontology(Namespace, _GraphManager):
         print("\n\n\n", file = sys.stderr)
         raise
     return self
+  
+  def _load_properties(self):
+    props = []
+    for prop_storid in itertools.chain(self.get_triples_po(rdf_type, owl_object_property), self.get_triples_po(rdf_type, owl_data_property), self.get_triples_po(rdf_type, owl_annotation_property)):
+      Prop = self.world._get_by_storid(prop_storid)
+      python_name = self.world.get_triple_sp(prop_storid, owlready_python_name)
+      
+      if python_name is None:
+        props.append(Prop.python_name)
+      else:
+        with LOADING: Prop.python_name = python_name
+        props.append("%s (%s)" % (Prop.python_name, Prop.name))
+    if _LOG_LEVEL:
+      print("* Owlready2 *     ...%s properties found: %s" % (len(props), ", ".join(props)), file = sys.stderr)
+      
   
   def indirectly_imported_ontologies(self):
     yield self

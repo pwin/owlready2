@@ -114,19 +114,21 @@ class Graph(BaseGraph):
     self.execute("UPDATE resources SET iri=? WHERE storid=?", (new_iri, storid,))
     
   def sub_graph(self, onto):
+    new_in_quadstore = False
     self.execute("SELECT c FROM ontologies WHERE iri=?", (onto.base_iri,))
     c = self.fetchone()
     if c is None:
       self.execute("SELECT ontologies.c FROM ontologies, ontology_alias WHERE ontology_alias.alias=? AND ontologies.iri=ontology_alias.iri", (onto.base_iri,))
       c = self.fetchone()
       if c is None:
+        new_in_quadstore = True
         self.execute("INSERT INTO ontologies VALUES (NULL, ?, 0)", (onto.base_iri,))
         self.execute("SELECT c FROM ontologies WHERE iri=?", (onto.base_iri,))
         c = self.fetchone()
     c = c[0]
     self.c_2_onto[c] = onto
     
-    return SubGraph(self, onto, c, self.db, self.sql)
+    return SubGraph(self, onto, c, self.db, self.sql), new_in_quadstore
   
   def context_2_user_context(self, c): return self.c_2_onto[c]
   
