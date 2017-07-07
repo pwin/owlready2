@@ -216,11 +216,39 @@ class Graph(BaseGraph):
     r = self.execute("SELECT o FROM quads WHERE s=? AND p=? LIMIT 1", (s, p,)).fetchone()
     if r: return r[0]
     return None
+  
   def get_triple_po(self, p = None, o = None):
     r = self.execute("SELECT s FROM quads WHERE p=? AND o=? LIMIT 1", (p, o,)).fetchone()
     if r: return r[0]
     return None
   
+  def get_transitive_po(self, p, o):
+    yield o
+    for (x,) in self.execute("""
+WITH RECURSIVE transit(x)
+AS (      SELECT ?
+UNION ALL SELECT quads.s FROM quads, transit WHERE quads.p=? AND quads.o=transit.x)
+SELECT DISTINCT x FROM transit""", (o, p)).fetchall(): yield x
+  
+  def get_transitive_sp(self, s, p):
+    yield s
+    for (x,) in self.execute("""
+WITH RECURSIVE transit(x)
+AS (      SELECT ?
+UNION ALL SELECT quads.o FROM quads, transit WHERE quads.s=transit.x AND quads.p=?)
+SELECT DISTINCT x FROM transit""", (s, p)).fetchall(): yield x
+
+#   def get_transitive_sym(self, s, p):
+#     yield s
+#     for (x,) in self.execute("""
+# WITH RECURSIVE transit(x)
+# AS (      SELECT ?
+# UNION ALL SELECT quads.o FROM quads, transit WHERE quads.s=transit.x AND quads.p=?
+# UNION ALL SELECT quads.s FROM quads, transit WHERE quads.p=? AND quads.o=transit.x)
+# SELECT x FROM transit""", (s, p, p)).fetchall(): yield x
+    
+    
+    
   def has_triple(self, s = None, p = None, o = None):
     if s is None:
       if p is None:
@@ -602,15 +630,31 @@ class SubGraph(BaseGraph):
   def get_triples_po(self, p, o):
     for (x,) in self.execute("SELECT s FROM quads WHERE c=? AND p=? AND o=?", (self.c, p, o,)).fetchall(): yield x
     
-  def get_triple_sp(self, s = None, p = None):
+  def get_triple_sp(self, s, p):
     r = self.execute("SELECT o FROM quads WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,)).fetchone()
     if r: return r[0]
     return None
   
-  def get_triple_po(self, p = None, o = None):
+  def get_triple_po(self, p, o):
     r = self.execute("SELECT s FROM quads WHERE c=? AND p=? AND o=? LIMIT 1", (self.c, p, o,)).fetchone()
     if r: return r[0]
     return None
+  
+  def get_transitive_po(self, p, o):
+    yield o
+    for (x,) in self.execute("""
+WITH RECURSIVE transit(x)
+AS (      SELECT ?
+UNION ALL SELECT quads.s FROM quads, transit WHERE quads.c=? AND quads.p=? AND quads.o=transit.x)
+SELECT DISTINCT x FROM transit""", (o, c, p)).fetchall(): yield x
+  
+  def get_transitive_sp(self, s, p):
+    yield s
+    for (x,) in self.execute("""
+WITH RECURSIVE transit(x)
+AS (      SELECT ?
+UNION ALL SELECT quads.o FROM quads, transit WHERE quads.c=? AND quads.s=transit.x AND quads.p=?)
+SELECT DISTINCT x FROM transit""", (s, c, p)).fetchall(): yield x
   
   def get_pred(self, s):
     for (x,) in self.execute("SELECT DISTINCT p FROM quads WHERE c=? AND s=?", (self.c, s,)).fetchall(): yield x
