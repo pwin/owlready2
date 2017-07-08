@@ -151,6 +151,8 @@ The following example shows how to list the properties of a given individual, an
    >>>     for value in prop[onto.drug_1]:
    >>>         print(".%s == %s" % (prop.python_name, value))
 
+Notice the "Property[individual]" syntax. It allows to get the values as a list, even for functional properties
+(contrary to getattr(individual, Property.python_name).
 
    
 Inverse properties can be obtained by the .get_inverse_properties() method.
