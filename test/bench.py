@@ -29,9 +29,8 @@ def render(entity):
   return entity.name
 set_render_func(render)
 
-s = ""
 for c in default_world.classes():
-  s += repr(c)
+  print(repr(c))
   for parent in c.is_a:
     print("    is a %s" % parent)
 
