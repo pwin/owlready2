@@ -16,6 +16,8 @@ Owlready2 can:
 
  - Perform automatic classification of classes and instances, using the HermiT reasoner.
 
+ - Tested up to 100 millions of RDF triples (but can potentially support more).
+
  - In addition, the quadstore is compatible with the RDFlib Pyton module, which can be used to perform SPARQL queries.
    
 Owlready has been created by Jean-Baptiste Lamy at the LIMICS reseach lab.
