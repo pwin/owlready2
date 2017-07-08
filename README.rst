@@ -142,6 +142,7 @@ version 2 - 0.4
 
 * Add methods for querying the properties defined for a given individuals, the inverse properties
   and the relation instances (.get_properties(), .get_inverse_properties() and .get_relations())
+* Optimize ontology loading by recreating SQL index from scratch
 * Optimize SQL query for transitive quadstore queries, using RECURSIVE Sqlite3 statements
 * Optimize SQL query for obtaining the number of RDF triples (ie len(default_world.graph))
 * Bugfixes:

@@ -475,9 +475,23 @@ class SubGraph(BaseGraph):
       
       if delete_existing_triples: self.execute("DELETE FROM quads WHERE c=?", (self.c,))
       
+      if len(self.parent) < 100000:
+        self.execute("""DROP INDEX index_resources_iri""")
+        self.execute("""DROP INDEX index_quads_s""")
+        self.execute("""DROP INDEX index_quads_o""")
+        reindex = True
+      else:
+        reindex = False
+        
       if owlready2.namespace._LOG_LEVEL: print("* OwlReady 2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
       self.sql.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
       self.sql.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
+      
+      if reindex:
+        self.execute("""CREATE INDEX index_resources_iri ON resources(iri)""")
+        self.execute("""CREATE INDEX index_quads_s ON quads(s)""")
+        self.execute("""CREATE INDEX index_quads_o ON quads(o)""")
+        
       
       onto_base_iri = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND quads.o=? AND resources.storid=quads.s LIMIT 1", (self.c, owl_ontology)).fetchone()
       
