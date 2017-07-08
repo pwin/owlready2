@@ -223,7 +223,6 @@ class Graph(BaseGraph):
     return None
   
   def get_transitive_po(self, p, o):
-    yield o
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT ?
@@ -231,22 +230,19 @@ UNION ALL SELECT quads.s FROM quads, transit WHERE quads.p=? AND quads.o=transit
 SELECT DISTINCT x FROM transit""", (o, p)).fetchall(): yield x
   
   def get_transitive_sp(self, s, p):
-    yield s
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT ?
 UNION ALL SELECT quads.o FROM quads, transit WHERE quads.s=transit.x AND quads.p=?)
 SELECT DISTINCT x FROM transit""", (s, p)).fetchall(): yield x
 
-#   def get_transitive_sym(self, s, p):
-#     yield s
-#     for (x,) in self.execute("""
-# WITH RECURSIVE transit(x)
-# AS (      SELECT ?
-# UNION ALL SELECT quads.o FROM quads, transit WHERE quads.s=transit.x AND quads.p=?
-# UNION ALL SELECT quads.s FROM quads, transit WHERE quads.p=? AND quads.o=transit.x)
-# SELECT x FROM transit""", (s, p, p)).fetchall(): yield x
-    
+    # This one is actually slower than the Python implementation
+#  def get_transitive_sym2(self, s, p):
+#    for (x,) in self.execute("""
+#WITH RECURSIVE transit(s,o)
+#AS (  SELECT s,o from quads WHERE (s=? OR o=?) AND (p=?)
+#UNION SELECT quads.s,quads.o FROM quads, transit WHERE (quads.s=transit.s OR quads.o=transit.o) AND quads.p=?)
+#SELECT s FROM transit UNION SELECT o FROM transit""", (s, s, p, p)).fetchall(): yield x
     
     
   def has_triple(self, s = None, p = None, o = None):
@@ -641,7 +637,6 @@ class SubGraph(BaseGraph):
     return None
   
   def get_transitive_po(self, p, o):
-    yield o
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT ?
@@ -649,7 +644,6 @@ UNION ALL SELECT quads.s FROM quads, transit WHERE quads.c=? AND quads.p=? AND q
 SELECT DISTINCT x FROM transit""", (o, c, p)).fetchall(): yield x
   
   def get_transitive_sp(self, s, p):
-    yield s
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT ?

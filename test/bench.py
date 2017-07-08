@@ -12,7 +12,7 @@ t = time.time()
 onto_path.append(os.path.dirname(__file__))
 onto_path.append("/home/jiba/telechargements/base_med/")
 
-go = get_ontology("http://purl.obolibrary.org/obo/dron.owl").load()
+go = get_ontology("http://purl.obolibrary.org/obo/go.owl").load()
 default_world.save()
 
 t = time.time() - t
