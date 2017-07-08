@@ -143,6 +143,16 @@ It returns a generator that yields the properties (without dupplicates).
    
    >>> onto.drug_1.get_properties()
 
+The following example shows how to list the properties of a given individual, and the associated values:
+
+::
+   
+   >>> for prop in onto.drug_1.get_properties():
+   >>>     for value in prop[onto.drug_1]:
+   >>>         print(".%s == %s" % (prop.python_name, value))
+
+
+   
 Inverse properties can be obtained by the .get_inverse_properties() method.
 It returns a generator that yields (subject, property) tuples.
 
