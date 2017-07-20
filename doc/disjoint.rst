@@ -26,7 +26,7 @@ are disjoint (yes, we need to specify that explicitely -- sometimes ontologies s
    ...         pass
    ...     class ActivePrinciple(Thing):
    ...         pass
-   ...     AllDisjoint(Drug, ActivePrinciple)
+   ...     AllDisjoint([Drug, ActivePrinciple])
 
 
 Disjoint Properties
@@ -51,7 +51,7 @@ to state explicitely that acetaminophen and aspirin are not the same!)
    >>> acetaminophen = ActivePrinciple("acetaminophen")
    >>> aspirin       = ActivePrinciple("aspirin")
    
-   >>> AllDifferent(acetaminophen, aspirin)
+   >>> AllDifferent([acetaminophen, aspirin])
 
 .. note::
 

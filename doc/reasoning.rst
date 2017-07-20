@@ -49,7 +49,7 @@ Here is an example creating a 'reasoning-ready' ontology:
    >>> amoxicillin     = ActivePrinciple("amoxicillin")
    >>> clavulanic_acid = ActivePrinciple("clavulanic_acid")
    
-   >>> AllDifferent(acetaminophen, amoxicillin, clavulanic_acid)
+   >>> AllDifferent([acetaminophen, amoxicillin, clavulanic_acid])
 
    >>> drug1 = Drug(active_principles = [acetaminophen])
    >>> drug2 = Drug(active_principles = [amoxicillin, clavulanic_acid])
