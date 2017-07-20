@@ -20,7 +20,7 @@
 from owlready2.base import *
 
 class BaseGraph(object):
-  READ_METHODS  = ["refactor", "new_numbered_iri", "abbreviate", "unabbreviate", "get_triple_sp", "get_triple_po", "get_transitive_sp", "get_transitive_po", "get_transitive_sym", "get_triples", "get_triples_s", "get_triples_sp", "get_triples_po", "get_pred", "get_quads", "get_quads_sp", "has_triple", "_del_triple"]
+  READ_METHODS  = ["refactor", "new_numbered_iri", "abbreviate", "unabbreviate", "get_triple_sp", "get_triple_po", "get_transitive_sp", "get_transitive_po", "get_transitive_sym", "get_transitive_sp_indirect", "get_triples", "get_triples_s", "get_triples_sp", "get_triples_po", "get_pred", "get_quads", "get_quads_sp", "has_triple", "_del_triple"]
   WRITE_METHODS = ["_add_triple", "_set_triple"]
   
   def sub_graph(self, user_context): return self.__class__(self, user_context)
@@ -39,11 +39,11 @@ class BaseGraph(object):
       return True
     return False
     
-  def get_triple_sp(self, subject = None, predicate = None):
+  def get_triple_sp(self, subject, predicate):
     for o in self.get_triples_sp(subject, predicate): return o
     return None
   
-  def get_triple_po(self, predicate = None, object = None):
+  def get_triple_po(self, predicate, object):
     for s in self.get_triples_po(predicate, object): return s
     return None
   
@@ -54,7 +54,7 @@ class BaseGraph(object):
   #    return p
   #  return None
     
-  def get_transitive_po(self, predicate = None, object = None, already = None):
+  def get_transitive_po(self, predicate, object, already = None):
     if already is None: already = set()
     if not object in already:
       #yield object
@@ -64,7 +64,7 @@ class BaseGraph(object):
         self.get_transitive_po(predicate, s, already)
     return already
   
-  def get_transitive_sp(self, subject = None, predicate = None, already = None):
+  def get_transitive_sp(self, subject, predicate, already = None):
     if already is None: already = set()
     if not subject in already:
       #yield subject
@@ -74,32 +74,42 @@ class BaseGraph(object):
         self.get_transitive_sp(o, predicate, already)
     return already
   
-  def get_transitive_sym(self, subject = None, predicate = None, already = None):
+  def get_transitive_sym(self, subject, predicate, already = None):
     if already is None: already = set()
     if not subject in already:
       already.add(subject)
       for s in self.get_triples_po(predicate, subject): self.get_transitive_sym(s, predicate, already)
       for s in self.get_triples_sp(subject, predicate): self.get_transitive_sym(s, predicate, already)
     return already
-    
+  
+  def get_transitive_sp_indirect(self, subject, predicates_inverses, already = None):
+    if already is None: already = set()
+    if not subject in already:
+      already.add(subject)
+      for (predicate, inverse) in predicates_inverses:
+        for o in self.get_triples_sp(subject, predicate): self.get_transitive_sp_indirect(o, predicates_inverses, already)
+        if inverse:
+          for o in self.get_triples_po(inverse, subject): self.get_transitive_sp_indirect(o, predicates_inverses, already)
+    return already
+  
     
   def get_triples(self, subject = None, predicate = None, object = None):
     for s,p,o,c in self.get_quads(subject, predicate, object, None):
       yield s,p,o
       
-  def get_triples_s(self, subject = None):
+  def get_triples_s(self, subject):
     return [(p,o) for s,p,o in self.get_triples(subject, None, None)]
   
-  def get_triples_sp(self, subject = None, predicate = None):
+  def get_triples_sp(self, subject, predicate):
     return [o for s,p,o in self.get_triples(subject, predicate, None)]
   
-  def get_triples_po(self, predicate = None, object = None):
+  def get_triples_po(self, predicate, object):
     return [s for s,p,o in self.get_triples(None, predicate, object)]
   
   def get_quads(self, subject = None, predicate = None, object = None, ontology_graph = None):
     raise NotImplementedError
   
-  def get_quads_sp(self, subject = None, predicate = None):
+  def get_quads_sp(self, subject, predicate):
     return [(o,c) for s,p,o,c in self.get_quads(subject, predicate)]
   
   def __len__(self): raise NotImplementedError

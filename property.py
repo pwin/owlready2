@@ -19,10 +19,11 @@
 
 import weakref
 
-from owlready2.namespace import *
-from owlready2.entity    import *
-from owlready2.entity    import _inherited_property_value_restrictions
-from owlready2.base      import _universal_abbrev_2_datatype, _universal_datatype_2_abbrev
+from owlready2.namespace  import *
+from owlready2.entity     import *
+from owlready2.entity     import _inherited_property_value_restrictions
+from owlready2.individual import ValueList
+from owlready2.base       import _universal_abbrev_2_datatype, _universal_datatype_2_abbrev
 
 
 _next_domain_range = None
@@ -250,11 +251,11 @@ class ReasoningPropertyClass(PropertyClass):
     Prop.namespace.world._reasoning_props[python_name] = Prop
     PropertyClass.set_python_name(Prop, python_name)
   python_name = property(PropertyClass.get_python_name, set_python_name)
-    
+  
   def __getitem__(Prop, individual):
     values = getattr(individual, Prop.python_name)
     if isinstance(values, list): return values
-    return [values]
+    return ValueList([values], individual, Prop)
   
   
 class ObjectPropertyClass(ReasoningPropertyClass):

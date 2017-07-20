@@ -700,6 +700,87 @@ class Test(BaseTest, unittest.TestCase):
     assert set(o.ma_pizza.get_properties()) == { o.price, o.annot, comment, o.has_topping, o.has_main_topping }
     assert set(o.ma_tomate.get_inverse_properties()) == { (o.ma_pizza, o.has_topping), (o.ma_pizza, o.has_main_topping) }
     
+  def test_individual_12(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.test.org/test.owl")
+
+    with o:
+      class O(Thing): pass
+      class p(O >> O, TransitiveProperty): pass
+      
+      o1 = O()
+      o2 = O(p = [o1])
+      o3 = O(p = [o2])
+      o4 = O(p = [o3])
+
+    r = set(o3.p.transitive())
+    assert r == { o1, o2, o3 }
+    
+  def test_individual_13(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.test.org/test.owl")
+
+    with o:
+      class O(Thing): pass
+      class p(O >> O, TransitiveProperty): pass
+      class i(O >> O, TransitiveProperty): inverse = p
+      
+      o1 = O()
+      o2 = O(p = [o1])
+      o3 = O(p = [o2])
+      o4 = O(i = [o3])
+      o6 = O()
+      o5 = O(i = [o4], p = [o6])
+      o7 = O()
+      
+    r = set(o3.p.transitive())
+    assert r == { o1, o2, o3, o4, o5, o6 }
+    
+  def test_individual_14(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class O(Thing): pass
+      class p(O >> O, TransitiveProperty, SymmetricProperty): pass
+      
+      o1 = O()
+      o2 = O(p = [o1])
+      o3 = O(p = [o2])
+      o4 = O(p = [o3])
+      o5 = O()
+      o6 = O(p = [o5])
+      o7 = O()
+      
+    r = set(o3.p.transitive_symmetric())
+    assert r == { o1, o2, o3, o4 }
+    
+    r = set(o3.p.symmetric())
+    assert r == { o2, o4 }
+    
+  def test_individual_15(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.test.org/test.owl")
+
+    with o:
+      class O(Thing): pass
+      class p(O >> O, TransitiveProperty): pass
+      class q(p): pass
+      class s(q): pass
+      
+      o1 = O()
+      o2 = O()
+      o3 = O()
+      o4 = O(s = [o3])
+      o5 = O(q = [o4])
+      o6 = O(s = [o5], q = [o1], p = [o2])
+      o7 = O()
+      o8 = O(s = [o5])
+      
+    r = set(o6.q.indirect())
+    assert r == { o6, o5, o1, o4, o3 }
+    
+    
     
   def test_prop_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

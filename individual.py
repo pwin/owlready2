@@ -30,6 +30,79 @@ class ValueList(CallbackListWithLanguage):
     self._obj  = obj
     self._Prop = Prop
     
+  def transitive(self):
+    n = self._obj.namespace
+    if self._Prop.inverse_property:
+      for o in n.world.get_transitive_sp_indirect(self._obj.storid, [(self._Prop.storid, self._Prop.inverse_property.storid)]):
+        yield n.ontology._to_python(o)
+    else:
+      for o in n.world.get_transitive_sp(self._obj.storid, self._Prop.storid):
+        yield n.ontology._to_python(o)
+        
+  def transitive_symmetric(self):
+    n = self._obj.namespace
+    for o in n.world.get_transitive_sym(self._obj.storid, self._Prop.storid):
+      yield n.ontology._to_python(o)
+      
+  def symmetric(self):
+    yield from self
+    n = self._obj.namespace
+    for o in n.world.get_triples_po(self._Prop.storid, self._obj.storid):
+      yield n.ontology._to_python(o)
+      
+  def indirect(self):
+    n = self._obj.namespace
+    Props = self._Prop.descendants()
+    if isinstance(self._Prop, TransitiveProperty):
+      if isinstance(self._Prop, SymmetricProperty):
+        for o in n.world.get_transitive_sym_indirect(self._obj.storid,
+                                                     [(Prop.storid, Prop.storid) for Prop in Props]):
+          yield n.ontology._to_python(o)
+          
+      else:
+        prop_storids = []
+        inv_storids  = []
+        for Prop in Props:
+          if isinstance(Prop, TransitiveProperty):
+            prop_storids.append(Prop.storid)
+            if Prop.inverse_property: inv_storids.append(Prop.inverse_property.storid)
+            else:                     inv_storids.append(None)
+          else: yield from Prop[self._obj]
+          
+        for o in n.world.get_transitive_sp_indirect(self._obj.storid,
+                                                    [(Prop.storid, Prop.inverse_property.storid if prop_storids else None) for Prop in Props]):
+          yield n.ontology._to_python(o)
+          
+    else:
+      for Prop in Props:
+        if isinstance(Prop, SymmetricProperty): yield from Prop[self._obj].symmetric()
+        else:                                   yield from Prop[self._obj]
+        
+  def indirect(self):
+    if (not issubclass(self._Prop, TransitiveProperty)) and (not issubclass(self._Prop, SymmetricProperty)):
+      if issubclass(self._Prop, ReflexiveProperty): yield self._obj
+      for Prop in self._Prop.descendants(): yield from Prop[self._obj]
+    else:
+      n = self._obj.namespace
+      prop_storids = []
+      for Prop in self._Prop.descendants():
+        if issubclass(Prop, TransitiveProperty):
+          if issubclass(Prop, SymmetricProperty):
+            prop_storids.append((Prop.storid, Prop.storid))
+          else:
+            if Prop.inverse_property: prop_storids.append((Prop.storid, Prop.inverse_property.storid))
+            else:                     prop_storids.append((Prop.storid, None))
+        else:
+          if issubclass(Prop, SymmetricProperty): yield from Prop[self._obj].symmetric()
+          else:                                   yield from Prop[self._obj]
+          
+      if prop_storids:
+        for o in n.world.get_transitive_sp_indirect(self._obj.storid, prop_storids):
+          yield n.ontology._to_python(o)
+      else:
+        if issubclass(self._Prop, ReflexiveProperty): yield self._obj
+        
+        
   def _callback(self, obj, old):
     old = set(old)
     new = set(self)
@@ -161,18 +234,12 @@ class Thing(metaclass = ThingClass):
       storids = set(onto._parse_list_as_rdf(list_bnode))
       if self.storid in storids: yield onto._parse_bnode(s)
       
-  
+      
   def __getattr__(self, attr):
     if attr == "equivalent_to": return self.get_equivalent_to()
     
     Prop = self.namespace.world._props.get(attr)
     if Prop is None: raise AttributeError("'%s' property is not defined." % attr)
-    
-    #for domain in Prop.domain:
-    #  if not domain._satisfied_by(self):
-    #    try:    repr_self = repr(self)
-    #    except: repr_self = "<instance of %s>" % self.__class__
-    #    raise AttributeError("%s has no attribute '%s', and '%s' property has incompatible domain." % (repr_self, attr, attr))
     
     values = [self.namespace.ontology._to_python(o) for o in self.namespace.world.get_triples_sp(self.storid, Prop.storid)]
     if Prop.is_functional_for(self.__class__):

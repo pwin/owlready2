@@ -1,4 +1,4 @@
-#python ./owlready2/test/bench.py > /dev/null
+# python ./owlready2/test/bench.py > /dev/null
 
 import sys, time#, cProfile
 
@@ -7,7 +7,7 @@ from owlready2 import *
 
 t = time.time()
 
-#default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite")
+default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite3")
 
 onto_path.append(os.path.dirname(__file__))
 onto_path.append("/home/jiba/telechargements/base_med/")

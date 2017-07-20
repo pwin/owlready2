@@ -79,6 +79,9 @@ owlready2.property.ValueList               = ValueList
 owlready2.property._check_superclasses     = True
 owlready2.individual._keep_most_specific = _keep_most_specific
 owlready2.individual.ClassConstruct      = ClassConstruct
+owlready2.individual.TransitiveProperty  = TransitiveProperty
+owlready2.individual.SymmetricProperty   = SymmetricProperty
+owlready2.individual.ReflexiveProperty   = ReflexiveProperty
 owlready2.class_construct.Thing      = Thing
 owlready2.class_construct.ThingClass = ThingClass
 del owlready2
