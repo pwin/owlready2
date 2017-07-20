@@ -73,7 +73,7 @@ def close_world(self, Properties = None, close_instance_list = True, recursive =
         for r in _inherited_property_value_restrictions(instance, Prop):
           if   (r.type == SOME):  range_classes  .append(r.value)
           elif (r.type == VALUE): range_instances.append(r.value)
-          
+      
       if range_instances: range_classes.append(OneOf(range_instances))
       if   len(range_classes) == 1: self.is_a.append(Prop.only(range_classes[0]))
       elif range_classes:           self.is_a.append(Prop.only(Or(range_classes)))

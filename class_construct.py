@@ -255,9 +255,9 @@ class Restriction(ClassConstruct):
       ontology.add_triple(self.storid, self.type, value)
     else:
       if self.value is None:
-        if not self.cardinality is None: ontology.add_triple(self.storid, _qualified_2_non_qualified[self.type], '"%s"^%s' % (self.cardinality, _non_negative_integer))
+        if not self.cardinality is None: ontology.add_triple(self.storid, _qualified_2_non_qualified[self.type], '"%s"%s' % (self.cardinality, _non_negative_integer))
       else:
-        if not self.cardinality is None: ontology.add_triple(self.storid, self.type, '"%s"^%s' % (self.cardinality, _non_negative_integer))
+        if not self.cardinality is None: ontology.add_triple(self.storid, self.type, '"%s"%s' % (self.cardinality, _non_negative_integer))
         value = _universal_datatype_2_abbrev.get(self.value)
         if value:
           ontology.add_triple(self.storid, owl_ondatarange, value)

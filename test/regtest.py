@@ -1220,7 +1220,7 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, owl_onclass, C3.storid)
-    self.assert_triple(bnode, EXACTLY, '"2"^%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    self.assert_triple(bnode, EXACTLY, '"2"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
     assert len(list(default_world.get_triples(bnode, None, None))) == 4
     
     r.type        = MIN
@@ -1228,33 +1228,33 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, owl_onclass, C3.storid)
-    self.assert_triple(bnode, MIN, '"3"^%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    self.assert_triple(bnode, MIN, '"3"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
     assert len(list(default_world.get_triples(bnode, None, None))) == 4
     
     r.value = None
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
-    self.assert_triple(bnode, owl_min_cardinality, '"3"^%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    self.assert_triple(bnode, owl_min_cardinality, '"3"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
     assert len(list(default_world.get_triples(bnode, None, None))) == 3
     
     r.type = MAX
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
-    self.assert_triple(bnode, owl_max_cardinality, '"3"^%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    self.assert_triple(bnode, owl_max_cardinality, '"3"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
     assert len(list(default_world.get_triples(bnode, None, None))) == 3
     
     r.value = C2
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, owl_onclass, C2.storid)
-    self.assert_triple(bnode, MAX, '"3"^%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    self.assert_triple(bnode, MAX, '"3"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
     assert len(list(default_world.get_triples(bnode, None, None))) == 4
     
     r.type = EXACTLY
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, owl_onclass, C2.storid)
-    self.assert_triple(bnode, EXACTLY, '"3"^%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    self.assert_triple(bnode, EXACTLY, '"3"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
     assert len(list(default_world.get_triples(bnode, None, None))) == 4
     
     #for i in g.predicate_objects(bnode): print(i)
@@ -1293,7 +1293,7 @@ class Test(BaseTest, unittest.TestCase):
     r.cardinality = 5
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P1.storid)
-    self.assert_triple(bnode, EXACTLY, '"5"^%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    self.assert_triple(bnode, EXACTLY, '"5"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
     self.assert_triple(bnode, owl_ondatarange, n.abbreviate("http://www.w3.org/2001/XMLSchema#decimal"))
     assert len(list(default_world.get_triples(bnode, None, None))) == 4
 
@@ -1422,6 +1422,67 @@ class Test(BaseTest, unittest.TestCase):
     assert onto.VegetarianPizza in onto.VegetalianPizza.__bases__
     assert onto.pizza_tomato.__class__ is onto.VegetalianPizza
     assert onto.pizza_tomato_cheese.__class__ is onto.VegetarianPizza
+    
+  def test_reasoning_3(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/drug.owl")
+
+    output = ""
+    def print(s):
+      nonlocal output
+      output += s + "\n"
+      
+    with onto:
+        class Drug(Thing):
+            def take(self): print("I took a drug")
+
+        class ActivePrinciple(Thing):
+            pass
+
+        class has_for_active_principle(Drug >> ActivePrinciple):
+            python_name = "active_principles"
+            
+        class Placebo(Drug):
+            equivalent_to = [Drug & Not(has_for_active_principle.some(ActivePrinciple))]
+            def take(self): print("I took a placebo")
+            
+        class SingleActivePrincipleDrug(Drug):
+            equivalent_to = [Drug & has_for_active_principle.exactly(1, ActivePrinciple)]
+            def take(self): print("I took a drug with a single active principle")
+            
+        class DrugAssociation(Drug):
+            equivalent_to = [Drug & has_for_active_principle.min(2, ActivePrinciple)]
+            def take(self): print("I took a drug with %s active principles" % len(self.active_principles))
+            
+    acetaminophen   = ActivePrinciple("acetaminophen")
+    amoxicillin     = ActivePrinciple("amoxicillin")
+    clavulanic_acid = ActivePrinciple("clavulanic_acid")
+    
+    AllDifferent([acetaminophen, amoxicillin, clavulanic_acid])
+    
+    drug1 = Drug(active_principles = [acetaminophen])
+    drug2 = Drug(active_principles = [amoxicillin, clavulanic_acid])
+    drug3 = Drug(active_principles = [])
+    
+    close_world(Drug)
+    
+    # Running the reasoner
+    with onto:
+      sync_reasoner(world, debug = 0)
+        
+    # Results of the automatic classification
+    drug1.take()
+    drug2.take()
+    drug3.take()
+    
+    assert drug1.__class__ is onto.SingleActivePrincipleDrug
+    assert drug2.__class__ is onto.DrugAssociation
+    assert drug3.__class__ is onto.Placebo
+    
+    assert output == """I took a drug with a single active principle
+I took a drug with 2 active principles
+I took a placebo
+"""
     
     
   def test_disjoint_1(self):

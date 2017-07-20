@@ -432,20 +432,16 @@ class RoleFilerList(CallbackListWithLanguage):
   def _callback(self, obj, old): self._obj._on_class_prop_changed(self._Prop, old, self)
       
 
-
-def _inherited_property_value_restrictions(Class, Prop):
-  if isinstance(Class, Restriction):
-    yield Class
-    return
-  
-  for parent in itertools.chain(Class.is_a, Class.equivalent_to):
-    if isinstance(parent, Restriction) and (parent.property is Prop):
-      yield parent
-    if isinstance(parent, And):
-      for Class2 in parent.Classes:
-        if isinstance(parent, EntityClass):
-          yield from _inherited_property_value_restrictions(Class2, Prop)
-    if isinstance(parent, EntityClass): yield from _inherited_property_value_restrictions(parent, Prop)
-
-
+def _inherited_property_value_restrictions(x, Prop):
+  if   isinstance(x, Restriction):
+    if (x.property is Prop): yield x
+    
+  elif isinstance(x, EntityClass) or isinstance(x, Thing):
+    for parent in itertools.chain(x.is_a, x.equivalent_to):
+      yield from _inherited_property_value_restrictions(parent, Prop)
+      
+  elif isinstance(x, And):
+    for x2 in x.Classes:
+      yield from _inherited_property_value_restrictions(x2, Prop)
+      
 

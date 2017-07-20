@@ -148,6 +148,7 @@ version 2 - 0.4
 * Bugfixes:
   * Fix properties loading when reusing an ontology from a disk-stored quadstore
   * Fix _inherited_property_value_restrictions() when complement (Not) is involved
+  * Fix restrictions with cardinality
   * Fix doc on AllDisjoint / AllDifferent
 
 
