@@ -12,7 +12,7 @@ renamed in Python, see :ref:`associating-python-alias-name-to-properties`):
 
    >>> from owlready2 import *
    
-   >>> onto = Ontology("http://test.org/onto.owl")
+   >>> onto = get_ontology("http://test.org/onto.owl")
    
    >>> with onto:
    ...     class Drug(Thing):
@@ -77,7 +77,7 @@ For example, in file 'my_python_module.py':
 
    >>> from owlready2 import *
    
-   >>> onto = Ontology("http://test.org/onto.owl") # Do not load the ontology here!
+   >>> onto = get_ontology("http://test.org/onto.owl") # Do not load the ontology here!
    
    >>> with onto:
    ...     class Drug(Thing):

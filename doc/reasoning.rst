@@ -21,7 +21,7 @@ Here is an example creating a 'reasoning-ready' ontology:
 
    >>> from owlready2 import *
    
-   >>> onto = Ontology("http://test.org/onto.owl")
+   >>> onto = get_ontology("http://test.org/onto.owl")
    
    >>> with onto:
    ...     class Drug(Thing):

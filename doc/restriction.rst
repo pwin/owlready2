@@ -10,7 +10,7 @@ Restrictions on a Property
 
    >>> from owlready2 import *
    
-   >>> onto = Ontology("http://test.org/onto.owl")
+   >>> onto = get_ontology("http://test.org/onto.owl")
    
    >>> with onto:
    ...     class Drug(Thing):

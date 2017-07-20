@@ -442,7 +442,9 @@ def _inherited_property_value_restrictions(Class, Prop):
     if isinstance(parent, Restriction) and (parent.property is Prop):
       yield parent
     if isinstance(parent, And):
-      for Class2 in parent.Classes: yield from _inherited_property_value_restrictions(Class2, Prop)
+      for Class2 in parent.Classes:
+        if isinstance(parent, EntityClass):
+          yield from _inherited_property_value_restrictions(Class2, Prop)
     if isinstance(parent, EntityClass): yield from _inherited_property_value_restrictions(parent, Prop)
 
 
