@@ -87,6 +87,8 @@ Creating equivalent classes
 
 The .equivalent_to Class attribute is a list of equivalent classes. It behaves like .is_a.
 
+To obtain all equivalent classes, including indirect ones (due to transitivity), use .equivalent_to.indirect().
+
 
 Creating Individuals
 --------------------
@@ -130,7 +132,19 @@ subclasses). It returns a generator.
 
    >>> for i in Drug.instances(): print(i)
 
-Finally, Individuals also have the .equivalent_to attribute.
+Finally, Individuals also have the .equivalent_to attribute (which correspond to the "same as" relation).
+
+
+Querying Individual relations
+-----------------------------
+
+For a given Individual, the values of a property can be obtained with the usual
+"object.property" dot notation. See :doc:`properties` for more details.
+
+::
+
+   >>> print(onto.my_drug.has_for_active_principle)
+   []
    
 
 Introspecting Individuals

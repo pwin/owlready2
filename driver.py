@@ -47,49 +47,76 @@ class BaseGraph(object):
     for s in self.get_triples_po(predicate, object): return s
     return None
   
-  #def get_triple(self, subject = None, predicate = None, object = None):
-  #  for s,p,o in self.get_triples(subject, predicate, object):
-  #    if object  is None: return o
-  #    if subject is None: return s
-  #    return p
-  #  return None
-    
-  def get_transitive_po(self, predicate, object, already = None):
-    if already is None: already = set()
-    if not object in already:
-      #yield object
-      already.add(object)
-      for s in self.get_triples_po(predicate, object):
-        #yield from self.get_transitive_po(predicate, s, already)
-        self.get_transitive_po(predicate, s, already)
-    return already
+  #def get_transitive_po(self, predicate, object, already = None):
+  #  if already is None: already = set()
+  #  if not object in already:
+  #    already.add(object)
+  #    for s in self.get_triples_po(predicate, object):
+  #      self.get_transitive_po(predicate, s, already)
+  #  return already
   
+  #def get_transitive_sp(self, subject, predicate, already = None):
+  #  if already is None: already = set()
+  #  if not subject in already:
+  #    already.add(subject)
+  #    for o in self.get_triples_sp(subject, predicate):
+  #      self.get_transitive_sp(o, predicate, already)
+  #  return already
+  
+  #def get_transitive_sym(self, subject, predicate, already = None):
+  #  if already is None: already = set()
+  #  if not subject in already:
+  #    already.add(subject)
+  #    for s in self.get_triples_po(predicate, subject): self.get_transitive_sym(s, predicate, already)
+  #    for s in self.get_triples_sp(subject, predicate): self.get_transitive_sym(s, predicate, already)
+  #  return already
+  
+  #def get_transitive_sp_indirect(self, subject, predicates_inverses, already = None):
+  #  if already is None: already = set()
+  #  if not subject in already:
+  #    already.add(subject)
+  #    for (predicate, inverse) in predicates_inverses:
+  #      for o in self.get_triples_sp(subject, predicate): self.get_transitive_sp_indirect(o, predicates_inverses, already)
+  #      if inverse:
+  #        for o in self.get_triples_po(inverse, subject): self.get_transitive_sp_indirect(o, predicates_inverses, already)
+  #  return already
+
   def get_transitive_sp(self, subject, predicate, already = None):
     if already is None: already = set()
-    if not subject in already:
-      #yield subject
+    else:
+      if subject in already: return already
       already.add(subject)
-      for o in self.get_triples_sp(subject, predicate):
-        #yield from self.get_transitive_sp(o, predicate, already)
-        self.get_transitive_sp(o, predicate, already)
+    for o in self.get_triples_sp(subject, predicate):
+      self.get_transitive_sp(o, predicate, already)
+    return already
+  
+  def get_transitive_po(self, predicate, object, already = None):
+    if already is None: already = set()
+    else:
+      if object in already: return already
+      already.add(object)
+    for s in self.get_triples_po(predicate, object):
+      self.get_transitive_po(predicate, s, already)
     return already
   
   def get_transitive_sym(self, subject, predicate, already = None):
     if already is None: already = set()
-    if not subject in already:
+    else:
+      if subject in already: return already
       already.add(subject)
-      for s in self.get_triples_po(predicate, subject): self.get_transitive_sym(s, predicate, already)
-      for s in self.get_triples_sp(subject, predicate): self.get_transitive_sym(s, predicate, already)
+    for s in self.get_triples_po(predicate, subject): self.get_transitive_sym(s, predicate, already)
+    for s in self.get_triples_sp(subject, predicate): self.get_transitive_sym(s, predicate, already)
     return already
   
   def get_transitive_sp_indirect(self, subject, predicates_inverses, already = None):
     if already is None: already = set()
-    if not subject in already:
+    else:
+      if subject in already: return already
       already.add(subject)
-      for (predicate, inverse) in predicates_inverses:
-        for o in self.get_triples_sp(subject, predicate): self.get_transitive_sp_indirect(o, predicates_inverses, already)
-        if inverse:
-          for o in self.get_triples_po(inverse, subject): self.get_transitive_sp_indirect(o, predicates_inverses, already)
+    for (predicate, inverse) in predicates_inverses:
+      for o in self.get_triples_sp(subject, predicate): self.get_transitive_sp_indirect(o, predicates_inverses, already)
+      if inverse:
+        for o in self.get_triples_po(inverse, subject): self.get_transitive_sp_indirect(o, predicates_inverses, already)
     return already
   
     

@@ -230,6 +230,34 @@ A subproperty can be created by subclassing a Property class.
    Owlready2 currently does not automatically update parent properties when a child property is defined.
    This might be added in a future version, though.
 
+   
+Obtaining indirect relations (considering subproperty, transitivity, etc)
+-------------------------------------------------------------------------
+
+The .indirect() method can be used to obtain a generator over all indirectly
+related entities. It takes into account:
+
+ * subproperties,
+ * transitive properties,
+ * symmetric properties,
+ * reflexive properties.
+
+::
+
+   >>> with onto:
+   ...     class BodyPart(Thing): pass
+   ...     class part_of(BodyPart >> BodyPart, TransitiveProperty): pass
+   ...     abdomen          = BodyPart("abdomen")
+   ...     heart            = BodyPart("heart"           , part_of = [abdomen])
+   ...     left_ventricular = BodyPart("left_ventricular", part_of = [heart])
+   ...     kidney           = BodyPart("kidney"          , part_of = [abdomen])
+    
+   ... print(left_ventricular.part_of)
+   [heart]
+   
+   ... print(list(left_ventricular.part_of.indirect()))
+   [heart, abdomen]
+
 
 .. _associating-python-alias-name-to-properties:
 

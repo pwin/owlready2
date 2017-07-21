@@ -21,6 +21,23 @@ import owlready2
 from owlready2.base      import *
 from owlready2.namespace import *
 
+
+class _EquivalentToList(CallbackList):
+  __slots__ = ["_indirect"]
+  def __init__(self, l, obj, callback):
+    CallbackList.__init__(self, l, obj, callback)
+    self._indirect = None
+    
+  def transitive_symmetric(self):
+    if self._indirect is None:
+      n = self._obj.namespace
+      self._indirect = set()
+      for o in n.world.get_transitive_sym(self._obj.storid, self._obj._owl_equivalent):
+        if o != self._obj.storid: self._indirect.add(n.ontology._to_python(o))
+    yield from self._indirect
+    
+  indirect = transitive_symmetric
+  
   
 class EntityClass(type):
   namespace = owlready
@@ -88,6 +105,8 @@ class EntityClass(type):
         if isinstance(base, ClassConstruct): base._set_ontology(namespace.ontology)
       Class = namespace.world._get_by_storid(storid)
       
+    equivalent_to = obj_dict.pop("equivalent_to", None)
+      
     if Class is None:
       _is_a = CallbackList(_is_a, None, MetaClass._class_is_a_changed)
       obj_dict.update(
@@ -107,8 +126,7 @@ class EntityClass(type):
     else:
       if Class.is_a != _is_a: Class.is_a.extend([i for i in _is_a if not i in Class.is_a])
       
-    if "equivalent_to" in obj_dict:
-      equivalent_to = obj_dict.pop("equivalent_to")
+    if equivalent_to:
       if isinstance(equivalent_to, list): Class.equivalent_to.extend(equivalent_to)
       
     return Class
@@ -131,12 +149,10 @@ class EntityClass(type):
         
   def get_equivalent_to(Class):
     if Class._equivalent_to is None:
-      eqs = [
-        Class.namespace.world._to_python(o)
-        for o in Class.namespace.world.get_transitive_sym(Class.storid, Class._owl_equivalent)
-        if o != Class.storid
-      ]
-      Class._equivalent_to = CallbackList(eqs, Class, Class.__class__._class_equivalent_to_changed)
+      Class._equivalent_to = _EquivalentToList(
+          [Class.namespace.world._to_python(o)
+           for o in Class.namespace.world.get_triples_sp(Class.storid, Class._owl_equivalent)
+          ], Class, Class.__class__._class_equivalent_to_changed)
     return Class._equivalent_to
   
   def set_equivalent_to(Class, value): Class.equivalent_to.reinit(value)
@@ -152,20 +168,21 @@ class EntityClass(type):
     
     for x in old - new:
       Class.namespace.ontology.del_triple(Class.storid, Class._owl_equivalent, x    .storid)
-      Class.namespace.ontology.del_triple(x    .storid, Class._owl_equivalent, Class.storid)
       if isinstance(x, ClassConstruct): x._set_ontology(None)
       else: # Invalidate it
-        for x2 in x.equivalent_to: x2._equivalent_to = None
-        x._equivalent_to = None
-        
+        if x.equivalent_to._indirect:
+          for x2 in x.equivalent_to._indirect: x2._equivalent_to._indirect = None
+          x._equivalent_to._indirect = None
+      
     for x in new - old:
       if isinstance(x, ClassConstruct): x._set_ontology(Class.namespace.ontology)
       else: # Invalidate it
-        for x2 in x.equivalent_to: x2._equivalent_to = None
-        x._equivalent_to = None
+        if x.equivalent_to._indirect:
+          for x2 in x.equivalent_to._indirect: x2._equivalent_to._indirect = None
+          x._equivalent_to._indirect = None
       Class.namespace.ontology.add_triple(Class.storid, Class._owl_equivalent, x.storid)
       
-    Class._equivalent_to = None # Invalidate, because the addition / removal may add its own equivalent.
+    Class._equivalent_to._indirect = None # Invalidate, because the addition / removal may add its own equivalent.
     
   def __setattr__(Class, attr, value):
     if attr == "is_a":
@@ -231,7 +248,7 @@ class EntityClass(type):
     if include_self:
       if not Class in s:
         s.add(Class)
-        for equivalent in Class.equivalent_to:
+        for equivalent in Class.equivalent_to.indirect():
           if isinstance(equivalent, EntityClass):
             if not equivalent in s: equivalent._fill_ancestors(s, True)
     for parent in Class.__bases__:
@@ -240,6 +257,12 @@ class EntityClass(type):
           parent._fill_ancestors(s, True)
           
   def _fill_descendants(Class, s, include_self, only_loaded = False):
+    if include_self:
+      s.add(Class)
+    for equivalent in Class.equivalent_to.indirect():
+      if isinstance(equivalent, Class.__class__) and not equivalent in s:
+        equivalent._fill_descendants(s, True)
+        
     for x in Class.namespace.world.get_transitive_po(Class._rdfs_is_a, Class.storid):
       if not x.startswith("_"):
         if only_loaded:
@@ -247,13 +270,13 @@ class EntityClass(type):
           if descendant is None: continue
         else:
           descendant = Class.namespace.world._get_by_storid(x, None, Class.__class__, Class.namespace.ontology)
-        if (descendant is Class) and (not include_self): continue
+        #if (descendant is Class) and (not include_self): continue
+        if (descendant is Class): continue
         if not descendant in s:
           s.add(descendant)
-          for equivalent in descendant.equivalent_to:
-            if isinstance(equivalent, Class.__class__):
-              if not equivalent in s:
-                equivalent._fill_descendants(s, True)
+          for equivalent in descendant.equivalent_to.indirect():
+            if isinstance(equivalent, Class.__class__) and not equivalent in s:
+              equivalent._fill_descendants(s, True)
                 
   def subclasses(Class, only_loaded = False):
     if only_loaded:
@@ -279,9 +302,10 @@ def issubclass_owlready(Class, Parent_or_tuple):
     parent_storids = { Parent.storid for Parent in Parent_or_tuple }
     
     Class_parents = set(Class.namespace.world.get_transitive_sp(Class.storid, Class._rdfs_is_a))
+    Class_parents.add(Class.storid)
     if not parent_storids.isdisjoint(Class_parents): return True
     
-    equivalent_storids = { Equivalent.storid for Parent in Parent_or_tuple for Equivalent in Parent.equivalent_to }
+    equivalent_storids = { Equivalent.storid for Parent in Parent_or_tuple for Equivalent in Parent.equivalent_to.indirect() }
     if not equivalent_storids.isdisjoint(Class_parents): return True
     
   return False
@@ -437,7 +461,7 @@ def _inherited_property_value_restrictions(x, Prop):
     if (x.property is Prop): yield x
     
   elif isinstance(x, EntityClass) or isinstance(x, Thing):
-    for parent in itertools.chain(x.is_a, x.equivalent_to):
+    for parent in itertools.chain(x.is_a, x.equivalent_to.indirect()):
       yield from _inherited_property_value_restrictions(parent, Prop)
       
   elif isinstance(x, And):

@@ -22,6 +22,22 @@ from owlready2.namespace import *
 from owlready2.entity    import *
 from owlready2.entity    import _inherited_property_value_restrictions
 
+class _EquivalentToList(CallbackList):
+  __slots__ = ["_indirect"]
+  def __init__(self, l, obj, callback):
+    CallbackList.__init__(self, l, obj, callback)
+    self._indirect = None
+    
+  def transitive_symmetric(self):
+    if self._indirect is None:
+      n = self._obj.namespace
+      self._indirect = set()
+      for o in n.world.get_transitive_sym(self._obj.storid, owl_equivalentindividual):
+        if o != self._obj.storid: self._indirect.add(n.ontology._to_python(o))
+    yield from self._indirect
+    
+  indirect = transitive_symmetric
+  
 
 class ValueList(CallbackListWithLanguage):
   __slots__ = ["_Prop"]
@@ -51,38 +67,11 @@ class ValueList(CallbackListWithLanguage):
       yield n.ontology._to_python(o)
       
   def indirect(self):
-    n = self._obj.namespace
-    Props = self._Prop.descendants()
-    if isinstance(self._Prop, TransitiveProperty):
-      if isinstance(self._Prop, SymmetricProperty):
-        for o in n.world.get_transitive_sym_indirect(self._obj.storid,
-                                                     [(Prop.storid, Prop.storid) for Prop in Props]):
-          yield n.ontology._to_python(o)
-          
-      else:
-        prop_storids = []
-        inv_storids  = []
-        for Prop in Props:
-          if isinstance(Prop, TransitiveProperty):
-            prop_storids.append(Prop.storid)
-            if Prop.inverse_property: inv_storids.append(Prop.inverse_property.storid)
-            else:                     inv_storids.append(None)
-          else: yield from Prop[self._obj]
-          
-        for o in n.world.get_transitive_sp_indirect(self._obj.storid,
-                                                    [(Prop.storid, Prop.inverse_property.storid if prop_storids else None) for Prop in Props]):
-          yield n.ontology._to_python(o)
-          
-    else:
-      for Prop in Props:
-        if isinstance(Prop, SymmetricProperty): yield from Prop[self._obj].symmetric()
-        else:                                   yield from Prop[self._obj]
-        
-  def indirect(self):
     if (not issubclass(self._Prop, TransitiveProperty)) and (not issubclass(self._Prop, SymmetricProperty)):
       if issubclass(self._Prop, ReflexiveProperty): yield self._obj
       for Prop in self._Prop.descendants(): yield from Prop[self._obj]
     else:
+      if issubclass(self._Prop, ReflexiveProperty): yield self._obj
       n = self._obj.namespace
       prop_storids = []
       for Prop in self._Prop.descendants():
@@ -99,9 +88,7 @@ class ValueList(CallbackListWithLanguage):
       if prop_storids:
         for o in n.world.get_transitive_sp_indirect(self._obj.storid, prop_storids):
           yield n.ontology._to_python(o)
-      else:
-        if issubclass(self._Prop, ReflexiveProperty): yield self._obj
-        
+          
         
   def _callback(self, obj, old):
     old = set(old)
@@ -194,39 +181,39 @@ class Thing(metaclass = ThingClass):
   
   def get_equivalent_to(self):
     if self._equivalent_to is None:
-      eqs = [
-        self.namespace.world._to_python(o)
-        for o in self.namespace.world.get_transitive_sym(self.storid, owl_equivalentindividual)
-        if o != self.storid
-      ]
-      self._equivalent_to = CallbackList(eqs, self, Thing._instance_equivalent_to_changed)
+      self._equivalent_to = _EquivalentToList(
+        [self.namespace.world._to_python(o)
+         for o in self.namespace.world.get_triples_sp(self.storid, owl_equivalentindividual)
+        ], self, Thing._instance_equivalent_to_changed)
     return self._equivalent_to
   
   def set_equivalent_to(self, value): self.equivalent_to.reinit(value)
-  
-  equivalent_to = property(get_equivalent_to, set_equivalent_to)
+
+  # Cannot use property because it name-clashes with the Class similar property
+  #equivalent_to = property(get_equivalent_to, set_equivalent_to)
   
   def _instance_equivalent_to_changed(self, old):
     new = frozenset(self._equivalent_to)
     old = frozenset(old)
-
+    
     for x in old - new:
       self.namespace.ontology.del_triple(self.storid, owl_equivalentindividual, x   .storid)
-      self.namespace.ontology.del_triple(x   .storid, owl_equivalentindividual, self.storid)
       if isinstance(x, ClassConstruct): x._set_ontology(None)
       else: # Invalidate it
-        for x2 in x.equivalent_to: x2._equivalent_to = None
-        x._equivalent_to = None
-
+        if x.equivalent_to._indirect:
+          for x2 in x.equivalent_to._indirect: x2._equivalent_to._indirect = None
+          x._equivalent_to._indirect = None
+          
     for x in new - old:
       self.namespace.ontology.add_triple(self.storid, owl_equivalentindividual, x.storid)
       if isinstance(x, ClassConstruct): x._set_ontology(self.namespace.ontology)
       else: # Invalidate it
-        for x2 in x.equivalent_to: x2._equivalent_to = None
-        x._equivalent_to = None
-
-    self._equivalent_to = None # Invalidate, because the addition / removal may add its own equivalent.
-  
+        if x.equivalent_to._indirect:
+          for x2 in x.equivalent_to._indirect: x2._equivalent_to._indirect = None
+          x._equivalent_to._indirect = None
+          
+    self._equivalent_to._indirect = None # Invalidate, because the addition / removal may add its own equivalent.
+    
   def differents(self):
     for s, p, o, c in self.namespace.world.get_quads(None, rdf_type, owl_alldifferent, None):
       onto = self.namespace.world.graph.context_2_user_context(c)
@@ -236,10 +223,10 @@ class Thing(metaclass = ThingClass):
       
       
   def __getattr__(self, attr):
-    if attr == "equivalent_to": return self.get_equivalent_to()
-    
     Prop = self.namespace.world._props.get(attr)
-    if Prop is None: raise AttributeError("'%s' property is not defined." % attr)
+    if Prop is None:
+      if attr == "equivalent_to": return self.get_equivalent_to() # Needed
+      raise AttributeError("'%s' property is not defined." % attr)
     
     values = [self.namespace.ontology._to_python(o) for o in self.namespace.world.get_triples_sp(self.storid, Prop.storid)]
     if Prop.is_functional_for(self.__class__):
@@ -261,11 +248,10 @@ class Thing(metaclass = ThingClass):
     return values
   
   def __setattr__(self, attr, value):
-    if attr == "equivalent_to": return self.set_equivalent_to(value)
-    
     if attr in SPECIAL_ATTRS:
-      if attr == "is_a": self.is_a.reinit(value)
-      else:              super().__setattr__(attr, value)
+      if   attr == "is_a":          self.is_a.reinit(value)
+      elif attr == "equivalent_to": self.set_equivalent_to(value) # Needed
+      else:                         super().__setattr__(attr, value)
     else:
       Prop = self.namespace.world._props.get(attr)
       if Prop:

@@ -61,12 +61,13 @@ class _GraphManager(object):
   def unabbreviate(self, abb):
     return _universal_abbrev_2_iri.get(abb, abb)
   
-  def get_triple_sp(self, subject = None, predicate = None, object = None): return None
-  def get_triple_po(self, subject = None, predicate = None, object = None): return None
+  def get_triple_sp(self, subject, predicate): return None
+  def get_triple_po(self, predicate, object): return None
   
-  def get_transitive_sp (self, subject = None, predicate = None, already = None): return set()
-  def get_transitive_po (self, predicate = None, object = None, already = None): return set()
-  def get_transitive_sym(self, subject = None, predicate = None): return set()
+  def get_transitive_sp (self, subject, predicate, already = None): return set()
+  def get_transitive_po (self, predicate, object, already = None): return set()
+  def get_transitive_sym(self, subject, predicate): return set()
+  def get_transitive_sp_indirect(self, subject, predicates_inverses, already = None): return set()
   def get_triples(self, subject = None, predicate = None, object = None): return []
   get_triples_s = get_triples_sp = get_triples_po = get_triples
   
@@ -75,7 +76,7 @@ class _GraphManager(object):
   def has_triple(self, subject = None, predicate = None, object = None): return False
   
   def get_quads(self, subject = None, predicate = None, object = None, ontology_graph = None): return []
-  def get_quads_sp(self, subject = None, predicate = None): return []
+  def get_quads_sp(self, subject, predicate): return []
   
   def refactor(self, storid, new_iri): pass
   

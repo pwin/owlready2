@@ -386,13 +386,15 @@ def destroy_entity(e):
           for Subclass in o.descendants(True, True): _FUNCTIONAL_FOR_CACHE.pop(Subclass, None)
 
         elif (r == owl_equivalentproperty) or (r == owl_equivalentindividual):
-          for o2 in o.equivalent_to: o2._equivalent_to = None
-          o._equivalent_to = None
+          if o._equivalent_to._indirect:
+            for o2 in o.equivalent_to._indirect: o2._equivalent_to._indirect = None
+            o._equivalent_to._indirect = None
         elif r == owl_equivalentclass:
-          for o2 in o.equivalent_to: o2._equivalent_to = None
-          o._equivalent_to = None
+          if o._equivalent_to._indirect:
+            for o2 in o.equivalent_to._indirect: o2._equivalent_to._indirect = None
+            o._equivalent_to._indirect = None
           for Subclass in o.descendants(True, True): _FUNCTIONAL_FOR_CACHE.pop(Subclass, None)
-
+          
         elif r == rdf_domain:
           o._domain = None
         elif r == rdf_range:

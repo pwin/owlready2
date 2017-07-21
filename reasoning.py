@@ -139,11 +139,7 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
     for child, parents in new_parents.items():
       old = set(parent for parent in child.is_a if not isinstance(parent, ClassConstruct))
       new = set(parents)
-      new.update([parent_eq for parent in new for parent_eq in parent.equivalent_to if not isinstance(parent, ClassConstruct)])
-      #for parent in set(new):
-      #  for parent_eq in parent.equivalent_to:
-      #    if not isinstance(parent, ClassConstruct):
-      #      new.add(parent_eq)
+      new.update([parent_eq for parent in new for parent_eq in parent.equivalent_to.indirect() if not isinstance(parent, ClassConstruct)])
       
       new.update(old & _TYPES) # Types are not shown by HermiT
       if old == new: continue
@@ -157,7 +153,7 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
       
       child.is_a.reinit(new_is_a)
       
-      for child_eq in child.equivalent_to:
+      for child_eq in child.equivalent_to.indirect():
         if isinstance(child_eq, ThingClass):
           if debug: print("* Owlready * Reparenting %s (since equivalent):" % child_eq, old, "=>", new, file = sys.stderr)
           new_is_a = list(child_eq.is_a)

@@ -415,7 +415,7 @@ class Test(BaseTest, unittest.TestCase):
       class D(Thing): pass
       class D2(D): pass
       
-      D.equivalent_to # Read and define it
+      D.equivalent_to.indirect() # Read and define it
       C.equivalent_to.append(D)
       
     assert set(C .descendants()) == { C, C2, D, D2 }
@@ -431,6 +431,8 @@ class Test(BaseTest, unittest.TestCase):
       class D(Thing):
         equivalent_to = [C2]
         
+    assert not "equivalent_to" in D.__dict__ # Must not be set in the dict!
+    
     assert set(C .descendants()) == { C, C2, D }
     assert set(C2.descendants()) == { C2, D }
     assert set(D .descendants()) == { C2, D }
@@ -456,9 +458,9 @@ class Test(BaseTest, unittest.TestCase):
       class E(Thing):
         equivalent_to = [D]
         
-    assert set(C.equivalent_to) == { D, E }
-    assert set(D.equivalent_to) == { C, E }
-    assert set(E.equivalent_to) == { C, D }
+    assert set(C.equivalent_to.indirect()) == { D, E }
+    assert set(D.equivalent_to.indirect()) == { C, E }
+    assert set(E.equivalent_to.indirect()) == { C, D }
     assert set(C.descendants()) == { C, D, E }
     assert set(C.ancestors()) == { C, D, E, Thing }
     
@@ -500,9 +502,9 @@ class Test(BaseTest, unittest.TestCase):
       C.equivalent_to.append(D)
       E.equivalent_to.append(D)
       
-    assert set(C.equivalent_to) == { D, E }
-    assert set(D.equivalent_to) == { C, E }
-    assert set(E.equivalent_to) == { C, D }
+    assert set(C.equivalent_to.indirect()) == { D, E }
+    assert set(D.equivalent_to.indirect()) == { C, E }
+    assert set(E.equivalent_to.indirect()) == { C, D }
     
   def test_class_17(self): # test MRO
     n = self.new_ontology()
@@ -623,11 +625,11 @@ class Test(BaseTest, unittest.TestCase):
     
     i1.equivalent_to.append(i2)
     
-    assert set(i2.equivalent_to) == { i1 }
+    assert set(i2.equivalent_to.indirect()) == { i1 }
     
-    i2.equivalent_to.remove(i1)
-    assert set(i2.equivalent_to) == set()
-    assert set(i1.equivalent_to) == set()
+    i1.equivalent_to.remove(i2)
+    assert set(i2.equivalent_to.indirect()) == set()
+    assert set(i1.equivalent_to.indirect()) == set()
     
   def test_individual_7(self):
     n = self.new_ontology()
@@ -642,10 +644,10 @@ class Test(BaseTest, unittest.TestCase):
     i2.equivalent_to.append(i3)
     i3.equivalent_to.append(i4)
     
-    assert set(i1.equivalent_to) == { i2, i3, i4 }
-    assert set(i2.equivalent_to) == { i1, i3, i4 }
-    assert set(i3.equivalent_to) == { i1, i2, i4 }
-    assert set(i4.equivalent_to) == { i1, i2, i3 }
+    assert set(i1.equivalent_to.indirect()) == { i2, i3, i4 }
+    assert set(i2.equivalent_to.indirect()) == { i1, i3, i4 }
+    assert set(i3.equivalent_to.indirect()) == { i1, i2, i4 }
+    assert set(i4.equivalent_to.indirect()) == { i1, i2, i3 }
     
   def test_individual_8(self):
     n = self.new_ontology()
@@ -714,7 +716,7 @@ class Test(BaseTest, unittest.TestCase):
       o4 = O(p = [o3])
 
     r = set(o3.p.transitive())
-    assert r == { o1, o2, o3 }
+    assert r == { o1, o2 }
     
   def test_individual_13(self):
     world   = self.new_world()
@@ -734,7 +736,7 @@ class Test(BaseTest, unittest.TestCase):
       o7 = O()
       
     r = set(o3.p.transitive())
-    assert r == { o1, o2, o3, o4, o5, o6 }
+    assert r == { o1, o2, o4, o5, o6 }
     
   def test_individual_14(self):
     world   = self.new_world()
@@ -753,7 +755,7 @@ class Test(BaseTest, unittest.TestCase):
       o7 = O()
       
     r = set(o3.p.transitive_symmetric())
-    assert r == { o1, o2, o3, o4 }
+    assert r == { o3, o1, o2, o4 }
     
     r = set(o3.p.symmetric())
     assert r == { o2, o4 }
@@ -778,8 +780,22 @@ class Test(BaseTest, unittest.TestCase):
       o8 = O(s = [o5])
       
     r = set(o6.q.indirect())
-    assert r == { o6, o5, o1, o4, o3 }
+    assert r == { o5, o1, o4, o3 }
     
+  def test_individual_16(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.test.org/test.owl")
+
+    with o:
+      class BodyPart(Thing): pass
+      class part_of(BodyPart >> BodyPart, TransitiveProperty): pass
+      abdomen          = BodyPart("abdomen")
+      heart            = BodyPart("heart"           , part_of = [abdomen])
+      left_ventricular = BodyPart("left_ventricular", part_of = [heart])
+      kidney           = BodyPart("kidney"          , part_of = [abdomen])
+      
+    assert left_ventricular.part_of == [heart]
+    assert set(left_ventricular.part_of.indirect()) == { heart, abdomen }
     
     
   def test_prop_1(self):
@@ -3019,8 +3035,8 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       
     destroy_entity(D)
     
-    assert C.equivalent_to == []
-    assert E.equivalent_to == []
+    assert list(C.equivalent_to.indirect()) == []
+    assert list(E.equivalent_to.indirect()) == []
     assert len(w.graph) == 5
     
   def test_destroy_12(self):
@@ -3147,7 +3163,7 @@ class Paper(BaseTest, unittest.TestCase):
     
       sync_reasoner(world, debug = 0)
     
-    assert MaladieHémorragique in Maladie_CI_avec_m.equivalent_to
+    assert MaladieHémorragique in Maladie_CI_avec_m.equivalent_to.indirect()
     assert issubclass(MaladieHémorragique, Maladie_CI_avec_m)
     
   def test_paper_5(self):
