@@ -194,6 +194,13 @@ When a single return value is expected, the .search_one() method can be used. It
 
    >>> onto.search_one(label = "my label")
    
+
+Owlready classes and individuals can be used as values within search(), as follows:
+
+::
+
+   >>> onto.search_one(is_a = onto.Pizza)
+   
    
 For more complex queries, SQPARQL can be used with RDFlib (see :doc:`world`).
 
