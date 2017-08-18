@@ -16,7 +16,13 @@ Jean-Baptiste Lamy. It was developed during the VIIIP research project funded by
 this is why some examples in this documentation relate to drug ;).
 
 Owlready2 is available under the GNU LGPL licence v3.
-A forum/mailing list is available for Owlready on Nabble: http://owlready.8326.n8.nabble.com
+If you use Owlready2 in scientific works, **please cite the following article**:
+
+   **Lamy JB**.
+   Owlready: Ontology-oriented programming in Python with automatic classification and high level constructs for biomedical ontologies.
+   **Artificial Intelligence In Medicine 2017**;80C:11-28
+   
+In case of troubles, questions or comments, please use this Forum/Mailing list: http://owlready.8326.n8.nabble.com
 
 
 Table of content
@@ -35,3 +41,4 @@ Table of content
    namespace.rst
    world.rst
    porting1.rst
+   contact.rst

@@ -174,13 +174,20 @@ class _GraphManager(object):
       for v in v0:
         if   k == "iri":
           prop_vals.append(("iri", v))
+        elif (k == "is_a") or (k == "subclass_of") or (k == "type"):
+          v2 = [parent.storid for parent in v.descendants()]
+          prop_vals.append((k, v2))
         else:
           k2 = self.world._props.get(k)
           if k2 is None:
             k2 = _universal_iri_2_abbrev.get(k) or k
           else:
-            k2 = k2.storid
-          v2 = self.world._to_rdf(v)
+            if k2.inverse_property:
+              k2 = (k2.storid, k2.inverse.storid)
+            else:
+              k2 = k2.storid
+          if v is None: v2 = None
+          else:         v2 = self.world._to_rdf(v)
           prop_vals.append((k2, v2))
           
     r = self.graph.search(prop_vals)

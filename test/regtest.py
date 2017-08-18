@@ -2601,6 +2601,77 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     l = n.search(subclass_of = n.Pizza)
     assert set(l) == { n.VegetarianPizza }
     
+  def test_search_4(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    l = n.search(type = n.Pizza, has_topping = None)
+    assert set(l) == set()
+    
+    n.ma_pizza.price = 9.9
+    n.Pizza("pizzvide")
+    n.Pizza("pizzvide2", price = 9.9)
+    
+    l = n.search(type = n.Pizza, has_topping = None)
+    assert set(l) == { n.pizzvide, n.pizzvide2 }
+    
+    l = n.search(type = n.Pizza, price = 9.9, has_topping = None)
+    assert set(l) == { n.pizzvide2 }
+    
+  def test_search_5(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    n.Tomato()
+    
+    l = n.search(type = n.Tomato, topping_of = n.ma_pizza)
+    assert set(l) == { n.ma_tomate }
+    
+    l = n.search(topping_of = n.ma_pizza)
+    assert set(l) == { n.ma_tomate, n.mon_frometon }
+    
+  def test_search_6(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    l = n.search(type = n.Tomato)
+    assert set(l) == { n.ma_tomate }
+    
+    l = n.search(type = n.Topping)
+    assert set(l) == { n.ma_tomate, n.mon_frometon }
+    
+    l = n.search(subclass_of = n.Tomato)
+    assert set(l) == set()
+    
+    l = n.search(is_a = n.Tomato)
+    assert set(l) == { n.ma_tomate }
+    
+    l = n.search(subclass_of = n.Topping)
+    print(l)
+    assert set(l) == { n.Tomato, n.Cheese, n.Meat, n.Vegetable, n.Eggplant, n.Olive }
+    
+    l = n.search(is_a = n.Topping)
+    print(l)
+    assert set(l) == { n.ma_tomate, n.mon_frometon, n.Tomato, n.Cheese, n.Meat, n.Vegetable, n.Eggplant, n.Olive }
+    
+  def test_search_7(self):
+    world = self.new_world()
+    n = world.get_ontology("http://test.org/test.owl")
+    with n:
+      class O(Thing): pass
+      class p(O >> str): pass
+
+    o1 = O(p = ["ABCD"])
+    o2 = O(p = ["ABC"])
+    o3 = O(p = ["AB", "EF"])
+    o4 = O(p = ["EFG"])
+
+    l = n.search(p = "ABC*")
+    assert set(l) == { o1, o2 }
+    
+    l = n.search(p = "EF*")
+    assert set(l) == { o3, o4 }
+    
     
   def test_rdflib_1(self):
     world = self.new_world()

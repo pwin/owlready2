@@ -297,49 +297,96 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
         else:         self.execute("DELETE FROM quads WHERE s=? AND p=? AND o=?", (s, p, o,))
         
   def search(self, prop_vals, c = None):
-    tables = []
+    tables     = []
     conditions = []
-    params = []
+    params     = []
+    excepts    = []
     i = 0
+    
     for k, v in prop_vals:
+      if v is None:
+        excepts.append(k)
+        continue
+      
       i += 1
-      tables        .append("quads q%s" % i)
-      if i > 1:
-        conditions  .append("q%s.s = q1.s" % i)
-      if k == "iri":
-        tables      .append("resources")
-        conditions  .append("resources.storid = q%s.s" % i)
-        if "*" in v:
-          conditions.append("resources.iri GLOB ?")
-        else:
-          conditions.append("resources.iri = ?")
-        params      .append(v)
-      else:
-        if   k == "is_a":
-          conditions  .append("(q%s.p = %s OR q%s.p = %s)" % (i, rdf_type, i, rdfs_subclassof))
-        elif k == "type":
-          conditions  .append("q%s.p = %s" % (i, rdf_type))
-        elif k == "subclass_of":
-          conditions  .append("q%s.p = %s" % (i, rdfs_subclassof))
-        else:
-          conditions  .append("q%s.p = ?" % i)
-          params      .append(k)
-          
+      tables.append("quads q%s" % i)
+      if not c is None:
+        conditions  .append("q%s.c = ?" % i)
+        params      .append(c)
+        
+      if   k == "iri":
+        if i > 1: conditions.append("q%s.s = q1.s" % i)
+        tables    .append("resources")
+        conditions.append("resources.storid = q%s.s" % i)
+        if "*" in v: conditions.append("resources.iri GLOB ?")
+        else:        conditions.append("resources.iri = ?")
+        params.append(v)
+        
+      elif k == "is_a":
+        if i > 1: conditions.append("q%s.s = q1.s" % i)
+        conditions.append("(q%s.p = '%s' OR q%s.p = '%s') AND q%s.o IN (%s)" % (i, rdf_type, i, rdfs_subclassof, i, ",".join("?" for i in v)))
+        params    .extend(v)
+        
+      elif k == "type":
+        if i > 1: conditions.append("q%s.s = q1.s" % i)
+        conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdf_type, i, ",".join("?" for i in v)))
+        params    .extend(v)
+        
+      elif k == "subclass_of":
+        if i > 1: conditions.append("q%s.s = q1.s" % i)
+        conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdfs_subclassof, i, ",".join("?" for i in v)))
+        params    .extend(v)
+        
+      elif isinstance(k, tuple): # Prop with inverse
+        if i == 1: # Does not work if it is the FIRST => add a dumb first.
+          i += 1
+          tables.append("quads q%s" % i)
+          if not c is None:
+            conditions  .append("q%s.c = ?" % i)
+            params      .append(c)
+            
+        cond1 = "q%s.s = q1.s AND q%s.p = ? AND q%s.o = ?" % (i, i, i)
+        cond2 = "q%s.o = q1.s AND q%s.p = ? AND q%s.s = ?" % (i, i, i)
+        conditions  .append("((%s) OR (%s))" % (cond1, cond2))
+        params.extend([k[0], v, k[1], v])
+        
+      else: # Prop without inverse
+        if i > 1: conditions.append("q%s.s = q1.s" % i)
+        conditions.append("q%s.p = ?" % i)
+        params    .append(k)
         if "*" in v:
           if   v.startswith('"*"'):
             conditions.append("q%s.o GLOB '*'" % i)
           else:
             conditions.append("q%s.o GLOB ?" % i)
-            params      .append(v)
+            params    .append(v)
         else:
           conditions.append("q%s.o = ?" % i)
-          params      .append(v)
-        
-      if not c is None:
-        conditions  .append("q%s.c = ?" % i)
-        params      .append(c)
-        
+          params    .append(v)
+
     req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions))
+    
+    if excepts:
+      conditions = []
+      for except_p in excepts:
+        if isinstance(except_p, tuple): # Prop with inverse
+          conditions.append("quads.s = candidates.s AND quads.p = ?")
+          params    .append(except_p[0])
+          conditions.append("quads.o = candidates.s AND quads.p = ?")
+          params    .append(except_p[1])
+        else: # No inverse
+          conditions.append("quads.s = candidates.s AND quads.p = ?")
+          params    .append(except_p)
+          
+          
+      req = """
+WITH candidates(s) AS (%s)
+SELECT s FROM candidates
+EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR (".join(conditions))
+
+    #print(req)
+    #print(params)
+      
     self.execute(req, params)
     return self.fetchall()
 

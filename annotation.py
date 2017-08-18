@@ -49,7 +49,7 @@ class AnnotList(CallbackListWithLanguage):
     
 class AnnotationPropertyClass(PropertyClass):
   _owl_type = owl_annotation_property
-  inverse_property = None
+  inverse_property = inverse = None
   
   def __getitem__(Annot, index):
     if isinstance(index, tuple):

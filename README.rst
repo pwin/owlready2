@@ -1,6 +1,10 @@
 Owlready2
 =========
 
+.. image:: https://readthedocs.org/projects/owlready2/badge/?version=latest
+   :target: http://owlready2.readthedocs.io/en/latest/
+   :alt: documentation
+
 Owlready2 is a module for ontology-oriented programming in Python 3, including an optimized RDF quadstore.
 
 Owlready2 can:
@@ -22,17 +26,14 @@ Owlready2 can:
    
 Owlready has been created by Jean-Baptiste Lamy at the LIMICS reseach lab.
 It is available under the GNU LGPL licence v3.
-In case of trouble, please contact Jean-Baptiste Lamy
-<jean-baptiste.lamy *@* univ-paris13 *.* fr>
+If you use Owlready in scientific works, **please cite the following article**:
 
-::
+   **Lamy JB**.
+   Owlready: Ontology-oriented programming in Python with automatic classification and high level constructs for biomedical ontologies.
+   **Artificial Intelligence In Medicine 2017**;80C:11-28
+   
+In case of troubles, questions or comments, please use this Forum/Mailing list: http://owlready.8326.n8.nabble.com
 
-  LIMICS
-  University Paris 13, Sorbonne Paris Cité
-  Bureau 149
-  74 rue Marcel Cachin
-  93017 BOBIGNY
-  FRANCE
 
   
 What can I do with Owlready2?
@@ -120,7 +121,7 @@ version 2 - 0.2
 * Property chain support
 * Add ntriples_diff.py utility
 * Bugfixes:
-  * Fix breaklines in literal when exporting to NTriples
+  - Fix breaklines in literal when exporting to NTriples
 
 version 2 - 0.3
 ***************
@@ -129,13 +130,13 @@ version 2 - 0.3
 * Greatly improve performance for individual creation
 * When searching, allow to use "*" as a jocker for any object
 * Bugfixes:
-  * Fix nested intersections and unions
-  * Fix boolean
-  * Fix bug when removing parent properties
-  * Fix parsing of rdf:ID
-  * Fix multiple loading of the same ontology whose IRI is modified by OWL file, using an ontology alias table
-  * Fix ClassConstruct.subclasses()
-  * Check for properties with multiple incompatible classes (e.g. ObjectProperty and Annotation Property)
+  - Fix nested intersections and unions
+  - Fix boolean
+  - Fix bug when removing parent properties
+  - Fix parsing of rdf:ID
+  - Fix multiple loading of the same ontology whose IRI is modified by OWL file, using an ontology alias table
+  - Fix ClassConstruct.subclasses()
+  - Check for properties with multiple incompatible classes (e.g. ObjectProperty and Annotation Property)
 
 version 2 - 0.4
 ***************
@@ -144,14 +145,17 @@ version 2 - 0.4
   and the relation instances (.get_properties(), .get_inverse_properties() and .get_relations())
 * Add .indirect() method to obtain indirect relations (considering subproperties, transivitity,
   symmetry and reflexibity)
+* search() now takes into account inheritance and inverse properties
+* search() now accepts 'None' for searching for entities without a given relation
 * Optimize ontology loading by recreating SQL index from scratch
 * Optimize SQL query for transitive quadstore queries, using RECURSIVE Sqlite3 statements
 * Optimize SQL query for obtaining the number of RDF triples (ie len(default_world.graph))
+* Add Artificial Intelligence In Medicine scientific article in doc and Readme 
 * Bugfixes:
-  * Fix properties loading when reusing an ontology from a disk-stored quadstore
-  * Fix _inherited_property_value_restrictions() when complement (Not) is involved
-  * Fix restrictions with cardinality
-  * Fix doc on AllDisjoint / AllDifferent
+  - Fix properties loading when reusing an ontology from a disk-stored quadstore
+  - Fix _inherited_property_value_restrictions() when complement (Not) is involved
+  - Fix restrictions with cardinality
+  - Fix doc on AllDisjoint / AllDifferent
 
 
 Links
@@ -166,6 +170,14 @@ Documentation: http://owlready2.readthedocs.io/
 Forum/Mailing list: http://owlready.8326.n8.nabble.com
 
 
-Mail me for any comment, problem, suggestion or help !
+Contact "Jiba" Jean-Baptiste Lamy:
 
-Jiba -- Jean-Baptiste LAMY -- jibalamy @ free.fr
+::
+
+  <jean-baptiste.lamy *@* univ-paris13 *.* fr>
+  LIMICS
+  University Paris 13, Sorbonne Paris Cité
+  Bureau 149
+  74 rue Marcel Cachin
+  93017 BOBIGNY
+  FRANCE

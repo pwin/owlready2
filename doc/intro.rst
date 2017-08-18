@@ -88,22 +88,3 @@ Owlready2 maintains a RDF quadstore in an optimized SQLite3 database,
 either in memory or on the disk (see :doc:`world`). It provides a high-level access to the Classes and the
 objects in the ontology (aka. ontology-oriented programming). Classes and Invididuals are loaded
 dynamically from the quadstore as needed, cached in memory and destroyed when no longer needed.
-
-
-Contact and links
------------------
-
-A forum/mailing list is available for Owlready on Nabble: http://owlready.8326.n8.nabble.com
-
-In case of trouble, please write to the forum or contact Jean-Baptiste Lamy <jean-baptiste.lamy *@* univ-paris13 *.* fr>
-
-::
-
-  LIMICS
-  University Paris 13, Sorbonne Paris Cité
-  Bureau 149
-  74 rue Marcel Cachin
-  93017 BOBIGNY
-  FRANCE
-
-Owlready on BitBucket (development repository): https://bitbucket.org/jibalamy/owlready
