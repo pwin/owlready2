@@ -29,7 +29,7 @@ It is available under the GNU LGPL licence v3.
 If you use Owlready in scientific works, **please cite the following article**:
 
    **Lamy JB**.
-   Owlready: Ontology-oriented programming in Python with automatic classification and high level constructs for biomedical ontologies.
+   `Owlready: Ontology-oriented programming in Python with automatic classification and high level constructs for biomedical ontologies. <http://www.lesfleursdunormal.fr/_downloads/article_owlready_aim_2017.pdf>`_
    **Artificial Intelligence In Medicine 2017**;80C:11-28
    
 In case of troubles, questions or comments, please use this Forum/Mailing list: http://owlready.8326.n8.nabble.com
