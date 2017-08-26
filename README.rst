@@ -5,6 +5,12 @@ Owlready2
    :target: http://owlready2.readthedocs.io/en/latest/
    :alt: documentation
 
+.. image:: http://www.lesfleursdunormal.fr/static/_images/owlready_downloads.svg
+   :target: http://www.lesfleursdunormal.fr/static/informatique/pymod_stat_en.html
+   :alt: download stats
+
+
+         
 Owlready2 is a module for ontology-oriented programming in Python 3, including an optimized RDF quadstore.
 
 Owlready2 can:

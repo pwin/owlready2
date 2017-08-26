@@ -2647,11 +2647,9 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert set(l) == { n.ma_tomate }
     
     l = n.search(subclass_of = n.Topping)
-    print(l)
     assert set(l) == { n.Tomato, n.Cheese, n.Meat, n.Vegetable, n.Eggplant, n.Olive }
     
     l = n.search(is_a = n.Topping)
-    print(l)
     assert set(l) == { n.ma_tomate, n.mon_frometon, n.Tomato, n.Cheese, n.Meat, n.Vegetable, n.Eggplant, n.Olive }
     
   def test_search_7(self):
