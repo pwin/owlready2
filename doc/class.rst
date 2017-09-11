@@ -79,7 +79,8 @@ The 'types' Python module can be used to create classes and subclasses dynamical
 
    >>> import types
 
-   >>> NewClass = types.new_class("NewClassName", (SuperClass,), kwds = { "namespace" : my_ontology })
+   >>> with my_ontology:
+   ...     NewClass = types.new_class("NewClassName", (SuperClass,))
 
    
 Creating equivalent classes
