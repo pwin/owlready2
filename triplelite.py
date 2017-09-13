@@ -345,10 +345,15 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
             conditions  .append("q%s.c = ?" % i)
             params      .append(c)
             
-        cond1 = "q%s.s = q1.s AND q%s.p = ? AND q%s.o = ?" % (i, i, i)
-        cond2 = "q%s.o = q1.s AND q%s.p = ? AND q%s.s = ?" % (i, i, i)
+        if v.startswith('"*"'):
+          cond1 = "q%s.s = q1.s AND q%s.p = ?" % (i, i)
+          cond2 = "q%s.o = q1.s AND q%s.p = ?" % (i, i)
+          params.extend([k[0], k[1]])
+        else:
+          cond1 = "q%s.s = q1.s AND q%s.p = ? AND q%s.o = ?" % (i, i, i)
+          cond2 = "q%s.o = q1.s AND q%s.p = ? AND q%s.s = ?" % (i, i, i)
+          params.extend([k[0], v, k[1], v])
         conditions  .append("((%s) OR (%s))" % (cond1, cond2))
-        params.extend([k[0], v, k[1], v])
         
       else: # Prop without inverse
         if i > 1: conditions.append("q%s.s = q1.s" % i)
