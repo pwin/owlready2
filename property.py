@@ -189,12 +189,13 @@ class PropertyClass(EntityClass):
     Prop._python_name = python_name
   python_name = property(get_python_name, set_python_name)
   
-  def some   (Prop,     value): return Restriction(Prop, SOME   , None, value)
-  def only   (Prop,     value): return Restriction(Prop, ONLY   , None, value)
-  def value  (Prop,     value): return Restriction(Prop, VALUE  , None, value)
-  def exactly(Prop, nb, value = None): return Restriction(Prop, EXACTLY, nb  , value)
-  def min    (Prop, nb, value = None): return Restriction(Prop, MIN    , nb  , value)
-  def max    (Prop, nb, value = None): return Restriction(Prop, MAX    , nb  , value)
+  def some    (Prop,     value): return Restriction(Prop, SOME    , None, value)
+  def only    (Prop,     value): return Restriction(Prop, ONLY    , None, value)
+  def value   (Prop,     value): return Restriction(Prop, VALUE   , None, value)
+  def has_self(Prop,     value): return Restriction(Prop, HAS_SELF, None, value)
+  def exactly (Prop, nb, value = None): return Restriction(Prop, EXACTLY, nb  , value)
+  def min     (Prop, nb, value = None): return Restriction(Prop, MIN    , nb  , value)
+  def max     (Prop, nb, value = None): return Restriction(Prop, MAX    , nb  , value)
   
   
 _FUNCTIONAL_FOR_CACHE = weakref.WeakKeyDictionary()

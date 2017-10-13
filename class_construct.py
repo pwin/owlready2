@@ -220,6 +220,7 @@ _restriction_type_2_label = {
   SOME    : "some",
   ONLY    : "only",
   VALUE   : "value",
+  HAS_SELF: "has_self",
   EXACTLY : "exactly",
   MIN     : "min",
   MAX     : "max",
@@ -236,7 +237,7 @@ class Restriction(ClassConstruct):
     super().__init__(ontology, bnode)
     
   def __repr__(self):
-    if (self.type == SOME) or (self.type == ONLY) or (self.type == VALUE):
+    if (self.type == SOME) or (self.type == ONLY) or (self.type == VALUE) or (self.type == HAS_SELF):
       return """%s.%s(%s)""" % (self.property, _restriction_type_2_label[self.type], self.value)
     else:
       return """%s.%s(%s, %s)""" % (self.property, _restriction_type_2_label[self.type], self.cardinality, self.value)
@@ -250,7 +251,7 @@ class Restriction(ClassConstruct):
     ClassConstruct._create_triples(self, ontology)
     ontology.add_triple(self.storid, rdf_type, owl_restriction)
     ontology.add_triple(self.storid, owl_onproperty, self.property.storid)
-    if   (self.type is SOME) or (self.type is ONLY) or (self.type is VALUE):
+    if (self.type == SOME) or (self.type == ONLY) or (self.type == VALUE) or (self.type == HAS_SELF):
       value = _universal_datatype_2_abbrev.get(self.value) or ontology.world._to_rdf(self.value)
       ontology.add_triple(self.storid, self.type, value)
     else:
@@ -267,7 +268,7 @@ class Restriction(ClassConstruct):
           
   def __getattr__(self, attr):
     if attr == "value":
-      if (self.type is SOME) or (self.type is ONLY) or (self.type is VALUE):
+      if (self.type == SOME) or (self.type == ONLY) or (self.type == VALUE) or (self.type == HAS_SELF):
         v = self.ontology.get_triple_sp(self.storid, self.type)
         v = self.__dict__["value"] = _universal_abbrev_2_datatype.get(v) or self.ontology.world._to_python(v)
       else:
@@ -304,6 +305,9 @@ class Restriction(ClassConstruct):
         if obj is self.value: return True
       return False
     
+    elif self.type == HAS_SELF:
+      return x in values
+      
     else:
       nb = 0
       for obj in values:

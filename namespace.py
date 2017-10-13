@@ -298,7 +298,7 @@ class World(_GraphManager):
       types       = []
       is_a_bnodes = []
       for obj, graph in self.get_quads_sp(storid, rdf_type):
-        #print(self.unabbreviate(iri), "    QUAD", subj, pred, self.unabbreviate(obj), graph)
+        #print("QUAD", self.unabbreviate(storid), rdf_type, self.unabbreviate(obj), graph)
         if main_onto is None: main_onto = self.graph.context_2_user_context(graph)
         if   obj == owl_class:               main_type = ThingClass
         elif obj == owl_object_property:     main_type = ObjectPropertyClass;     types.append(ObjectProperty)
@@ -622,12 +622,13 @@ class Ontology(Namespace, _GraphManager):
         
         elif pred == owl_onproperty: restriction_property = self._to_python(obj)
         
-        elif pred == SOME:    restriction_type = SOME;
-        elif pred == ONLY:    restriction_type = ONLY;
-        elif pred == VALUE:   restriction_type = VALUE;
-        elif pred == EXACTLY: restriction_type = EXACTLY; restriction_cardinality = self._to_python(obj)
-        elif pred == MIN:     restriction_type = MIN;     restriction_cardinality = self._to_python(obj)
-        elif pred == MAX:     restriction_type = MAX;     restriction_cardinality = self._to_python(obj)
+        elif pred == SOME:      restriction_type = SOME;
+        elif pred == ONLY:      restriction_type = ONLY;
+        elif pred == VALUE:     restriction_type = VALUE;
+        elif pred == HAS_SELF:  restriction_type = HAS_SELF;
+        elif pred == EXACTLY:   restriction_type = EXACTLY; restriction_cardinality = self._to_python(obj)
+        elif pred == MIN:       restriction_type = MIN;     restriction_cardinality = self._to_python(obj)
+        elif pred == MAX:       restriction_type = MAX;     restriction_cardinality = self._to_python(obj)
         elif pred == owl_cardinality:     restriction_type = EXACTLY; restriction_cardinality = self._to_python(obj)
         elif pred == owl_min_cardinality: restriction_type = MIN;     restriction_cardinality = self._to_python(obj)
         elif pred == owl_max_cardinality: restriction_type = MAX;     restriction_cardinality = self._to_python(obj)

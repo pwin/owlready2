@@ -163,6 +163,11 @@ version 2 - 0.4
   - Fix restrictions with cardinality
   - Fix doc on AllDisjoint / AllDifferent
 
+version 2 - 0.5
+***************
+
+* Add support for hasSelf restriction
+
 
 Links
 -----

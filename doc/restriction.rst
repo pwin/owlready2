@@ -48,6 +48,7 @@ Owlready provides the following types of restrictions (they have the same names 
  * max : Property.max(cardinality, Range_Class)
  * exactly : Property.exactly(cardinality, Range_Class)
  * value : Property.value(Range_Individual / Literal value)
+ * has_self : Property.has_self(Boolean value)
 
 In addition, the Inverse(Property) construct can be used as the inverse of a given Property.
 
