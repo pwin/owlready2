@@ -167,6 +167,7 @@ version 2 - 0.5
 ***************
 
 * Add support for hasSelf restriction
+* Optimize XML parsers
 * Bugfixes:
   - Fix search() for '*' value on properties with inverse
   - Fix doc for Creating classes dynamically
