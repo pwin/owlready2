@@ -106,7 +106,12 @@ disjoints = {
 
 
 def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_literal = None):
-  parser                 = xml.parsers.expat.ParserCreate(None, "")
+  parser = xml.parsers.expat.ParserCreate(None, "")
+  try:
+    parser.buffer_text          = True
+    parser.specified_attributes = True
+  except: pass
+  
   ontology_iri           = ""
   objs                   = []
   annots                 = []

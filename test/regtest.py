@@ -1,6 +1,12 @@
 
-import sys, os, unittest, tempfile, atexit, datetime, rdflib
+import sys, os, unittest, tempfile, atexit, datetime
 from io import StringIO, BytesIO
+
+try:
+  import rdflib
+except:
+  pass
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import owlready2, owlready2.util
