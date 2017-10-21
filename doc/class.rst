@@ -61,6 +61,13 @@ with some limits described in :doc:`restriction`). It can also be modified for a
    >>> print(DrugAssociation.is_a)
    [onto.Drug]
 
+The .subclasses() method returns the list of direct subclasses of a class.
+
+::
+
+   >>> print(Drug.subclasses())
+   [onto.DrugAssociation]
+
 The .descendants() and .ancestors() Class methods return a set of the descendant and ancestor Classes
 (including self, but excluding non-entity classes such as restrictions).
 
