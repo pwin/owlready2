@@ -168,6 +168,7 @@ version 2 - 0.5
 
 * Add support for hasSelf restriction
 * Optimize XML parsers
+* PyPy 3 support (devel version of PyPy 3)
 * Bugfixes:
   - Fix search() for '*' value on properties with inverse
   - Fix doc for Creating classes dynamically
