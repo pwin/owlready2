@@ -9,6 +9,20 @@ Several OWL reasoners exist; Owlready2 includes a modified version of the `Hermi
 developed by the department of Computer Science of the University of Oxford, and released under the LGPL licence.
 HermiT is written in Java, and thus you need a Java Vitual Machine to perform reasoning in Owlready2.
 
+Configuration
+-------------
+
+Under Linux, Owlready should automatically find Java.
+
+Under windows, you may need to configure the location of the Java interpreter, as follows:
+
+::
+
+   >>> from owlready2 import *
+   >>> import owlready2
+   >>> owlready2.JAVA_EXE = "C:\\path\\to\\java.exe"
+
+
 Setting up everything
 ---------------------
 
