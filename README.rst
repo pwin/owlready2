@@ -172,7 +172,7 @@ version 2 - 0.5
 * Bugfixes:
   - Fix search() for '*' value on properties with inverse
   - Fix doc for Creating classes dynamically
-
+  - Rename module 'property' as 'prop', to avoid name clash with Python's 'property()' type.
 
 Links
 -----

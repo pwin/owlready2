@@ -18,8 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from owlready2.namespace import *
-from owlready2.property  import *
-from owlready2.property  import _CLASS_PROPS
+from owlready2.prop      import *
+from owlready2.prop      import _CLASS_PROPS
 
 
 class AnnotList(CallbackListWithLanguage):

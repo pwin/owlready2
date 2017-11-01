@@ -26,8 +26,8 @@ from owlready2.base            import *
 
 from owlready2.namespace       import *
 from owlready2.entity          import *
-from owlready2.property        import *
-from owlready2.property        import _FUNCTIONAL_FOR_CACHE
+from owlready2.prop            import *
+from owlready2.prop            import _FUNCTIONAL_FOR_CACHE
 from owlready2.individual      import *
 from owlready2.class_construct import *
 from owlready2.disjoint        import *
@@ -36,7 +36,7 @@ from owlready2.reasoning       import *
 from owlready2.reasoning       import _keep_most_specific
 from owlready2.close           import *
 
-import owlready2.namespace, owlready2.entity, owlready2.property, owlready2.class_construct
+import owlready2.namespace, owlready2.entity, owlready2.prop, owlready2.class_construct
 owlready2.namespace.EntityClass             = EntityClass
 owlready2.namespace.ThingClass              = ThingClass
 owlready2.namespace.PropertyClass           = PropertyClass
@@ -72,11 +72,11 @@ owlready2.entity.AllDisjoint        = AllDisjoint
 owlready2.entity.Inverse            = Inverse
 owlready2.entity._FUNCTIONAL_FOR_CACHE = _FUNCTIONAL_FOR_CACHE
 owlready2.disjoint.Or = Or
-owlready2.property.Restriction             = Restriction
-owlready2.property.ClassConstruct          = ClassConstruct
-owlready2.property.AnnotationProperty      = AnnotationProperty
-owlready2.property.ValueList               = ValueList
-owlready2.property._check_superclasses     = True
+owlready2.prop.Restriction             = Restriction
+owlready2.prop.ClassConstruct          = ClassConstruct
+owlready2.prop.AnnotationProperty      = AnnotationProperty
+owlready2.prop.ValueList               = ValueList
+owlready2.prop._check_superclasses     = True
 owlready2.individual._keep_most_specific = _keep_most_specific
 owlready2.individual.ClassConstruct      = ClassConstruct
 owlready2.individual.TransitiveProperty  = TransitiveProperty

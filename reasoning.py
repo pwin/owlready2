@@ -21,7 +21,7 @@ import re, tempfile
 
 import owlready2
 from owlready2.base            import *
-from owlready2.property        import *
+from owlready2.prop            import *
 from owlready2.namespace       import *
 from owlready2.class_construct import *
 

@@ -19,7 +19,7 @@
 
 from owlready2.namespace import *
 from owlready2.entity    import *
-from owlready2.property  import *
+from owlready2.prop      import *
 
 
 class AllDisjoint(object):

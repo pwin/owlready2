@@ -343,12 +343,12 @@ class ThingClass(EntityClass):
   def __invert__(a): return Not(a)
       
   def __rshift__(Domain, Range):
-    import owlready2.property
-    owlready2.property._next_domain_range = (Domain, Range)
+    import owlready2.prop
+    owlready2.prop._next_domain_range = (Domain, Range)
     if isinstance(Range, ThingClass) or isinstance(Range, ClassConstruct):
-      return owlready2.property.ObjectProperty
+      return owlready2.prop.ObjectProperty
     else:
-      return owlready2.property.DataProperty
+      return owlready2.prop.DataProperty
     
   def __getattr__(Class, attr):
     Prop = Class.namespace.world._props.get(attr)

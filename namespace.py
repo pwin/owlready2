@@ -494,10 +494,13 @@ class Ontology(Namespace, _GraphManager):
       print("* Owlready2 *     ...%s properties found: %s" % (len(props), ", ".join(props)), file = sys.stderr)
       
   
-  def indirectly_imported_ontologies(self):
-    yield self
-    for ontology in self.imported_ontologies: yield from ontology.indirectly_imported_ontologies()
-    
+  def indirectly_imported_ontologies(self, already = None):
+    already = already or set()
+    if not self in already:
+      already.add(self)
+      yield self
+      for ontology in self.imported_ontologies: yield from ontology.indirectly_imported_ontologies(already)
+      
   def save(self, file = None, format = "rdfxml", **kargs):
     if   file is None:
       file = _open_onto_file(self.base_iri, self.name, "wb")

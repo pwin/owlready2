@@ -20,7 +20,7 @@
 from owlready2.namespace       import *
 from owlready2.entity          import *
 from owlready2.entity          import _inherited_property_value_restrictions
-from owlready2.property        import *
+from owlready2.prop            import *
 from owlready2.individual      import *
 from owlready2.class_construct import *
 
