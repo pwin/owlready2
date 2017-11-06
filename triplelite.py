@@ -553,7 +553,7 @@ class SubGraph(BaseGraph):
       else:
         reindex = False
         
-      if owlready2.namespace._LOG_LEVEL: print("* OwlReady 2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
+      if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
       self.sql.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
       self.sql.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
       

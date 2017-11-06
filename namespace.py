@@ -257,12 +257,12 @@ class World(_GraphManager):
     if   file is None:
       self.graph.commit()
     elif isinstance(file, str):
-      if _LOG_LEVEL: print("* Owlready * Saving world %s to %s..." % (self, file), file = sys.stderr)
+      if _LOG_LEVEL: print("* Owlready2 * Saving world %s to %s..." % (self, file), file = sys.stderr)
       file = open(file, "wb")
       self.graph.save(file, format, **kargs)
       file.close()
     else:
-      if _LOG_LEVEL: print("* Owlready * Saving world %s to %s..." % (self, getattr(file, "name", "???")), file = sys.stderr)
+      if _LOG_LEVEL: print("* Owlready2 * Saving world %s to %s..." % (self, getattr(file, "name", "???")), file = sys.stderr)
       self.graph.save(file, format, **kargs)
       
   def as_rdflib_graph(self):
@@ -290,7 +290,13 @@ class World(_GraphManager):
   def __getitem__(self, iri):
     return self._get_by_storid(self.abbreviate(iri), iri)
   
-  def _get_by_storid(self, storid, full_iri = None, main_type = None, main_onto = None):
+  def _get_by_storid(self, storid, full_iri = None, main_type = None, main_onto = None, trace = None):
+    try:
+      return self._get_by_storid2(storid, full_iri, main_type, main_onto)
+    except RecursionError:
+      return self._get_by_storid2(storid, full_iri, main_type, main_onto, ())
+    
+  def _get_by_storid2(self, storid, full_iri = None, main_type = None, main_onto = None, trace = None):
     entity = self._entities.get(storid)
     if not entity is None: return entity
     
@@ -298,7 +304,6 @@ class World(_GraphManager):
       types       = []
       is_a_bnodes = []
       for obj, graph in self.get_quads_sp(storid, rdf_type):
-        #print("QUAD", self.unabbreviate(storid), rdf_type, self.unabbreviate(obj), graph)
         if main_onto is None: main_onto = self.graph.context_2_user_context(graph)
         if   obj == owl_class:               main_type = ThingClass
         elif obj == owl_object_property:     main_type = ObjectPropertyClass;     types.append(ObjectProperty)
@@ -314,18 +319,21 @@ class World(_GraphManager):
             if isinstance(Class, EntityClass): types.append(Class)
             elif Class is None: raise ValueError("Cannot get '%s'!" % obj)
             
-      if   main_type is ThingClass:
+      if main_type and (not main_type is Thing):
+        if not trace is None:
+            if storid in trace:
+              s = "\n  ".join([(i if i.startswith("_") else self.unabbreviate(i)) for i in trace[trace.index(storid):]])
+              print("* Owlready2 * Warning: ignoring cyclic subclass of/subproperty of, involving:\n  %s\n" % s, file = sys.stderr)
+              return None
+            trace = (*trace, storid)
+            
         is_a_entities = []
-        for obj, graph in self.get_quads_sp(storid, rdfs_subclassof):
-          if obj.startswith("_"): is_a_bnodes  .append((self.graph.context_2_user_context(graph), obj))
-          else:                   is_a_entities.append(self._get_by_storid(obj, None, ThingClass, main_onto))
-          
-      elif not main_type is Thing:
-        is_a_entities = []
-        for obj, graph in self.get_quads_sp(storid, rdfs_subpropertyof):
-          if obj.startswith("_"): is_a_bnodes  .append((self.graph.context_2_user_context(graph), obj))
-          else:                   is_a_entities.append(self._get_by_storid(obj, None, main_type, main_onto))
-          
+        for obj, graph in self.get_quads_sp(storid, main_type._rdfs_is_a):
+          if obj.startswith("_"): is_a_bnodes.append((self.graph.context_2_user_context(graph), obj))
+          else:
+            obj = self._get_by_storid2(obj, None, main_type, main_onto, trace)
+            if not obj is None: is_a_entities.append(obj)
+            
       if main_onto:
         full_iri = full_iri or self.unabbreviate(storid)
         splitted = full_iri.rsplit("#", 1)
@@ -504,16 +512,16 @@ class Ontology(Namespace, _GraphManager):
   def save(self, file = None, format = "rdfxml", **kargs):
     if   file is None:
       file = _open_onto_file(self.base_iri, self.name, "wb")
-      if _LOG_LEVEL: print("* Owlready * Saving ontology %s to %s..." % (self.name, getattr(file, "name", "???")), file = sys.stderr)
+      if _LOG_LEVEL: print("* Owlready2 * Saving ontology %s to %s..." % (self.name, getattr(file, "name", "???")), file = sys.stderr)
       self.graph.save(file, format, **kargs)
       file.close()
     elif isinstance(file, str):
-      if _LOG_LEVEL: print("* Owlready * Saving ontology %s to %s..." % (self.name, file), file = sys.stderr)
+      if _LOG_LEVEL: print("* Owlready2 * Saving ontology %s to %s..." % (self.name, file), file = sys.stderr)
       file = open(file, "wb")
       self.graph.save(file, format, **kargs)
       file.close()
     else:
-      if _LOG_LEVEL: print("* Owlready * Saving ontology %s to %s..." % (self.name, getattr(file, "name", "???")), file = sys.stderr)
+      if _LOG_LEVEL: print("* Owlready2 * Saving ontology %s to %s..." % (self.name, getattr(file, "name", "???")), file = sys.stderr)
       self.graph.save(file, format, **kargs)
     
   def add_triple(self, s, p, o):
@@ -663,7 +671,10 @@ class Ontology(Namespace, _GraphManager):
         elif on_datatype and with_restriction:
           r = ConstrainedDatatype(on_datatype, self, bnode, with_restriction)
         else:
-          raise ValueError("Cannot parse blank node %s: unknown node type!" % bnode)
+          s = ""
+          for p, o in self.get_triples_s(bnode):
+            s += "\n  %s %s %s" % (bnode, self.unabbreviate(p), self.unabbreviate(o))
+          raise ValueError("Cannot parse blank node %s: unknown node type! It is defined by the following RDF triples:%s" % (bnode, s))
         
     self._bnodes[bnode] = r
     return r

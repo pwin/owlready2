@@ -168,6 +168,7 @@ version 2 - 0.5
 
 * Add support for hasSelf restriction
 * Optimize XML parsers
+* Check for cyclic subclass of/subproperty of, and show warning
 * PyPy 3 support (devel version of PyPy 3)
 * Bugfixes:
   - Fix search() for '*' value on properties with inverse
