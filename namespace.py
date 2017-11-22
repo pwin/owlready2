@@ -492,7 +492,7 @@ class Ontology(Namespace, _GraphManager):
     for prop_storid in itertools.chain(self.get_triples_po(rdf_type, owl_object_property), self.get_triples_po(rdf_type, owl_data_property), self.get_triples_po(rdf_type, owl_annotation_property)):
       Prop = self.world._get_by_storid(prop_storid)
       python_name = self.world.get_triple_sp(prop_storid, owlready_python_name)
-      
+
       if python_name is None:
         props.append(Prop.python_name)
       else:

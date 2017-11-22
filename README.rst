@@ -172,6 +172,7 @@ version 2 - 0.5
 * PyPy 3 support (devel version of PyPy 3)
 * Bugfixes:
   - Fix search() for '*' value on properties with inverse
+  - Fix individual.annotation = "..." and property.annotation = "..."
   - Fix doc for Creating classes dynamically
   - Rename module 'property' as 'prop', to avoid name clash with Python's 'property()' type
 

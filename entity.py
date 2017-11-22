@@ -443,6 +443,9 @@ class ThingClass(EntityClass):
       if value is None: Class._on_class_prop_changed(Prop, old, [])
       else:             Class._on_class_prop_changed(Prop, old, [value])
     else:
+      if issubclass_python(Prop, AnnotationProperty):
+        if   value is None:               value = []
+        elif not isinstance(value, list): value = [value]
       getattr(Class, attr).reinit(value)
       
 

@@ -82,6 +82,7 @@ owlready2.individual.ClassConstruct      = ClassConstruct
 owlready2.individual.TransitiveProperty  = TransitiveProperty
 owlready2.individual.SymmetricProperty   = SymmetricProperty
 owlready2.individual.ReflexiveProperty   = ReflexiveProperty
+owlready2.individual.AnnotationPropertyClass = AnnotationPropertyClass
 owlready2.class_construct.Thing      = Thing
 owlready2.class_construct.ThingClass = ThingClass
 del owlready2

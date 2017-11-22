@@ -1962,6 +1962,38 @@ I took a placebo
     
     assert P2.annot == []
     
+  def test_annotation_11(self):
+    n = self.new_ontology()
+    with n:
+      class P1(ObjectProperty): pass
+      class P2(DataProperty): pass
+      class P3(AnnotationProperty): pass
+      class C (Thing): pass
+      i = C()
+    P1.comment = "annot1"
+    P2.comment = "annot2"
+    P3.comment = "annot3"
+    C .comment = "annot4"
+    i .comment = "annot5"
+    
+    assert P1.comment == ["annot1"]
+    assert P2.comment == ["annot2"]
+    assert P3.comment == ["annot3"]
+    assert C .comment == ["annot4"]
+    assert i .comment == ["annot5"]
+    
+    P1.comment = None
+    P2.comment = None
+    P3.comment = None
+    C .comment = None
+    i .comment = None
+    
+    assert P1.comment == []
+    assert P2.comment == []
+    assert P3.comment == []
+    assert C .comment == []
+    assert i .comment == []
+    
     
   def test_import_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/2/test_mixed.owl").load()

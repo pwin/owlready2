@@ -180,6 +180,18 @@ class PropertyClass(EntityClass):
       (Prop.namespace.ontology._to_python(o) for o in Prop.namespace.world.get_triples_sp(Prop.storid, Annot.storid)),
       Prop, Annot) # Do NOT cache in __dict__, to avoid inheriting annotations
   
+  def __setattr__(Class, attr, value):
+    if attr in SPECIAL_PROP_ATTRS:
+      super().__setattr__(attr, value)
+      return
+    
+    Prop = Class.namespace.world._props.get(attr)
+    if isinstance(Prop, ReasoningPropertyClass):
+      raise AttributeError("Property cannot have non-annotation properties!")
+    if   value is None:               value = []
+    elif not isinstance(value, list): value = [value]
+    getattr(Class, attr).reinit(value)
+    
   def get_python_name(Prop):
     return Prop._python_name
   def set_python_name(Prop, python_name):

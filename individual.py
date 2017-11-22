@@ -271,7 +271,12 @@ class Thing(metaclass = ThingClass):
             if Prop.inverse_property: value.__dict__.pop(Prop.inverse_property.python_name, None) # Remove => force reloading; XXX optimizable
             
         else:
-          if not isinstance(value, list): raise ValueError("Property '%s' is not functional, cannot assign directly (use .append() or assign a list)." % attr)
+          if not isinstance(value, list):
+            if isinstance(Prop, AnnotationPropertyClass):
+              if value is None: value = []
+              else:             value = [value]
+            else:
+              raise ValueError("Property '%s' is not functional, cannot assign directly (use .append() or assign a list)." % attr)
           getattr(self, attr).reinit(value)
           
       else:

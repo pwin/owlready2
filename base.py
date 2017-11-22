@@ -113,7 +113,8 @@ _universal_abbrev("http://www.w3.org/2000/01/rdf-schema#label")
 _universal_abbrev("http://www.w3.org/2002/07/owl#FunctionalProperty")
 _universal_abbrev("http://www.w3.org/2002/07/owl#InverseFunctionalProperty")
 
-SPECIAL_ATTRS = { "namespace",  "name", "_name", "iri", "_iri", "storid", "is_a", "equivalent_to", "_equivalent_to", "disjoint_with", "_disjoint_with", "__class__", "__qualname__", "__module__", "__doc__", "__bases__" }
+SPECIAL_ATTRS      = { "namespace",  "name", "_name", "iri", "_iri", "storid", "is_a", "equivalent_to", "_equivalent_to", "disjoint_with", "_disjoint_with", "__class__", "__qualname__", "__module__", "__doc__", "__bases__" }
+SPECIAL_PROP_ATTRS = { "namespace",  "name", "_name", "python_name", "_python_name", "_domain", "_property_chain", "_inverse_property", "inverse_property", "_range", "iri", "_iri", "storid", "is_a", "equivalent_to", "_equivalent_to", "disjoint_with", "_disjoint_with", "__class__", "__qualname__", "__module__", "__doc__", "__bases__" }
 
 
 
