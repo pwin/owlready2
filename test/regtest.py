@@ -1999,6 +1999,20 @@ I took a placebo
 
     assert set(n.C.classDescription) == { locstr("Annotation value"), 8, locstr("Annotation with lang", "en") }
     
+  def test_annotation_13(self):
+    n = self.new_ontology()
+    with n:
+      class C(Thing): pass
+      C.comment.append(8)
+      C.comment.append("ee")
+      C.comment.append(locstr("plain literal"))
+      C.comment.append(locstr("literal with lang", "en"))
+      
+    self.assert_triple(C.storid, comment.storid, '"8"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
+    self.assert_triple(C.storid, comment.storid, '"ee"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#string"))
+    self.assert_triple(C.storid, comment.storid, '"plain literal"%s' % n.abbreviate("http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral"))
+    self.assert_triple(C.storid, comment.storid, '"literal with lang"@en')
+    
     
   def test_import_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/2/test_mixed.owl").load()
