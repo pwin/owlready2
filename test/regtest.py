@@ -1994,6 +1994,11 @@ I took a placebo
     assert C .comment == []
     assert i .comment == []
     
+  def test_annotation_12(self):
+    n = get_ontology("http://www.test.org/test_annot_literal.owl").load()
+
+    assert set(n.C.classDescription) == { locstr("Annotation value"), 8, locstr("Annotation with lang", "en") }
+    
     
   def test_import_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/2/test_mixed.owl").load()

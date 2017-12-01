@@ -26,9 +26,9 @@ class normstr(str):
 
 class locstr(str):
   __slots__ = ["lang"]
-  def __new__(Class, s, lang): return str.__new__(Class, s)
+  def __new__(Class, s, lang = ""): return str.__new__(Class, s)
   
-  def __init__(self, s, lang):
+  def __init__(self, s, lang = ""):
     str.__init__(self)
     self.lang = lang
     

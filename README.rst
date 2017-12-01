@@ -166,6 +166,7 @@ version 2 - 0.4
 version 2 - 0.5
 ***************
 
+* Add individual/instance editor (require EditObj3)
 * Add support for hasSelf restriction
 * Optimize XML parsers
 * Check for cyclic subclass of/subproperty of, and show warning
@@ -173,6 +174,7 @@ version 2 - 0.5
 * Bugfixes:
   - Fix search() for '*' value on properties with inverse
   - Fix individual.annotation = "..." and property.annotation = "..."
+  - Fix PlainLiteral annotation with no language specified
   - Fix doc for Creating classes dynamically
   - Rename module 'property' as 'prop', to avoid name clash with Python's 'property()' type
 
