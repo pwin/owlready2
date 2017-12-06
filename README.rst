@@ -166,7 +166,7 @@ version 2 - 0.4
 version 2 - 0.5
 ***************
 
-* Add individual/instance editor (require EditObj3)
+* Add individual/instance editor (require EditObj3, still largely untested)
 * Add support for hasSelf restriction
 * Optimize XML parsers
 * Check for cyclic subclass of/subproperty of, and show warning
