@@ -233,7 +233,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'owlready', 'Owlready Documentation',
+    ('index', 'owlready2', 'Owlready2 Documentation',
      ['Jean-Baptiste LAMY'], 1)
 ]
 
