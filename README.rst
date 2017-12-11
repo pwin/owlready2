@@ -176,6 +176,7 @@ version 2 - 0.5
   - Fix individual.annotation = "..." and property.annotation = "..."
   - Fix PlainLiteral annotation with no language specified
   - Fix doc for Creating classes dynamically
+  - Fix loading ontologies with python_name annotations
   - Rename module 'property' as 'prop', to avoid name clash with Python's 'property()' type
 
 Links
