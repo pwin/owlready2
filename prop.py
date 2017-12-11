@@ -232,7 +232,7 @@ class Property(metaclass = PropertyClass):
     ranges  = set(Prop.range)
     singles = set()
 
-    for restriction in _inherited_property_value_restrictions(Class, Prop):
+    for restriction in _inherited_property_value_restrictions(Class, Prop, set()):
       if     restriction.type == ONLY:
         ranges.add(restriction.value)
       elif ((restriction.type == EXACTLY) or (restriction.type == MAX)) and (restriction.cardinality == 1):

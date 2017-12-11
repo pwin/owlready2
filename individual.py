@@ -286,7 +286,7 @@ class Thing(metaclass = ThingClass):
     for Prop in self.namespace.world._reasoning_props.values():
       all_domains = set(Prop.domains_indirect())
       if ignore_domainless_properties and (not all_domains):
-        for restrict in _inherited_property_value_restrictions(self, Prop):
+        for restrict in _inherited_property_value_restrictions(self, Prop, set()):
           yield Prop
           break
       else:

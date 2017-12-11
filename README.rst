@@ -177,6 +177,7 @@ version 2 - 0.5
   - Fix PlainLiteral annotation with no language specified
   - Fix doc for Creating classes dynamically
   - Fix loading ontologies with python_name annotations
+  - Fix _inherited_property_value_restrictions when multiple is-a / equivalent-to are present
   - Rename module 'property' as 'prop', to avoid name clash with Python's 'property()' type
 
 Links

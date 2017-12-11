@@ -367,12 +367,12 @@ class ThingClass(EntityClass):
       functional = Prop.is_functional_for(Class)
       
       if functional:
-        for r in _inherited_property_value_restrictions(Class, Prop):
+        for r in _inherited_property_value_restrictions(Class, Prop, set()):
           if (r.type == VALUE): return r.value
         return None
       else:
         return RoleFilerList(
-          (r.value for r in _inherited_property_value_restrictions(Class, Prop) if (r.type == VALUE)),
+          (r.value for r in _inherited_property_value_restrictions(Class, Prop, set()) if (r.type == VALUE)),
           Class, Prop)
       
       
@@ -412,7 +412,7 @@ class ThingClass(EntityClass):
     inverse = Prop.inverse_property
     
     if removed:
-      for r in list(_inherited_property_value_restrictions(Class, Prop)):
+      for r in list(_inherited_property_value_restrictions(Class, Prop, set())):
         if r.type == VALUE:
           if (r.value in removed) and (r in Class.is_a):
             Class.is_a.remove(r)
@@ -437,7 +437,7 @@ class ThingClass(EntityClass):
     Prop = Class.namespace.world._props.get(attr)
     
     if Prop.is_functional_for(Class):
-      for r in _inherited_property_value_restrictions(Class, Prop):
+      for r in _inherited_property_value_restrictions(Class, Prop, set()):
         if (r.type == VALUE): old = [r.value]; break
       else: old = []
       if value is None: Class._on_class_prop_changed(Prop, old, [])
@@ -459,16 +459,18 @@ class RoleFilerList(CallbackListWithLanguage):
   def _callback(self, obj, old): self._obj._on_class_prop_changed(self._Prop, old, self)
       
 
-def _inherited_property_value_restrictions(x, Prop):
+def _inherited_property_value_restrictions(x, Prop, already):
   if   isinstance(x, Restriction):
     if (x.property is Prop): yield x
     
   elif isinstance(x, EntityClass) or isinstance(x, Thing):
     for parent in itertools.chain(x.is_a, x.equivalent_to.indirect()):
-      yield from _inherited_property_value_restrictions(parent, Prop)
-      
+      if not parent in already:
+        already.add(parent)
+        yield from _inherited_property_value_restrictions(parent, Prop, already)
+        
   elif isinstance(x, And):
     for x2 in x.Classes:
-      yield from _inherited_property_value_restrictions(x2, Prop)
+      yield from _inherited_property_value_restrictions(x2, Prop, already)
       
 

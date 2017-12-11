@@ -35,7 +35,7 @@ def close_world(self, Properties = None, close_instance_list = True, recursive =
     for Prop in Properties2:
       range_instances = list(Prop[self])
       range_classes   = []
-      for r in _inherited_property_value_restrictions(self, Prop):
+      for r in _inherited_property_value_restrictions(self, Prop, set()):
         if   (r.type == SOME):  range_classes  .append(r.value)
         elif (r.type == VALUE): range_instances.append(r.value)
       if range_instances: range_classes.append(OneOf(range_instances))
@@ -61,7 +61,7 @@ def close_world(self, Properties = None, close_instance_list = True, recursive =
       range_instances = []
       range_classes   = []
       for subclass in subclasses: # subclasses includes self
-        for r in _inherited_property_value_restrictions(subclass, Prop):
+        for r in _inherited_property_value_restrictions(subclass, Prop, set()):
           if   r.type == VALUE:
             range_instances.append(r.value)
           elif (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1):
@@ -70,7 +70,7 @@ def close_world(self, Properties = None, close_instance_list = True, recursive =
             
       for instance in instances:
         range_instances.extend(Prop[instance])
-        for r in _inherited_property_value_restrictions(instance, Prop):
+        for r in _inherited_property_value_restrictions(instance, Prop, set()):
           if   (r.type == SOME):  range_classes  .append(r.value)
           elif (r.type == VALUE): range_instances.append(r.value)
       
