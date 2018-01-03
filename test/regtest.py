@@ -889,7 +889,7 @@ class Test(BaseTest, unittest.TestCase):
     assert isinstance(prop.range, util.CallbackList)
     
     prop.range.append(float)
-    self.assert_triple(prop.storid, rdf_range, n.abbreviate("http://www.w3.org/2001/XMLSchema#double"))
+    self.assert_triple(prop.storid, rdf_range, n.abbreviate("http://www.w3.org/2001/XMLSchema#decimal"))
     
     prop.range.remove(int)
     self.assert_not_triple(prop.storid, rdf_range, n.abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
@@ -1397,7 +1397,7 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P1.storid)
     self.assert_triple(bnode, EXACTLY, '"5"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    self.assert_triple(bnode, owl_ondatarange, n.abbreviate("http://www.w3.org/2001/XMLSchema#double"))
+    self.assert_triple(bnode, owl_ondatarange, n.abbreviate("http://www.w3.org/2001/XMLSchema#decimal"))
     assert len(list(default_world.get_triples(bnode, None, None))) == 4
 
     

@@ -186,8 +186,10 @@ version 2 - 0.6
 
 * Add set_datatype_iri() global function for associating a Python datatype to an IRI
 * Add nquads ontology format (useful for debugging)
+* Bugfixes:
+  - Align Python floats with xsd:decimal rather than xsd:double, finally, because decimal accepts int too
 
-  
+
 Links
 -----
 
