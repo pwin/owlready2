@@ -402,11 +402,11 @@ EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR ("
   
   def __len__(self):
     return self.execute("SELECT COUNT() FROM quads").fetchone()[0]
-
-  def dump(self):
+  
+  def dump(self, format = "ntriples"):
     import io
     s = io.BytesIO()
-    self.save(s, "ntriples")
+    self.save(s, format)
     print(s.getvalue().decode("utf8"))
     
     
@@ -814,6 +814,28 @@ def _save(f, format, graph, c = None):
         
       else: o = "<%s>" % unabbreviate(o)
       f.write(("%s %s %s .\n" % (s, p, o)).encode("utf8"))
+      
+  elif format == "nquads":
+    unabbreviate = lru_cache(None)(graph.unabbreviate)
+    
+    c_2_iri = { c : iri for c, iri in graph.sql.execute("SELECT c, iri FROM ontologies") }
+    
+    if c is None: graph.sql.execute("SELECT c, s,p,o FROM quads")
+    else:         graph.sql.execute("SELECT c, s,p,o FROM quads WHERE c=?", (c,))
+    for c, s,p,o in graph.sql.fetchall():
+      if   s.startswith("_"): s = "_:%s" % s[1:]
+      else:                   s = "<%s>" % unabbreviate(s)
+      p = "<%s>" % unabbreviate(p)
+      if   o.startswith("_"): o = "_:%s" % o[1:]
+      elif o.startswith('"'):
+        v, l = o.rsplit('"', 1)
+        v = v[1:].replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        if   l.startswith("@"): o = '"%s"%s' % (v, l)
+        elif l:                 o = '"%s"^^<%s>' % (v, unabbreviate(l)) # Unabbreviate datatype's iri
+        else:                   o = '"%s"' % v
+        
+      else: o = "<%s>" % unabbreviate(o)
+      f.write(("<%s> %s %s %s .\n" % (c_2_iri[c], s, p, o)).encode("utf8"))
       
   elif format == "rdfxml":
     @lru_cache(None)

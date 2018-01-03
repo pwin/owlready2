@@ -181,6 +181,13 @@ version 2 - 0.5
   - Align Python floats with xsd:double rather than xsd:decimal
   - Rename module 'property' as 'prop', to avoid name clash with Python's 'property()' type
 
+version 2 - 0.6
+***************
+
+* Add set_datatype_iri() global function for associating a Python datatype to an IRI
+* Add nquads ontology format (useful for debugging)
+
+  
 Links
 -----
 

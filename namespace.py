@@ -523,7 +523,7 @@ class Ontology(Namespace, _GraphManager):
     else:
       if _LOG_LEVEL: print("* Owlready2 * Saving ontology %s to %s..." % (self.name, getattr(file, "name", "???")), file = sys.stderr)
       self.graph.save(file, format, **kargs)
-    
+      
   def add_triple(self, s, p, o):
     if CURRENT_NAMESPACES[-1] is None: self._add_triple(s, p, o)
     else:                              CURRENT_NAMESPACES[-1].ontology._add_triple(s, p, o)
@@ -532,7 +532,7 @@ class Ontology(Namespace, _GraphManager):
       if p: p = self.unabbreviate(p)
       if o and not (o.startswith("_") or o.startswith('"')): o = self.unabbreviate(o)
       print("* Owlready2 * ADD TRIPLE", s, p, o, file = sys.stderr)
-    
+      
   def set_triple(self, s, p, o):
     if CURRENT_NAMESPACES[-1] is None: self._set_triple(s, p, o)
     else:   CURRENT_NAMESPACES[-1].ontology._set_triple(s, p, o)
