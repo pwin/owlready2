@@ -436,6 +436,9 @@ class ThingClass(EntityClass):
     
     Prop = Class.namespace.world._props.get(attr)
     
+    if Prop is None:
+      raise AttributeError("'%s' property is not defined." % attr)
+    
     if Prop.is_functional_for(Class):
       for r in _inherited_property_value_restrictions(Class, Prop, set()):
         if (r.type == VALUE): old = [r.value]; break
