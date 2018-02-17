@@ -208,7 +208,7 @@ Contact "Jiba" Jean-Baptiste Lamy:
 
   <jean-baptiste.lamy *@* univ-paris13 *.* fr>
   LIMICS
-  University Paris 13, Sorbonne Paris Cité
+  University Paris 13, Sorbonne Paris Cite
   Bureau 149
   74 rue Marcel Cachin
   93017 BOBIGNY
