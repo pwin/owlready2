@@ -136,7 +136,7 @@ def _get_class_one_of(Class):
   if isinstance(Class, ThingClass):
     s = []
     for ancestor in Class.ancestors():
-      for superclass in ancestor.is_a:
+      for superclass in ancestor.is_a + ancestor.equivalent_to:
         if isinstance(superclass, OneOf): s.append(superclass.instances)
     return _intersect_reduce(s)
   
@@ -178,7 +178,7 @@ def configure_editobj_from_ontology(onto):
   for Class in onto.classes():
     for superclass in Class.is_a:                     _configure_class_restriction(Class, superclass)
     for superclass in Class.equivalent_to.indirect(): _configure_class_restriction(Class, superclass)
-    
+
   for prop_children_group in PROP_CHILDREN_GROUPS.values():
     if prop_children_group.changed: prop_children_group.define_children_groups()
   
@@ -249,14 +249,15 @@ class PropChildrenGroup(object):
         if s: range_restrictions.update(s)
         
       range_instance_onlys = { range_restriction for range_restriction in range_restrictions if isinstance(range_restriction, RangeInstanceOnly) }
+      
       if range_instance_onlys:
         instances = _intersect_reduce([i.ranges for i in range_instance_onlys])
         d         = { instance.name : instance for instance in instances }
         if functional:
           d["None"] = None
-          descr.def_attr(self.Prop.python_name, field.EnumField(d), priority = priority)
+          descr.def_attr(self.Prop.python_name, field.EnumField(d), priority = priority, optional = False)
         else:
-          descr.def_attr(self.Prop.python_name, field.EnumListField(d), priority = priority)
+          descr.def_attr(self.Prop.python_name, field.EnumListField(d), priority = priority, optional = False)
           
       else:
         if isinstance(self.Prop, DataPropertyClass):
@@ -294,6 +295,7 @@ class PropChildrenGroup(object):
             else:                 inverse_attr = ""
             if functional:        field_class  = field.HierarchyOrObjectSelectorField
             else:                 field_class  = field.HierarchyOrObjectListField
+            
             descr.def_attr(self.Prop.python_name,
                            field_class,
                            addable_values = values_lister.available_values,
@@ -301,7 +303,8 @@ class PropChildrenGroup(object):
                            priority = priority)
           else:
             descr.def_attr(self.Prop.python_name,
-                           field.ObjectSelectorField, addable_values = values_lister.available_values,
+                           field.ObjectSelectorField,
+                           addable_values = values_lister.available_values,
                            priority = priority)
           
 class RangeRestriction(object):
@@ -354,7 +357,7 @@ class ValuesLister(object):
       elif isinstance(range_restriction, RangeClassExclusion):
         excluded_classes.update(range_restriction.get_classes())
         
-    available_classes = intersect_reduce(available_classes)
+    available_classes = _intersect_reduce(available_classes)
     available_classes.difference_update(excluded_classes)
     available_classes = sorted(available_classes, key = lambda Class: Class.name)
     

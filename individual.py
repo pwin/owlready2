@@ -301,6 +301,9 @@ class Thing(metaclass = ThingClass):
       if not Prop is None: # None is is-a
         yield Prop
         
+  def __dir__(self):
+    return set(object.__dir__(self)) | { Prop.python_name for Prop in self.get_properties() }
+  
   def get_inverse_properties(self):
     for s,p,o in self.namespace.world.get_triples(None, None, self.storid):
       Prop    = self.namespace.world._get_by_storid(p)

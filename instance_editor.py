@@ -31,6 +31,7 @@ from editobj3.observe import *
 class EditedInstances(object):
   def __init__(self, ontology, Class):
     self.ontology  = ontology
+    self.namespace = ontology
     self.Class     = Class
     self.name      = editobj3.TRANSLATOR(Class.name.replace("_", " "))
     
@@ -56,6 +57,7 @@ descr = introsp.description(EditedInstances)
 descr.set_details(EditedInstances.details)
 descr.def_attr("instances", label = "", reorder_method = None, addable_values = "addable_values")
 descr.def_attr("ontology" , field.HiddenField)
+descr.def_attr("namespace", field.HiddenField)
 descr.def_attr("Class"    , field.HiddenField)
 descr.def_attr("name"     , field.HiddenField)
 
