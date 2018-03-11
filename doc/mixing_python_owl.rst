@@ -62,7 +62,8 @@ It is possible to associate a Python module with an OWL ontology. When Owlready2
 it will automatically import the Python module.
 This is done with the 'python_module' annotation, which should be set on the ontology itself.
 The value should be the name of your Python module, *e.g.* 'my_package.my_module'.
-This annotation can be set with editor like Protégé, after importing the 'owlready_ontology.owl' ontology:
+This annotation can be set with editor like Protégé, after importing the 'owlready_ontology.owl' ontology
+(file 'owlready2/owlready_ontology.owl' in Owlready2 sources, URI http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl):
 
 .. figure:: _images/protege_python_module_annotation.png
 
