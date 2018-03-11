@@ -269,7 +269,7 @@ languages like Python, shorter attribute names are more common, *e.g.* "ingredie
 of a plural form, since it is actually a list of several ingredients).
 
 Owlready2 allows to rename Properties with more Pythonic name through the 'python_name' annotation (defined
-in the Owlready ontology):
+in the Owlready ontology, file 'owlready2/owlready_ontology.owl' in Owlready2 sources, URI http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl):
 
 ::
 
@@ -289,7 +289,7 @@ in the Owlready ontology):
 For more information about the use of annotations, see :doc:`annotations`.
 
 The 'python_name' annotations can also be defined in ontology editors like Protégé, by importing the Owlready
-ontology (file 'owlready2/owlready_ontology.owl' in Owlready2 sources).
+ontology (file 'owlready2/owlready_ontology.owl' in Owlready2 sources, URI http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl).
 
 
 Getting relation instances
