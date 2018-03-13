@@ -442,7 +442,7 @@ class Ontology(Namespace, _GraphManager):
       f = ""
       
     new_base_iri = None
-    if f.startswith("http:"):
+    if f.startswith("http:") or f.startswith("https:"):
       if self.graph.get_last_update_time() == 0.0: # Never loaded
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
         fileobj = urllib.request.urlopen(f)
