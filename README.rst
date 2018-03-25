@@ -190,7 +190,7 @@ version 2 - 0.6
 * Add support for ontology using https: protocol (thanks Samourkasidis Argyrios)
 * Bugfixes:
   - Align Python floats with xsd:decimal rather than xsd:double, finally, because decimal accepts int too
-
+  - Fix Class.instances() so as it returns instances of subclasses (as indicated in the doc)
 
 Links
 -----
