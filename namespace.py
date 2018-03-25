@@ -189,7 +189,7 @@ class _GraphManager(object):
           if v is None: v2 = None
           else:         v2 = self.world._to_rdf(v)
           prop_vals.append((k2, v2))
-          
+
     r = self.graph.search(prop_vals)
     return [self.world._get_by_storid(o) for (o,) in r if not o.startswith("_")]
   
@@ -299,7 +299,7 @@ class World(_GraphManager):
   def _get_by_storid2(self, storid, full_iri = None, main_type = None, main_onto = None, trace = None):
     entity = self._entities.get(storid)
     if not entity is None: return entity
-    
+
     with LOADING:
       types       = []
       is_a_bnodes = []

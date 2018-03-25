@@ -3228,6 +3228,139 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert C.is_a == [Thing]
     assert getattr(c1, "p", None) == None
     assert len(w.graph) == 5
+
+
+  def test_observe_1(self):
+    import owlready2.observe
+
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
+    
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class p(C >> str, FunctionalProperty): pass
+      class ps(C >> int): pass
+      
+    c = C()
+
+    listened = "\n"
+    def listener(o, p, new, old):
+      nonlocal listened
+      listened += "%s %s %s %s\n" % (o, p, new, old)
+    
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(c, listener)
+    
+    c.ps = [1, 2, 3]
+    
+    c.ps.remove(2)
+    c.ps.append(4)
+    
+    c.p = "test"
+    
+    c.is_a = [D]
+    
+    owlready2.observe.unobserve(c, listener)
+    
+    c.ps = [0]
+    
+    assert listened == """
+t.c1 http://test.org/t.owl#ps [1] []
+t.c1 http://test.org/t.owl#ps [1, 2] [1]
+t.c1 http://test.org/t.owl#ps [1, 2, 3] [1, 2]
+t.c1 http://test.org/t.owl#ps [1, 3] [1, 2, 3]
+t.c1 http://test.org/t.owl#ps [1, 3, 4] [1, 3]
+t.c1 http://test.org/t.owl#p ['test'] []
+t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [] [t.C]
+t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [t.D] []
+"""
+    
+  def test_observe_2(self):
+    import owlready2.observe
+    
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
+    
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class ps(C >> int): pass
+      
+    c = C()
+    c.ps = [1, 2, 3]
+    
+    listened = set()
+    def listener(o, diffs):
+      for pred, new, old in diffs:
+        listened.add("%s '%s' %s %s" % (o, pred, new, old))
+        
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(c, owlready2.observe.CollapsedListener(listener))
+    
+    c.ps.remove(2)
+    c.ps.append(4)
+    
+    c.is_a = [D]
+    
+    assert not listened
+    
+    owlready2.observe.scan_collapsed_changes()
+    
+    assert listened == {"t.c1 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' [t.D] [t.C]", "t.c1 'http://test.org/t.owl#ps' [1, 3, 4] [1, 2, 3]"}
+    
+    listened = set()
+    owlready2.observe.scan_collapsed_changes()
+    assert not listened # Now empty
+    
+    owlready2.observe.unobserve(c, owlready2.observe.CollapsedListener(listener))
+    c.ps.append(5)
+    owlready2.observe.scan_collapsed_changes()
+    assert not listened
+    
+  def test_observe_3(self):
+    import owlready2.observe
+    
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
+    
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class ps(C >> int): pass
+      
+    c = C()
+    c.ps = [1, 2, 3]
+    
+    listened = set()
+    @owlready2.observe.CollapsedListener
+    def listener(o, diffs):
+      for pred, new, old in diffs:
+        listened.add("%s '%s' %s %s" % (o, pred, new, old))
+        
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(c, listener)
+    
+    c.ps.remove(2)
+    c.ps.append(4)
+    
+    c.is_a = [D]
+    
+    assert not listened
+    
+    owlready2.observe.scan_collapsed_changes()
+    
+    assert listened == {"t.c1 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' [t.D] [t.C]", "t.c1 'http://test.org/t.owl#ps' [1, 3, 4] [1, 2, 3]"}
+    
+    listened = set()
+    owlready2.observe.scan_collapsed_changes()
+    assert not listened # Now empty
+    
+    owlready2.observe.unobserve(c, listener)
+    c.ps.append(5)
+    owlready2.observe.scan_collapsed_changes()
+    assert not listened
+    
     
     
 class Paper(BaseTest, unittest.TestCase):

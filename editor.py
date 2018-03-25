@@ -161,6 +161,8 @@ def _is_abstract_class(Class):
       else: return True
 
 def configure_editobj_from_ontology(onto):
+  introsp._init_for_owlready2()
+  
   for Prop in onto.properties():
     if len(Prop.range) != 1: continue
     if isinstance(Prop, DataPropertyClass): ranges = [Prop.range[0]]

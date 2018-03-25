@@ -259,10 +259,10 @@ class EntityClass(type):
   def _fill_descendants(Class, s, include_self, only_loaded = False):
     if include_self:
       s.add(Class)
-    for equivalent in Class.equivalent_to.indirect():
-      if isinstance(equivalent, Class.__class__) and not equivalent in s:
-        equivalent._fill_descendants(s, True)
-        
+      for equivalent in Class.equivalent_to.indirect():
+        if isinstance(equivalent, Class.__class__) and not equivalent in s:
+          equivalent._fill_descendants(s, True)
+          
     for x in Class.namespace.world.get_transitive_po(Class._rdfs_is_a, Class.storid):
       if not x.startswith("_"):
         if only_loaded:
@@ -270,7 +270,6 @@ class EntityClass(type):
           if descendant is None: continue
         else:
           descendant = Class.namespace.world._get_by_storid(x, None, Class.__class__, Class.namespace.ontology)
-        #if (descendant is Class) and (not include_self): continue
         if (descendant is Class): continue
         if not descendant in s:
           s.add(descendant)
@@ -334,14 +333,15 @@ class ThingClass(EntityClass):
         yield Prop
         
   def instances(Class):
-    for s in Class.namespace.world.get_triples_po(rdf_type, Class.storid):
-      if not s.startswith("_"): yield Class.namespace.world._get_by_storid(s, None, Thing, Class.namespace.ontology)
-      
-      
+    if Class.namespace is owl: return [] # For Thing
+    return Class.namespace.world.search(type = Class)
+    #for s in Class.namespace.world.get_triples_po(rdf_type, Class.storid):
+    #  if not s.startswith("_"): yield Class.namespace.world._get_by_storid(s, None, Thing, Class.namespace.ontology)
+    
   def __and__(a, b): return And([a, b])
   def __or__ (a, b): return Or ([a, b])
   def __invert__(a): return Not(a)
-      
+  
   def __rshift__(Domain, Range):
     import owlready2.prop
     owlready2.prop._next_domain_range = (Domain, Range)
