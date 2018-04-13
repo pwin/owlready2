@@ -175,7 +175,7 @@ class _GraphManager(object):
         if   k == "iri":
           prop_vals.append(("iri", v))
         elif (k == "is_a") or (k == "subclass_of") or (k == "type"):
-          v2 = [parent.storid for parent in v.descendants()]
+          v2 = [child.storid for child in v.descendants()]
           prop_vals.append((k, v2))
         else:
           k2 = self.world._props.get(k)
@@ -396,7 +396,7 @@ class Ontology(Namespace, _GraphManager):
     self.loaded                = False
     self._bnodes               = weakref.WeakValueDictionary()
     self.storid                = world.abbreviate(base_iri[:-1])
-    self.imported_ontologies   = CallbackList([], self, Ontology._import_changed)
+    self._imported_ontologies  = CallbackList([], self, Ontology._import_changed)
     
     if world.graph is None:
       self.graph = None
@@ -418,9 +418,16 @@ class Ontology(Namespace, _GraphManager):
     del self.world.ontologies[self.base_iri]
     self.graph.destroy()
     
+  def get_imported_ontologies(self): return self._imported_ontologies
+  def set_imported_ontologies(self, l):
+    old = self._imported_ontologies
+    self._imported_ontologies = CallbackList(l, self, Ontology._import_changed)
+    self._import_changed(old)
+  imported_ontologies = property(get_imported_ontologies, set_imported_ontologies)
+    
   def _import_changed(self, old):
     old = set(old)
-    new = set(self.imported_ontologies)
+    new = set(self._imported_ontologies)
     for ontology in old - new:
       self.del_triple(self.storid, owl_imports, ontology.storid)
     for ontology in new - old:
@@ -473,7 +480,7 @@ class Ontology(Namespace, _GraphManager):
     
     # Load imported ontologies
     imported_ontologies = [self.world.get_ontology(self.unabbreviate(abbrev_iri)).load() for abbrev_iri in self.world.get_triples_sp(self.storid, owl_imports)]
-    self.imported_ontologies._set(imported_ontologies)
+    self._imported_ontologies._set(imported_ontologies)
     
     # Import Python module
     for module in self.get_triples_sp(self.storid, owlready_python_module):
@@ -507,7 +514,7 @@ class Ontology(Namespace, _GraphManager):
     if not self in already:
       already.add(self)
       yield self
-      for ontology in self.imported_ontologies: yield from ontology.indirectly_imported_ontologies(already)
+      for ontology in self._imported_ontologies: yield from ontology.indirectly_imported_ontologies(already)
       
   def save(self, file = None, format = "rdfxml", **kargs):
     if   file is None:
@@ -619,7 +626,7 @@ class Ontology(Namespace, _GraphManager):
         for value in values: self.add_triple(bnode, annot, value)
         return bnode
       
-          
+      
   def _parse_bnode(self, bnode):
     r = self._bnodes.get(bnode)
     if not r is None: return r

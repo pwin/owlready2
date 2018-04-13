@@ -317,6 +317,24 @@ class Test(BaseTest, unittest.TestCase):
     
     assert o._parse_bnode(o.NonPizza.is_a[-1].storid) is o.NonPizza.is_a[-1]
     
+  def test_ontology_8(self):
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test1.owl")
+    o2 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test2.owl")
+    o1.imported_ontologies.append(o2)
+    file = BytesIO()
+    o1.save(file)
+    assert """<owl:imports rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test2.owl"/>""" in file.getvalue().decode("utf8")
+    
+  def test_ontology_9(self):
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test1.owl")
+    o2 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test2.owl")
+    o1.imported_ontologies = [o2]
+    file = BytesIO()
+    o1.save(file)
+    assert """<owl:imports rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test2.owl"/>""" in file.getvalue().decode("utf8")
+    
       
   def test_class_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -3361,6 +3379,117 @@ t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [t.D] []
     owlready2.observe.scan_collapsed_changes()
     assert not listened
     
+  def test_observe_4(self):
+    import owlready2.observe
+    
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
+    
+    with onto:
+      class C(Thing): pass
+      
+    c1 = C()
+    c2 = C()
+    
+    listened = []
+    def listener(o, p, new, old):
+      listened.append((o, p, new, old))
+    l = owlready2.observe.InstancesOfClass(C, use_observe = True)
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(l, listener)
+    
+    c3 = C()
+
+    assert listened[0][0] is l
+    assert listened[0][1] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
+    assert list(listened[0][2]) == [c1, c2, c3]
+    assert list(listened[0][3]) == [c1, c2]
+    
+    assert list(l) == [c1, c2, c3]
+    
+  def test_observe_5(self):
+    import owlready2.observe
+    
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
+    
+    with onto:
+      class C(Thing): pass
+      
+    c1 = C()
+    c2 = C()
+    
+    listened = []
+    def listener(o, p, new, old):
+      listened.append((o, p, new, old))
+    l = owlready2.observe.InstancesOfClass(C, use_observe = True)
+    len(l)
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(l, listener)
+    
+    c3 = C()
+
+    assert listened[0][0] is l
+    assert listened[0][1] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
+    assert list(listened[0][2]) == [c1, c2, c3]
+    assert list(listened[0][3]) == [c1, c2]
+    
+    assert list(l) == [c1, c2, c3]
+    
+  def test_observe_6(self):
+    import owlready2.observe
+    
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
+    
+    with onto:
+      class C(Thing): pass
+      
+    c1 = C()
+    c2 = C()
+    
+    listened = []
+    
+    @owlready2.observe.CollapsedListener
+    def listener(o, diffs):
+      listened.extend(diffs)
+    l = owlready2.observe.InstancesOfClass(C, use_observe = True)
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(l, listener)
+    
+    c3 = C()
+    c4 = C()
+    
+    assert listened == []
+    owlready2.observe.scan_collapsed_changes()
+    
+    assert listened[0][0] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
+    assert list(listened[0][1]) == [c1, c2, c3, c4]
+    assert list(listened[0][2]) == [c1, c2]
+    
+    assert list(l) == [c1, c2, c3, c4]
+    
+  def test_observe_7(self):
+    import owlready2.observe
+    
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
+    
+    with onto:
+      class C(Thing): pass
+      c1 = C()
+      c2 = C()
+      c2.label.en = "AAA ?"
+      c2.label.fr = "Paracétamol"
+      c3 = C()
+      c3.label.en = "Asprine"
+      c3.label.fr = "Asprin"
+      
+    l = owlready2.observe.InstancesOfClass(C, order_by = "label", lang = "fr", use_observe = True)
+    assert list(l) == [c1, c3, c2]
+    
+    l = owlready2.observe.InstancesOfClass(C, order_by = "label", lang = "en", use_observe = True)
+    assert list(l) == [c1, c2, c3]
     
     
 class Paper(BaseTest, unittest.TestCase):
