@@ -63,9 +63,11 @@ Logical operators (intersection, union and complement)
 Owlready provides the following operators between Classes
 (normal Classes but also class constructs and restrictions):
 
- * '&' : and operator (intersection). For example: Class1 & Class2
- * '|' : or operator (union). For example: Class1 | Class2
- * Not() : not operator (negation or complement). For example: Not(Class1)
+ * '&' : And operator (intersection). For example: Class1 & Class2.
+   It can also be written: And([Class1, Class2])
+ * '|' : Or operator (union). For example: Class1 | Class2.
+   It can also be written: Or([Class1, Class2])
+ * Not() : Not operator (negation or complement). For example: Not(Class1)
 
 The Classes used with logical operators can be normal Classes (inheriting from Thing), restrictions or
 other logical operators. 

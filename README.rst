@@ -188,6 +188,7 @@ version 2 - 0.6
 * Add nquads ontology format (useful for debugging)
 * Add support for dir() on individuals
 * Add support for ontology using https: protocol (thanks Samourkasidis Argyrios)
+* Improve docs
 * Bugfixes:
   - Align Python floats with xsd:decimal rather than xsd:double, finally, because decimal accepts int too
   - Fix Class.instances() so as it returns instances of subclasses (as indicated in the doc)
