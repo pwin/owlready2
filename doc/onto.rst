@@ -61,7 +61,7 @@ if not found, tries to download it from the Internet. For example:
    >>> onto = get_ontology("http://www.lesfleursdunormal.fr/static/_downloads/pizza_onto.owl").load()
 
 The onto_path global variable contains a list of directories for searching local copies of ontologies.
-It behaves similarly to sys.path (for Python modules).
+It behaves similarly to sys.path (for Python modules / packages).
 
 The get_ontology() function returns an ontology from its IRI, and creates a new empty ontology if needed.
 

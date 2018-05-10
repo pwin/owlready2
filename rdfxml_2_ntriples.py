@@ -295,14 +295,6 @@ def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_l
       if not bn.startswith("_ "):
         content_2_bns[frozenset(content)].append(bn)
         
-    #print(file = sys.stderr)
-    #print("    bns", file = sys.stderr)
-    #for k, v in bns.items(): print(k, v, file = sys.stderr)
-    #print("\n    content_2_bns", file = sys.stderr)
-    #for k, v in content_2_bns.items():
-    #  if v: print(k, v, file = sys.stderr)
-    #print(file = sys.stderr)
-    
     def rebuild_bn(content):
       bn = new_blank()
       content_2_bns[frozenset(content)].append(bn)

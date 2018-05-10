@@ -1,7 +1,7 @@
 Welcome to Owlready2's documentation!
 *************************************
 
-Owlready2 is a module for ontology-oriented programming in Python. It can load OWL 2.0 ontologies
+Owlready2 is a package for ontology-oriented programming in Python. It can load OWL 2.0 ontologies
 as Python objects, modify them, save them, and perform reasoning via HermiT
 (included). Owlready2 allows a transparent access to OWL ontologies (contrary
 to usual Java-based API).

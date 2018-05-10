@@ -1,7 +1,7 @@
 Introduction
 ============
 
-Owlready2 is a module for manipulating OWL 2.0 ontologies in Python. It can load, modify, save ontologies, and
+Owlready2 is a package for manipulating OWL 2.0 ontologies in Python. It can load, modify, save ontologies, and
 it supports reasoning via HermiT (included). Owlready allows a transparent access to OWL ontologies.
 
 Owlready2 can:
