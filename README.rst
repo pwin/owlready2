@@ -196,7 +196,7 @@ version 2 - 0.6
   - Fix direct assignation to Ontology.imported_ontologies
   - Fix a bug in reasoning, when adding deduced facts between one loaded and one non-loaded entity
 
-version 2 - 0.6
+version 2 - 0.7
 ***************
 
 * Bugfixes:
