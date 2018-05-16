@@ -188,6 +188,7 @@ version 2 - 0.6
 * Add nquads ontology format (useful for debugging)
 * Add support for dir() on individuals
 * Add support for ontology using https: protocol (thanks Samourkasidis Argyrios)
+* Add observe module (for registering callback when the ontology is modified)
 * Improve docs
 * Bugfixes:
   - Align Python floats with xsd:decimal rather than xsd:double, finally, because decimal accepts int too
@@ -195,7 +196,13 @@ version 2 - 0.6
   - Fix direct assignation to Ontology.imported_ontologies
   - Fix a bug in reasoning, when adding deduced facts between one loaded and one non-loaded entity
 
-    
+version 2 - 0.6
+***************
+
+* Bugfixes:
+  - Restore HermiT compiled with older Java compilator (higher compatibility)
+  
+
 Links
 -----
 
