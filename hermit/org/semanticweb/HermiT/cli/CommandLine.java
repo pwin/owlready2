@@ -19,6 +19,8 @@
    
    javac -cp ./hermit/HermiT.jar ./hermit/org/semanticweb/HermiT/cli/CommandLine.java  
 
+   javac -cp ./hermit/HermiT.jar ./hermit/org/semanticweb/HermiT/cli/CommandLine.java ./hermit/org/semanticweb/HermiT/Reasoner.java 
+
 */
 package org.semanticweb.HermiT.cli;
 
@@ -138,14 +140,16 @@ public class CommandLine {
         final boolean classifyIs;
         final boolean prettyPrint;
         final String outputLocation;
+        final IRI deltaOntoIRI;
 
-        public ClassifyAction(boolean classifyClasses, boolean classifyOPs, boolean classifyDPs, boolean classifyIs, boolean prettyPrint, String outputLocation) {
+      public ClassifyAction(boolean classifyClasses, boolean classifyOPs, boolean classifyDPs, boolean classifyIs, boolean prettyPrint, String outputLocation, IRI deltaOntoIRI) {
             this.classifyClasses=classifyClasses;
             this.classifyOPs=classifyOPs;
             this.classifyDPs=classifyDPs;
             this.classifyIs=classifyIs;
             this.prettyPrint=prettyPrint;
             this.outputLocation=outputLocation;
+            this.deltaOntoIRI = deltaOntoIRI;
         }
         public void run(Reasoner hermit, StatusOutput status, PrintWriter output,boolean ignoreOntologyPrefixes) {
             Set<InferenceType> inferences=new HashSet<InferenceType>();
@@ -157,9 +161,30 @@ public class CommandLine {
                 inferences.add(InferenceType.DATA_PROPERTY_HIERARCHY);
             if (classifyIs)
                 inferences.add(InferenceType.CLASS_ASSERTIONS);
-            status.log(2,"Classifying...");
-            hermit.precomputeInferences(inferences.toArray(new InferenceType[0]));
+
+            OWLOntology dumpedOnto = null;
+            if (deltaOntoIRI == null) {
+              status.log(2,"Classifying...");
+              hermit.precomputeInferences(inferences.toArray(new InferenceType[0]));
+            }
+            else {
+              status.log(2,"Classifying delta...");
+              //OWLOntology deltaOnto = m.loadOntology(deltaOntoIRI);
+              
+              OWLOntology deltaOnto = null;
+              OWLOntologyManager m = OWLManager.createOWLOntologyManager();
+              try {
+                deltaOnto = m.loadOntology(deltaOntoIRI);
+                //System.out.println(deltaOnto);
+              }
+              catch (OWLOntologyCreationException e) {
+                e.printStackTrace();
+              }
+              hermit.loadDeltaOntology(deltaOnto);
+              dumpedOnto = deltaOnto;
+            }
             if (output!=null) {
+                if (dumpedOnto == null) dumpedOnto = hermit.getRootOntology();
                 if (outputLocation!=null)
                     status.log(2,"Writing results to "+outputLocation);
                 else
@@ -169,7 +194,8 @@ public class CommandLine {
                 else
                     hermit.dumpHierarchies(output, classifyClasses, classifyOPs, classifyDPs);
                 if (classifyIs) {
-                    for(OWLNamedIndividual namedIndividual : hermit.getRootOntology().getIndividualsInSignature()) {
+                  System.out.println("DUMP " + dumpedOnto);
+                    for(OWLNamedIndividual namedIndividual : dumpedOnto.getIndividualsInSignature()) {
                         for (Node<OWLClass> node : hermit.getTypes(namedIndividual, true)) {
                             for (OWLClass clazz : node.getEntities()) {
                                 output.print("Type( <");
@@ -436,7 +462,8 @@ public class CommandLine {
         new Option('U',"unsatisfiable",kActions,"output unsatisfiable classes (equivalent to --equivalents=owl:Nothing)"),
         new Option(kDumpPrefixes,"print-prefixes",kActions,"output prefix names available for use in identifiers"),
         new Option('E',"checkEntailment",kActions,"check whether the premise (option premise) ontology entails the conclusion ontology (option conclusion)"),
-
+        new Option('L',"deltaOnto",kActions,true,"IRI","classify delta ontology IRI, with regards to other loaded ontologies"),
+        
         new Option('N',"no-prefixes",kPrefixes,"do not abbreviate or expand identifiers using prefixes defined in input ontology"),
         new Option('p',"prefix",kPrefixes,true,"PN=IRI","use PN as an abbreviation for IRI in identifiers"),
         new Option(kDefaultPrefix,"prefix",kPrefixes,true,"IRI","use IRI as the default identifier prefix"),
@@ -468,6 +495,7 @@ public class CommandLine {
             Collection<Action> actions=new LinkedList<Action>();
             URI base;
             IRI conclusionIRI=null;
+            IRI deltaOntoIRI=null;
             Configuration config=new Configuration();
             boolean doAll=true;
             try {
@@ -596,6 +624,15 @@ public class CommandLine {
                         break;
                     case 'I': {
                         classifyIs=true;
+                    }
+                        break;
+                    case 'L': {
+                        String arg = g.getOptarg();
+                        int eqIndex = arg.indexOf('=');
+                        if (eqIndex==-1) {
+                            throw new IllegalArgumentException("the prefix declaration '"+arg+"' is not of the form PN=IRI.");
+                        }
+                        deltaOntoIRI = IRI.create(arg.substring(0,eqIndex),arg.substring(eqIndex+1));
                     }
                         break;
                     case 'P': {
@@ -754,7 +791,7 @@ public class CommandLine {
             if (verbosity>3)
                 config.monitor=new Timer(new PrintWriter(System.err));
             if (classifyClasses || classifyOPs || classifyDPs || classifyIs)
-                actions.add(new ClassifyAction(classifyClasses, classifyOPs, classifyDPs, classifyIs, prettyPrint, resultsFileLocation));
+              actions.add(new ClassifyAction(classifyClasses, classifyOPs, classifyDPs, classifyIs, prettyPrint, resultsFileLocation, deltaOntoIRI));
             for (IRI ont : ontologies) {
                 didSomething=true;
                 status.log(2,"Processing "+ont.toString());

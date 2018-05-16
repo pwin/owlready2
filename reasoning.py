@@ -93,7 +93,6 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
   new_parents = defaultdict(list)
   new_equivs  = defaultdict(list)
   for relation, concept_iris in _HERMIT_RESULT_REGEXP.findall(output):
-    #if (relation == "SubObjectPropertyOf") or (relation == "SubDataPropertyOf"): relation = "SubPropertyOf"
     concept_iris = [ontology.abbreviate(x) for x in concept_iris[1:-1].split("> <")]
     owl_relation = _HERMIT_2_OWL[relation]
     
@@ -103,10 +102,11 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
       if not ontology.world.has_triple(concept_iris[0], owl_relation, concept_iris[1]):
         ontology.add_triple(concept_iris[0], owl_relation, concept_iris[1])
         
-      child  = world._entities.get(concept_iris[0])
-      parent = world._entities.get(concept_iris[1])
+      child = world._entities.get(concept_iris[0])
       
-      if not child is None: new_parents[child].append(parent or world[concept_iris[1]])
+      if not child is None:
+        parent = world._get_by_storid(concept_iris[1])
+        new_parents[child].append(parent)
         
     elif relation in _EQUIV_RELATIONS:
       if "http://www.w3.org/2002/07/owl#Nothing" in concept_iris:
@@ -126,8 +126,10 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
             concept1 = world._entities.get(concept_iri1)
             concept2 = world._entities.get(concept_iri2)
             if concept1 or concept2:
-              concept1 = concept1 or world[concept_iri1]
-              concept2 = concept2 or world[concept_iri2]
+              #concept1 = concept1 or world[concept_iri1]
+              #concept2 = concept2 or world[concept_iri2]
+              concept1 = concept1 or world._get_by_storid(concept_iri1)
+              concept2 = concept2 or world._get_by_storid(concept_iri2)
               if not concept1 is concept2: new_equivs[concept1].append(concept2)
               
   with LOADING: # Because triples were asserted above => only modify Python objects WITHOUT creating new triples!
@@ -139,6 +141,7 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
     for child, parents in new_parents.items():
       old = set(parent for parent in child.is_a if not isinstance(parent, ClassConstruct))
       new = set(parents)
+      
       new.update([parent_eq for parent in new for parent_eq in parent.equivalent_to.indirect() if not isinstance(parent, ClassConstruct)])
       
       new.update(old & _TYPES) # Types are not shown by HermiT
