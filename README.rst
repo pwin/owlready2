@@ -202,6 +202,13 @@ version 2 - 0.7
 * Bugfixes:
   - Restore HermiT compiled with older Java compilator (higher compatibility)
   
+version 2 - 0.8
+***************
+
+* Bugfixes:
+  - REALLY restore HermiT compiled with older Java compilator (higher compatibility)
+  - Fix search(prop = "value") when value is a string and the ontology uses localized string
+  
 
 Links
 -----

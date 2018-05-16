@@ -14,11 +14,6 @@
 
    You should have received a copy of the GNU Lesser General Public License
    along with HermiT.  If not, see <http://www.gnu.org/licenses/>.
-
-   Compile with :
-   
-   javac -cp ./hermit/HermiT.jar ./hermit/org/semanticweb/HermiT/cli/CommandLine.java  
-
 */
 package org.semanticweb.HermiT.cli;
 

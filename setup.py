@@ -27,7 +27,7 @@ import setuptools
 
 setuptools.setup(
   name         = "Owlready2",
-  version      = "0.7",
+  version      = "0.8",
   license      = "LGPLv3+",
   description  = "A package for ontology-oriented programming in Python: load OWL 2.0 ontologies as Python objects, modify them, save them, and perform reasoning via HermiT. Includes an optimized RDF quadstore.",
   long_description = open(os.path.join(HERE, "README.rst")).read(),

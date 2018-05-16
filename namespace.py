@@ -186,8 +186,12 @@ class _GraphManager(object):
               k2 = (k2.storid, k2.inverse.storid)
             else:
               k2 = k2.storid
-          if v is None: v2 = None
-          else:         v2 = self.world._to_rdf(v)
+          if v is None:
+            v2 = None
+          else:
+            v2 = self.world._to_rdf(v)
+            if v2.endswith('"Y'): # A string, which can be associated to a language in RDF
+              v2 = '%s*' % v2[:-1]
           prop_vals.append((k2, v2))
 
     r = self.graph.search(prop_vals)

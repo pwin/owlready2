@@ -368,7 +368,7 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
         else:
           conditions.append("q%s.o = ?" % i)
           params    .append(v)
-
+          
     req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions))
     
     if excepts:
@@ -389,6 +389,7 @@ WITH candidates(s) AS (%s)
 SELECT s FROM candidates
 EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR (".join(conditions))
 
+    #print(prop_vals)
     #print(req)
     #print(params)
       
