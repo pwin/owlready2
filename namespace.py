@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Owlready2
-# Copyright (C) 2013-2017 Jean-Baptiste LAMY
+# Copyright (C) 2013-2018 Jean-Baptiste LAMY
 # LIMICS (Laboratoire d'informatique médicale et d'ingénierie des connaissances en santé), UMR_S 1142
 # University Paris 13, Sorbonne paris-Cité, Bobigny, France
 
@@ -167,7 +167,7 @@ class _GraphManager(object):
       
   def disjoints(self): return itertools.chain(self.disjoint_classes(), self.disjoint_properties(), self.different_individuals())
   
-  def search(self, **kargs):
+  def search(self, _use_str_as_loc_str = True, **kargs):
     prop_vals = []
     for k, v0 in kargs.items():
       if not isinstance(v0, list): v0 = (v0,)
@@ -190,10 +190,10 @@ class _GraphManager(object):
             v2 = None
           else:
             v2 = self.world._to_rdf(v)
-            if v2.endswith('"Y'): # A string, which can be associated to a language in RDF
+            if _use_str_as_loc_str and v2.endswith('"Y'): # A string, which can be associated to a language in RDF
               v2 = '%s*' % v2[:-1]
           prop_vals.append((k2, v2))
-
+          
     r = self.graph.search(prop_vals)
     return [self.world._get_by_storid(o) for (o,) in r if not o.startswith("_")]
   

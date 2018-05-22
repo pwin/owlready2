@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Owlready2
-# Copyright (C) 2017 Jean-Baptiste LAMY
+# Copyright (C) 2017-2018 Jean-Baptiste LAMY
 # LIMICS (Laboratoire d'informatique médicale et d'ingénierie des connaissances en santé), UMR_S 1142
 # University Paris 13, Sorbonne paris-Cité, Bobigny, France
 

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # Owlready2
-# Copyright (C) 2013-2017 Jean-Baptiste LAMY
+# Copyright (C) 2013-2018 Jean-Baptiste LAMY
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
