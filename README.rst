@@ -209,6 +209,12 @@ version 2 - 0.8
   - REALLY restore HermiT compiled with older Java compilator (higher compatibility)
   - Fix search(prop = "value") when value is a string and the ontology uses localized string
   
+version 2 - 0.9
+***************
+
+* PostgresQL backend (in addition to SQLite3)
+* Bugfixes:
+  
 
 Links
 -----
