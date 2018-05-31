@@ -29,12 +29,12 @@ from owlready2.base import _universal_abbrev_2_iri
 
 class Graph(BaseMainGraph):
   _SUPPORT_CLONING = True
-  def __init__(self, filename, clone = None):
+  def __init__(self, filename, clone = None, exclusive = True):
     exists        = os.path.exists(filename) and os.path.getsize(filename) # BEFORE creating db!
     initialize_db = (clone is None) and ((filename == ":memory:") or (not exists))
     
     self.db = sqlite3.connect(filename, check_same_thread = False)
-    self.db.execute("""PRAGMA locking_mode = EXCLUSIVE""")
+    if exclusive: self.db.execute("""PRAGMA locking_mode = EXCLUSIVE""")
     
     self.sql      = self.db.cursor()
     self.execute  = self.sql.execute

@@ -39,6 +39,14 @@ state of the quadstore in the SQLite3 file:
 Storing the quadstore in a file does not reduce the performance of Owlready2 (actually,
 it seems that Owlready2 performs a little *faster* when storing the quadstore on the disk).
 
+By default, Owlready2 opens the SQLite3 database in exclusive mode. This mode is faster, but it does not allow
+several programs to use the same database simultaneously. If you need to have several Python programs that
+access simultaneously the same Owlready2 quadstore, you can disable the exclusive mode as follows:
+
+::
+
+   >>> default_world.set_backend(filename = "/path/to/your/file.sqlite3", exclusive = False)
+
 
 Using several isolated Worlds
 -----------------------------
