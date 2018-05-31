@@ -238,12 +238,27 @@ class World(_GraphManager):
       for iri in self.graph.ontologies_iris():
         self.get_ontology(iri) # Create all possible ontologies
         
-  def set_backend(self, backend = "sqlite", filename = ":memory:"):
-    assert backend == "sqlite"
-    if len(self.graph):
-      self.graph = Graph(filename, clone = self.graph)
+  def set_backend(self, backend = "sqlite", filename = ":memory:", dbname = "owlready2_quadstore", **kargs):
+    if   backend == "sqlite":
+      from owlready2.triplelite import Graph
+      if len(self.graph):
+        self.graph = Graph(filename, clone = self.graph)
+      else:
+        self.graph = Graph(filename)
+    elif backend == "mysql":
+      from owlready2.driver_mysql import Graph
+      if len(self.graph):
+        raise ValueError
+      else:
+        self.graph = Graph(dbname, **kargs)
+    elif backend == "postgresql":
+      from owlready2.driver_postgresql import Graph
+      if len(self.graph):
+        raise ValueError
+      else:
+        self.graph = Graph(dbname, **kargs)
     else:
-      self.graph = Graph(filename)
+      raise ValueError("Unsupported backend type '%s'!" % backend)
     for method in self.graph.__class__.READ_METHODS: setattr(self, method, getattr(self.graph, method))
     self.filename = filename
     

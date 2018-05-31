@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, os, os.path, sqlite3, time, datetime, re, multiprocessing
+import sys, os, os.path, sqlite3, time, re
 from collections import defaultdict
 
 import owlready2
@@ -507,10 +507,13 @@ class SubGraph(BaseSubGraph):
     values       = []
     abbrevs      = {}
     new_abbrevs  = []
+
+    cur = self.db.cursor()
+    
     def abbreviate(iri): # Re-implement for speed
       storid = abbrevs.get(iri)
       if not storid is None: return storid
-      r = self.execute("SELECT storid FROM resources WHERE iri=? LIMIT 1", (iri,)).fetchone()
+      r = cur.execute("SELECT storid FROM resources WHERE iri=? LIMIT 1", (iri,)).fetchone()
       if r:
         abbrevs[iri] = r[0]
         return r[0]
@@ -538,39 +541,39 @@ class SubGraph(BaseSubGraph):
       if filename: date = os.path.getmtime(filename)
       else:        date = time.time()
       
-      if delete_existing_triples: self.execute("DELETE FROM quads WHERE c=?", (self.c,))
+      if delete_existing_triples: cur.execute("DELETE FROM quads WHERE c=?", (self.c,))
       
       if len(self.parent) < 100000:
-        self.execute("""DROP INDEX index_resources_iri""")
-        self.execute("""DROP INDEX index_quads_s""")
-        self.execute("""DROP INDEX index_quads_o""")
+        cur.execute("""DROP INDEX index_resources_iri""")
+        cur.execute("""DROP INDEX index_quads_s""")
+        cur.execute("""DROP INDEX index_quads_o""")
         reindex = True
       else:
         reindex = False
         
       if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
-      self.sql.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
-      self.sql.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
+      cur.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
+      cur.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
       
       if reindex:
-        self.execute("""CREATE INDEX index_resources_iri ON resources(iri)""")
-        self.execute("""CREATE INDEX index_quads_s ON quads(s)""")
-        self.execute("""CREATE INDEX index_quads_o ON quads(o)""")
+        cur.execute("""CREATE INDEX index_resources_iri ON resources(iri)""")
+        cur.execute("""CREATE INDEX index_quads_s ON quads(s)""")
+        cur.execute("""CREATE INDEX index_quads_o ON quads(o)""")
         
-      
-      onto_base_iri = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND quads.o=? AND resources.storid=quads.s LIMIT 1", (self.c, owl_ontology)).fetchone()
+        
+      onto_base_iri = cur.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND quads.o=? AND resources.storid=quads.s LIMIT 1", (self.c, owl_ontology)).fetchone()
       
       if onto_base_iri:
         onto_base_iri = onto_base_iri[0]
-        use_hash = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (self.c, onto_base_iri + "#%")).fetchone()
+        use_hash = cur.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (self.c, onto_base_iri + "#%")).fetchone()
         if use_hash: onto_base_iri = onto_base_iri + "#"
         else:
-          use_slash = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (self.c, onto_base_iri + "/%")).fetchone()
+          use_slash = cur.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (self.c, onto_base_iri + "/%")).fetchone()
           if use_slash: onto_base_iri = onto_base_iri + "/"
           else:         onto_base_iri = onto_base_iri + "#"
-        self.execute("UPDATE ontologies SET last_update=?,iri=? WHERE c=?", (date, onto_base_iri, self.c,))
+        cur.execute("UPDATE ontologies SET last_update=?,iri=? WHERE c=?", (date, onto_base_iri, self.c,))
       else:
-        self.execute("UPDATE ontologies SET last_update=? WHERE c=?", (date, self.c,))
+        cur.execute("UPDATE ontologies SET last_update=? WHERE c=?", (date, self.c,))
         
       return onto_base_iri
       
