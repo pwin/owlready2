@@ -35,11 +35,9 @@ class Graph(BaseMainGraph):
     
     self.db = sqlite3.connect(filename, check_same_thread = False)
     if exclusive: self.db.execute("""PRAGMA locking_mode = EXCLUSIVE""")
+    else:         self.db.execute("""PRAGMA locking_mode = NORMAL""")
     
-    self.sql      = self.db.cursor()
-    self.execute  = self.sql.execute
-    self.fetchone = self.sql.fetchone
-    self.fetchall = self.sql.fetchall
+    self.execute  = self.db.execute
     self.c_2_onto          = {}
     self.onto_2_subgraph   = {}
     self.last_numbered_iri = {}
@@ -54,7 +52,7 @@ class Graph(BaseMainGraph):
       self.execute("""CREATE TABLE ontologies (c INTEGER PRIMARY KEY, iri TEXT, last_update DOUBLE)""")
       self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
       self.execute("""CREATE TABLE resources (storid TEXT PRIMARY KEY, iri TEXT) WITHOUT ROWID""")
-      self.sql.executemany("INSERT INTO resources VALUES (?,?)", _universal_abbrev_2_iri.items())
+      self.db.executemany("INSERT INTO resources VALUES (?,?)", _universal_abbrev_2_iri.items())
       self.execute("""CREATE INDEX index_resources_iri ON resources(iri)""")
       self.execute("""CREATE INDEX index_quads_s ON quads(s)""")
       self.execute("""CREATE INDEX index_quads_o ON quads(o)""")
@@ -65,8 +63,8 @@ class Graph(BaseMainGraph):
         s = "\n".join(clone.db.iterdump())
         self.db.cursor().executescript(s)
         
-      self.execute("SELECT version, current_blank, current_resource FROM store")
-      version, self.current_blank, self.current_resource = self.fetchone()
+      
+      version, self.current_blank, self.current_resource = self.execute("SELECT version, current_blank, current_resource FROM store").fetchone()
       if version == 1:
         self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
         self.execute("""UPDATE store SET version=2""")
@@ -76,24 +74,20 @@ class Graph(BaseMainGraph):
     
   def sub_graph(self, onto):
     new_in_quadstore = False
-    self.execute("SELECT c FROM ontologies WHERE iri=?", (onto.base_iri,))
-    c = self.fetchone()
+    c = self.execute("SELECT c FROM ontologies WHERE iri=?", (onto.base_iri,)).fetchone()
     if c is None:
-      self.execute("SELECT ontologies.c FROM ontologies, ontology_alias WHERE ontology_alias.alias=? AND ontologies.iri=ontology_alias.iri", (onto.base_iri,))
-      c = self.fetchone()
+      c = self.execute("SELECT ontologies.c FROM ontologies, ontology_alias WHERE ontology_alias.alias=? AND ontologies.iri=ontology_alias.iri", (onto.base_iri,)).fetchone()
       if c is None:
         new_in_quadstore = True
         self.execute("INSERT INTO ontologies VALUES (NULL, ?, 0)", (onto.base_iri,))
-        self.execute("SELECT c FROM ontologies WHERE iri=?", (onto.base_iri,))
-        c = self.fetchone()
+        c = self.execute("SELECT c FROM ontologies WHERE iri=?", (onto.base_iri,)).fetchone()
     c = c[0]
     self.c_2_onto[c] = onto
     
-    return SubGraph(self, onto, c, self.db, self.sql), new_in_quadstore
+    return SubGraph(self, onto, c, self.db), new_in_quadstore
   
   def ontologies_iris(self):
-    self.execute("SELECT iri FROM ontologies")
-    for (iri,) in self.fetchall(): yield iri
+    for (iri,) in self.execute("SELECT iri FROM ontologies").fetchall(): yield iri
       
   def abbreviate(self, iri):
     r = self.execute("SELECT storid FROM resources WHERE iri=? LIMIT 1", (iri,)).fetchone()
@@ -114,9 +108,9 @@ class Graph(BaseMainGraph):
       i = self.last_numbered_iri[prefix] = self.last_numbered_iri[prefix] + 1
       return "%s%s" % (prefix, i)
     else:
-      self.execute("SELECT iri FROM resources WHERE iri GLOB ? ORDER BY LENGTH(iri) DESC, iri DESC", ("%s*" % prefix,))
+      cur = self.execute("SELECT iri FROM resources WHERE iri GLOB ? ORDER BY LENGTH(iri) DESC, iri DESC", ("%s*" % prefix,))
       while True:
-        iri = self.fetchone()
+        iri = cur.fetchone()
         if not iri: break
         num = iri[0][len(prefix):]
         if num.isdigit():
@@ -148,52 +142,52 @@ class Graph(BaseMainGraph):
   def get_triples(self, s, p, o):
     if s is None:
       if p is None:
-        if o is None: self.execute("SELECT s,p,o FROM quads")
-        else:         self.execute("SELECT s,p,o FROM quads WHERE o=?", (o,))
+        if o is None: cur = self.execute("SELECT s,p,o FROM quads")
+        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE o=?", (o,))
       else:
-        if o is None: self.execute("SELECT s,p,o FROM quads WHERE p=?", (p,))
-        else:         self.execute("SELECT s,p,o FROM quads WHERE p=? AND o=?", (p, o,))
+        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE p=?", (p,))
+        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE p=? AND o=?", (p, o,))
     else:
       if p is None:
-        if o is None: self.execute("SELECT s,p,o FROM quads WHERE s=?", (s,))
-        else:         self.execute("SELECT s,p,o FROM quads WHERE s=? AND o=?", (s, o,))
+        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE s=?", (s,))
+        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND o=?", (s, o,))
       else:
-        if o is None: self.execute("SELECT s,p,o FROM quads WHERE s=? AND p=?", (s, p,))
-        else:         self.execute("SELECT s,p,o FROM quads WHERE s=? AND p=? AND o=?", (s, p, o,))
-    return self.fetchall()
+        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND p=?", (s, p,))
+        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND p=? AND o=?", (s, p, o,))
+    return cur.fetchall()
     
   def get_quads(self, s, p, o, c):
     if c is None:
       if s is None:
         if p is None:
-          if o is None: self.execute("SELECT s,p,o,c FROM quads")
-          else:         self.execute("SELECT s,p,o,c FROM quads WHERE o=?", (o,))
+          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads")
+          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE o=?", (o,))
         else:
-          if o is None: self.execute("SELECT s,p,o,c FROM quads WHERE p=?", (p,))
-          else:         self.execute("SELECT s,p,o,c FROM quads WHERE p=? AND o=?", (p, o,))
+          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE p=?", (p,))
+          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE p=? AND o=?", (p, o,))
       else:
         if p is None:
-          if o is None: self.execute("SELECT s,p,o,c FROM quads WHERE s=?", (s,))
-          else:         self.execute("SELECT s,p,o,c FROM quads WHERE s=? AND o=?", (s, o,))
+          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE s=?", (s,))
+          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE s=? AND o=?", (s, o,))
         else:
-          if o is None: self.execute("SELECT s,p,o,c FROM quads WHERE s=? AND p=?", (s, p,))
-          else:         self.execute("SELECT s,p,o,c FROM quads WHERE s=? AND p=? AND o=?", (s, p, o,))
+          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE s=? AND p=?", (s, p,))
+          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE s=? AND p=? AND o=?", (s, p, o,))
     else:
       if s is None:
         if p is None:
-          if o is None: self.execute("SELECT s,p,o,c FROM quads WHERE c=?", (c,))
-          else:         self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND o=?", (c, o,))
+          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=?", (c,))
+          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND o=?", (c, o,))
         else:
-          if o is None: self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND p=?", (c, p,))
-          else:         self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND p=? AND o=?", (c, p, o,))
+          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND p=?", (c, p,))
+          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND p=? AND o=?", (c, p, o,))
       else:
         if p is None:
-          if o is None: self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND s=?", (c, s,))
-          else:         self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND s=? AND o=?", (c, s, o,))
+          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND s=?", (c, s,))
+          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND s=? AND o=?", (c, s, o,))
         else:
-          if o is None: self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND s=? AND p=?", (c, s, p,))
-          else:         self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND s=? AND p=? AND o=?", (c, s, p, o,))
-    return self.fetchall()
+          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND s=? AND p=?", (c, s, p,))
+          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND s=? AND p=? AND o=?", (c, s, p, o,))
+    return cur.fetchall()
   
   def get_quads_sp(self, s, p):
     return self.execute("SELECT o,c FROM quads WHERE s=? AND p=?", (s, p)).fetchall()
@@ -223,19 +217,19 @@ class Graph(BaseMainGraph):
   def has_triple(self, s = None, p = None, o = None):
     if s is None:
       if p is None:
-        if o is None: self.execute("SELECT s FROM quads LIMIT 1")
-        else:         self.execute("SELECT s FROM quads WHERE o=? LIMIT 1", (o,))
+        if o is None: cur = self.execute("SELECT s FROM quads LIMIT 1")
+        else:         cur = self.execute("SELECT s FROM quads WHERE o=? LIMIT 1", (o,))
       else:
-        if o is None: self.execute("SELECT s FROM quads WHERE p=? LIMIT 1", (p,))
-        else:         self.execute("SELECT s FROM quads WHERE p=? AND o=? LIMIT 1", (p, o))
+        if o is None: cur = self.execute("SELECT s FROM quads WHERE p=? LIMIT 1", (p,))
+        else:         cur = self.execute("SELECT s FROM quads WHERE p=? AND o=? LIMIT 1", (p, o))
     else:
       if p is None:
-        if o is None: self.execute("SELECT s FROM quads WHERE s=? LIMIT 1", (s,))
-        else:         self.execute("SELECT s FROM quads WHERE s=? AND o=? LIMIT 1", (s, o))
+        if o is None: cur = self.execute("SELECT s FROM quads WHERE s=? LIMIT 1", (s,))
+        else:         cur = self.execute("SELECT s FROM quads WHERE s=? AND o=? LIMIT 1", (s, o))
       else:
-        if o is None: self.execute("SELECT s FROM quads WHERE s=? AND p=? LIMIT 1", (s, p))
-        else:         self.execute("SELECT s FROM quads WHERE s=? AND p=? AND o=? LIMIT 1", (s, p, o))
-    return not self.fetchone() is None
+        if o is None: cur = self.execute("SELECT s FROM quads WHERE s=? AND p=? LIMIT 1", (s, p))
+        else:         cur = self.execute("SELECT s FROM quads WHERE s=? AND p=? AND o=? LIMIT 1", (s, p, o))
+    return not cur.fetchone() is None
   
   def _del_triple(self, s, p, o):
     if s is None:
@@ -350,13 +344,12 @@ EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR ("
     #print(req)
     #print(params)
     
-    self.execute(req, params)
-    return self.fetchall()
+    return self.execute(req, params).fetchall()
   
   def _punned_entities(self):
     from owlready2.base import rdf_type, owl_class, owl_named_individual
-    self.execute("SELECT q1.s FROM quads q1, quads q2 WHERE q1.s=q2.s AND q1.p=? AND q2.p=? AND q1.o=? AND q2.o=?", (rdf_type, rdf_type, owl_class, owl_named_individual))
-    return [storid for (storid,) in self.fetchall()]
+    cur = self.execute("SELECT q1.s FROM quads q1, quads q2 WHERE q1.s=q2.s AND q1.p=? AND q2.p=? AND q1.o=? AND q2.o=?", (rdf_type, rdf_type, owl_class, owl_named_individual))
+    return [storid for (storid,) in cur.fetchall()]
   
     
   def __len__(self):
@@ -443,8 +436,7 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
     else:
       root = blank
       
-    self.execute("SELECT s FROM quads WHERE o=? LIMIT 1", (root,))
-    list_user = self.fetchone()
+    list_user = self.execute("SELECT s FROM quads WHERE o=? LIMIT 1", (root,)).fetchone()
     if list_user: list_user = list_user[0]
     return list_user, root, previouss, nexts, length
   
@@ -489,14 +481,11 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
         
   
 class SubGraph(BaseSubGraph):
-  def __init__(self, parent, onto, c, db, sql):
+  def __init__(self, parent, onto, c, db):
     BaseSubGraph.__init__(self, parent, onto)
     self.c      = c
     self.db     = db
-    self.sql    = sql
-    self.execute  = self.sql.execute
-    self.fetchone = self.sql.fetchone
-    self.fetchall = self.sql.fetchall
+    self.execute  = db.execute
     self.abbreviate       = parent.abbreviate
     self.unabbreviate     = parent.unabbreviate
     self.new_numbered_iri = parent.new_numbered_iri
@@ -620,19 +609,19 @@ class SubGraph(BaseSubGraph):
   def get_triples(self, s, p, o):
     if s is None:
       if p is None:
-        if o is None: self.execute("SELECT s,p,o FROM quads WHERE c=?", (self.c,))
-        else:         self.execute("SELECT s,p,o FROM quads WHERE c=? AND o=?", (self.c, o,))
+        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE c=?", (self.c,))
+        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND o=?", (self.c, o,))
       else:
-        if o is None: self.execute("SELECT s,p,o FROM quads WHERE c=? AND p=?", (self.c, p,))
-        else:         self.execute("SELECT s,p,o FROM quads WHERE c=? AND p=? AND o=?", (self.c, p, o,))
+        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND p=?", (self.c, p,))
+        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND p=? AND o=?", (self.c, p, o,))
     else:
       if p is None:
-        if o is None: self.execute("SELECT s,p,o FROM quads WHERE c=? AND s=?", (self.c, s,))
-        else:         self.execute("SELECT s,p,o FROM quads WHERE c=? AND s=? AND o=?", (self.c, s, o,))
+        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND s=?", (self.c, s,))
+        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND s=? AND o=?", (self.c, s, o,))
       else:
-        if o is None: self.execute("SELECT s,p,o FROM quads WHERE c=? AND s=? AND p=?", (self.c, s, p,))
-        else:         self.execute("SELECT s,p,o FROM quads WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
-    return self.fetchall()
+        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND s=? AND p=?", (self.c, s, p,))
+        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
+    return cur.fetchall()
   
   def get_triples_s(self, s):
     return self.execute("SELECT p,o FROM quads WHERE c=? AND s=?", (self.c, s,)).fetchall()
@@ -659,19 +648,19 @@ class SubGraph(BaseSubGraph):
   def has_triple(self, s = None, p = None, o = None):
     if s is None:
       if p is None:
-        if o is None: self.execute("SELECT s FROM quads WHERE c=? LIMIT 1", (self.c,))
-        else:         self.execute("SELECT s FROM quads WHERE c=? AND o=? LIMIT 1", (self.c, o,))
+        if o is None: cur = self.execute("SELECT s FROM quads WHERE c=? LIMIT 1", (self.c,))
+        else:         cur = self.execute("SELECT s FROM quads WHERE c=? AND o=? LIMIT 1", (self.c, o,))
       else:
-        if o is None: self.execute("SELECT s FROM quads WHERE c=? AND p=? LIMIT 1", (self.c, p,))
-        else:         self.execute("SELECT s FROM quads WHERE c=? AND p=? AND o=? LIMIT 1", (self.c, p, o,))
+        if o is None: cur = self.execute("SELECT s FROM quads WHERE c=? AND p=? LIMIT 1", (self.c, p,))
+        else:         cur = self.execute("SELECT s FROM quads WHERE c=? AND p=? AND o=? LIMIT 1", (self.c, p, o,))
     else:
       if p is None:
-        if o is None: self.execute("SELECT s FROM quads WHERE c=? AND s=? LIMIT 1", (self.c, s,))
-        else:         self.execute("SELECT s FROM quads WHERE c=? AND s=? AND o=? LIMIT 1", (self.c, s, o,))
+        if o is None: cur = self.execute("SELECT s FROM quads WHERE c=? AND s=? LIMIT 1", (self.c, s,))
+        else:         cur = self.execute("SELECT s FROM quads WHERE c=? AND s=? AND o=? LIMIT 1", (self.c, s, o,))
       else:
-        if o is None: self.execute("SELECT s FROM quads WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,))
-        else:         self.execute("SELECT s FROM quads WHERE c=? AND s=? AND p=? AND o=? LIMIT 1", (self.c, s, p, o,))
-    return not self.fetchone() is None
+        if o is None: cur = self.execute("SELECT s FROM quads WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,))
+        else:         cur = self.execute("SELECT s FROM quads WHERE c=? AND s=? AND p=? AND o=? LIMIT 1", (self.c, s, p, o,))
+    return not cur.fetchone() is None
   
   def get_quads(self, s, p, o, c):
     return [(s, p, o, self.c) for (s, p, o) in self.get_triples(s, p, o)]

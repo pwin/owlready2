@@ -242,9 +242,9 @@ class World(_GraphManager):
     if   backend == "sqlite":
       from owlready2.triplelite import Graph
       if len(self.graph):
-        self.graph = Graph(filename, clone = self.graph)
+        self.graph = Graph(filename, clone = self.graph, **kargs)
       else:
-        self.graph = Graph(filename)
+        self.graph = Graph(filename, **kargs)
     elif backend == "mysql":
       from owlready2.driver_mysql import Graph
       if len(self.graph):
