@@ -53,7 +53,7 @@ class Graph(BaseMainGraph):
       self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
       self.execute("""CREATE TABLE resources (storid TEXT PRIMARY KEY, iri TEXT) WITHOUT ROWID""")
       self.db.executemany("INSERT INTO resources VALUES (?,?)", _universal_abbrev_2_iri.items())
-      self.execute("""CREATE INDEX index_resources_iri ON resources(iri)""")
+      self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
       self.execute("""CREATE INDEX index_quads_s ON quads(s)""")
       self.execute("""CREATE INDEX index_quads_o ON quads(o)""")
       self.db.commit()
@@ -545,7 +545,7 @@ class SubGraph(BaseSubGraph):
       cur.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
 
       if reindex:
-        cur.execute("""CREATE INDEX index_resources_iri ON resources(iri)""")
+        cur.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
         cur.execute("""CREATE INDEX index_quads_s ON quads(s)""")
         cur.execute("""CREATE INDEX index_quads_o ON quads(o)""")
         
