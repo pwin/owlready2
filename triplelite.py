@@ -543,7 +543,7 @@ class SubGraph(BaseSubGraph):
       if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
       cur.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
       cur.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
-      
+
       if reindex:
         cur.execute("""CREATE INDEX index_resources_iri ON resources(iri)""")
         cur.execute("""CREATE INDEX index_quads_s ON quads(s)""")

@@ -335,7 +335,115 @@ class Test(BaseTest, unittest.TestCase):
     o1.save(file)
     assert """<owl:imports rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test2.owl"/>""" in file.getvalue().decode("utf8")
     
-      
+  def test_ontology_10(self):
+    temp_dir = tempfile.TemporaryDirectory()
+    onto_path.insert(0, temp_dir.name)
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test1.owl")
+    o2 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test2.owl")
+    o1.imported_ontologies = [o2]
+    o1.save()
+    o2.save()
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test1.owl").load()
+    assert len(o1.imported_ontologies) == 1
+    
+    onto_path.remove(temp_dir.name)
+    temp_dir.cleanup()
+    
+  def test_ontology_11(self):
+    temp_dir = tempfile.TemporaryDirectory()
+    onto_path.insert(0, temp_dir.name)
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test1.owl")
+    o2 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test2.owl")
+    o1.imported_ontologies = [o2]
+    o1.save()
+    o2.save()
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("file://%s/test1.owl" % temp_dir.name).load()
+    assert len(o1.imported_ontologies) == 1
+    
+    onto_path.remove(temp_dir.name)
+    temp_dir.cleanup()
+
+  def test_ontology_12(self):
+    temp_dir = tempfile.TemporaryDirectory()
+    onto_path.insert(0, temp_dir.name)
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test1")
+    o2 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test2")
+    o1.imported_ontologies = [o2]
+    o1.save()
+    o2.save()
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test1").load()
+    assert len(o1.imported_ontologies) == 1
+    
+    onto_path.remove(temp_dir.name)
+    temp_dir.cleanup()
+    
+  def test_ontology_13(self):
+    temp_dir = tempfile.TemporaryDirectory()
+    onto_path.insert(0, temp_dir.name)
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test1")
+    o2 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test2")
+    o1.imported_ontologies = [o2]
+    o1.save()
+    o2.save()
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("file://%s/test1.owl" % temp_dir.name).load()
+    assert len(o1.imported_ontologies) == 1
+    
+    onto_path.remove(temp_dir.name)
+    temp_dir.cleanup()
+    
+  def test_ontology_14(self):
+    temp_dir = tempfile.TemporaryDirectory()
+    onto_path.insert(0, temp_dir.name)
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test1/")
+    o2 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test2/")
+    o1.imported_ontologies = [o2]
+    o1.save()
+    o2.save()
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test1/").load()
+    assert len(o1.imported_ontologies) == 1
+    
+    onto_path.remove(temp_dir.name)
+    temp_dir.cleanup()
+    
+  def test_ontology_15(self):
+    temp_dir = tempfile.TemporaryDirectory()
+    onto_path.insert(0, temp_dir.name)
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test1/")
+    o2 = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test2/")
+    o1.imported_ontologies = [o2]
+    o1.save()
+    o2.save()
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("file://%s/test1.owl" % temp_dir.name).load()
+    assert len(o1.imported_ontologies) == 1
+    
+    onto_path.remove(temp_dir.name)
+    temp_dir.cleanup()
+    
+    
   def test_class_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     assert issubclass(n.Tomato, n.Vegetable)

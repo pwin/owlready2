@@ -493,7 +493,11 @@ class Ontology(Namespace, _GraphManager):
       self.graph.add_ontology_alias(new_base_iri, self.base_iri)
       self.base_iri = new_base_iri
       self._namespaces[self.base_iri] = self.world.ontologies[self.base_iri] = self
-      
+      if new_base_iri.endswith("#") or new_base_iri.endswith("/"):
+        self.storid = self.world.abbreviate(new_base_iri[:-1])
+      else:
+        self.storid = self.world.abbreviate(new_base_iri)
+        
     # Search for property names
     self._load_properties()
     
