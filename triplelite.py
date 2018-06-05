@@ -70,7 +70,27 @@ class Graph(BaseMainGraph):
         self.execute("""UPDATE store SET version=2""")
         
     self.current_changes = self.db.total_changes
+    self.select_abbreviate_method()
     
+
+  def select_abbreviate_method(self):
+    nb = self.execute("SELECT count(*) FROM resources").fetchone()[0]
+    if nb < 100000:
+      iri_storid = self.execute("SELECT iri, storid FROM resources").fetchall()
+      self.  abbreviate_d = dict(iri_storid)
+      self.unabbreviate_d = dict((storid, iri) for (iri, storid) in  iri_storid)
+      self.abbreviate   = self.abbreviate_dict
+      self.unabbreviate = self.unabbreviate_dict
+      self.refactor     = self.refactor_dict
+    else:
+      self.  abbreviate_d = None
+      self.unabbreviate_d = None
+      self.abbreviate   = self.abbreviate_sql
+      self.unabbreviate = self.unabbreviate_sql
+      self.refactor     = self.refactor_sql
+    for subgraph in self.onto_2_subgraph.values():
+      subgraph.abbreviate   = self.abbreviate
+      subgraph.unabbreviate = self.unabbreviate
     
   def sub_graph(self, onto):
     new_in_quadstore = False
@@ -89,7 +109,7 @@ class Graph(BaseMainGraph):
   def ontologies_iris(self):
     for (iri,) in self.execute("SELECT iri FROM ontologies").fetchall(): yield iri
       
-  def abbreviate(self, iri):
+  def abbreviate_sql(self, iri):
     r = self.execute("SELECT storid FROM resources WHERE iri=? LIMIT 1", (iri,)).fetchone()
     if r: return r[0]
     self.current_resource += 1
@@ -97,8 +117,20 @@ class Graph(BaseMainGraph):
     self.execute("INSERT INTO resources VALUES (?,?)", (storid, iri))
     return storid
   
-  def unabbreviate(self, storid):
+  def unabbreviate_sql(self, storid):
     return self.execute("SELECT iri FROM resources WHERE storid=? LIMIT 1", (storid,)).fetchone()[0]
+  
+  def abbreviate_dict(self, iri):
+    storid = self.abbreviate_d.get(iri)
+    if storid is None:
+      self.current_resource += 1
+      storid = self.abbreviate_d[iri] = _int_base_62(self.current_resource)
+      self.unabbreviate_d[storid] = iri
+      self.execute("INSERT INTO resources VALUES (?,?)", (storid, iri))
+    return storid
+  
+  def unabbreviate_dict(self, storid):
+    return self.unabbreviate_d[storid]
   
   def get_storid_dict(self):
     return dict(self.execute("SELECT storid, iri FROM resources").fetchall())
@@ -120,10 +152,14 @@ class Graph(BaseMainGraph):
     self.last_numbered_iri[prefix] = 1
     return "%s1" % prefix
   
-  def refactor(self, storid, new_iri):
+  def refactor_sql(self, storid, new_iri):
     self.execute("UPDATE resources SET iri=? WHERE storid=?", (new_iri, storid,))
 
-    
+  def refactor_dict(self, storid, new_iri):
+    self.execute("UPDATE resources SET iri=? WHERE storid=?", (new_iri, storid,))
+    del self.abbreviate_d[self.unabbreviate_d[storid]]
+    self.  abbreviate_d[new_iri] = storid
+    self.unabbreviate_d[storid]  = new_iri
     
   def commit(self):
     if self.current_changes != self.db.total_changes:
@@ -208,7 +244,7 @@ class Graph(BaseMainGraph):
     r = self.execute("SELECT o FROM quads WHERE s=? AND p=? LIMIT 1", (s, p)).fetchone()
     if r: return r[0]
     return None
-  
+     
   def get_triple_po(self, p = None, o = None):
     r = self.execute("SELECT s FROM quads WHERE p=? AND o=? LIMIT 1", (p, o)).fetchone()
     if r: return r[0]
@@ -564,6 +600,8 @@ class SubGraph(BaseSubGraph):
       else:
         cur.execute("UPDATE ontologies SET last_update=? WHERE c=?", (date, self.c,))
         
+      self.parent.select_abbreviate_method()
+      
       return onto_base_iri
       
     return on_prepare_triple, self.parent.new_blank_node, new_literal, abbreviate, on_finish

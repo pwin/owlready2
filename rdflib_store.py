@@ -44,15 +44,15 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     
   def _rdflib_2_owlready(self, spo):
     s,p,o = spo
-    if   isinstance(s, rdflib.term.URIRef ): s = self.triplelite.abbreviate(s)
+    if   isinstance(s, rdflib.term.URIRef ): s = self.triplelite.abbreviate(str(s))
     elif isinstance(s, rdflib.term.BNode  ): s = str(s)
-    if   isinstance(p, rdflib.term.URIRef ): p = self.triplelite.abbreviate(p)
-    if   isinstance(o, rdflib.term.URIRef ): o = self.triplelite.abbreviate(o)
+    if   isinstance(p, rdflib.term.URIRef ): p = self.triplelite.abbreviate(str(p))
+    if   isinstance(o, rdflib.term.URIRef ): o = self.triplelite.abbreviate(str(o))
     elif isinstance(o, rdflib.term.BNode  ): o = str(o)
     elif isinstance(o, rdflib.term.Literal):
       if o.language is None:
         if o.datatype:
-          o = '"%s"%s' % (o.value, self.triplelite.abbreviate(o.datatype))
+          o = '"%s"%s' % (o.value, self.triplelite.abbreviate(str(o.datatype)))
         else:
           o = '"%s"' % o.value
       else:
