@@ -214,7 +214,7 @@ version 2 - 0.9
 
 * PostgresQL backend (in addition to SQLite3)
 * Add 'exclusive = False' option for SQLite3 backend (slower, but allows multiple uses)
-* Use unique index in sqlite3 quadstore on resource table
+* Use unique index in sqlite3 quadstore on resources table
 * Bugfixes:
   - Fix imported ontologies
 
