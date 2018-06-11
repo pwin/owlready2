@@ -218,6 +218,7 @@ version 2 - 0.9
 * Optimize sqlite3 quadstore by caching IRI dict (5% faster)
 * Bugfixes:
   - Fix imported ontologies
+  - Fix saving ontologies in onto_path
 
 Links
 -----

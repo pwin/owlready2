@@ -25,6 +25,8 @@ try:
 except:
   class OwlReadyOntologyParsingError(OwlReadyError): pass
 
+
+  
 def parse(f, on_triple = None, on_prepare_triple = None, new_blank = None, new_literal = None, default_base = ""):
   parser = xml.parsers.expat.ParserCreate(None, "")
   try:

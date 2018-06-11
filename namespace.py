@@ -747,6 +747,7 @@ class Ontology(Namespace, _GraphManager):
   
   
 def _open_onto_file(base_iri, name, mode = "r", only_local = False):
+  if base_iri.endswith("#") or base_iri.endswith("/"): base_iri = base_iri[:-1]
   if base_iri.startswith("file://"): return open(base_iri[7:], mode)
   for dir in onto_path:
     for ext in ["", ".owl", ".rdf", ".n3"]:
@@ -757,7 +758,8 @@ def _open_onto_file(base_iri, name, mode = "r", only_local = False):
   raise FileNotFoundError
 
 def _get_onto_file(base_iri, name, mode = "r", only_local = False):
-  if base_iri.startswith("file://"): return base_iri[7:-1]
+  if base_iri.endswith("#") or base_iri.endswith("/"): base_iri = base_iri[:-1]
+  if base_iri.startswith("file://"): return base_iri[7:]
   for dir in onto_path:
     filename = os.path.join(dir, base_iri[:-1].rsplit("/", 1)[-1])
     if os.path.exists(filename): return filename
