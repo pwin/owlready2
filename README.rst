@@ -219,6 +219,7 @@ version 2 - 0.9
 * Bugfixes:
   - Fix imported ontologies
   - Fix saving ontologies in onto_path
+  - Fix clear() on CallbackList
 
 Links
 -----

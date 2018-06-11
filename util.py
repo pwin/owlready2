@@ -66,6 +66,7 @@ class CallbackList(FirstList):
   def __iadd__(self, x):        old = list(self); super().__iadd__(x)       ; self._callback(self._obj, old); return self
   def __imul__(self, x):        old = list(self); super().__imul__(x)       ; self._callback(self._obj, old); return self
   def pop(self, i):             old = list(self); r = super().pop(i)        ; self._callback(self._obj, old); return r
+  def clear(self):              old = list(self); super().clear()           ; self._callback(self._obj, old)
   
 class LanguageSublist(CallbackList):
   __slots__ = ["_l", "_lang"]
