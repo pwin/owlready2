@@ -187,7 +187,7 @@ SELECT DISTINCT x FROM transit;""")
       i = self.last_numbered_iri[prefix] = self.last_numbered_iri[prefix] + 1
       return "%s%s" % (prefix, i)
     else:
-      self.execute("SELECT iri FROM resources WHERE iri GLOB %s ORDER BY LENGTH(iri) DESC, iri DESC", ("%s*" % prefix,))
+      self.execute("SELECT iri FROM resources WHERE iri LIKE %s ORDER BY LENGTH(iri) DESC, iri DESC", ("%s%%" % prefix,))
       while True:
         iri = self.fetchone()
         if not iri: break
@@ -280,10 +280,10 @@ SELECT DISTINCT x FROM transit;""")
     
   def get_triples_s(self, s):
     #self.execute("SELECT p,o FROM quads WHERE s=%s", (s,))
-    #self.execute("EXECUTE get_triples_s(%s)", (s))
+    #self.execute("EXECUTE get_triples_s(%s)", (s,))
     #return self.fetchall()
     with self.cursor() as cur:
-      cur.execute("EXECUTE get_triples_s(%s)", (s))
+      cur.execute("EXECUTE get_triples_s(%s)", (s,))
       return cur.fetchall()
     
   def get_triples_sp(self, s, p):
@@ -384,9 +384,12 @@ SELECT DISTINCT x FROM transit;""")
         if i > 1: conditions.append("q%s.s = q1.s" % i)
         tables    .append("resources")
         conditions.append("resources.storid = q%s.s" % i)
-        if "*" in v: conditions.append("resources.iri GLOB %s")
-        else:        conditions.append("resources.iri = %s")
-        params.append(v)
+        if "*" in v:
+          conditions.append("resources.iri LIKE %s")
+          params.append(v.replace("*", "%").replace("_", "\\_"))
+        else:
+          conditions.append("resources.iri = %s")
+          params.append(v)
         
       elif k == "is_a":
         if i > 1: conditions.append("q%s.s = q1.s" % i)
@@ -427,10 +430,10 @@ SELECT DISTINCT x FROM transit;""")
         params    .append(k)
         if "*" in v:
           if   v.startswith('"*"'):
-            conditions.append("q%s.o GLOB '*'" % i)
+            conditions.append("q%s.o LIKE '%'" % i)
           else:
-            conditions.append("q%s.o GLOB %%s" % i)
-            params    .append(v)
+            conditions.append("q%s.o LIKE %%s" % i)
+            params    .append(v.replace("*", "%").replace("_", "\\_"))
         else:
           conditions.append("q%s.o = %%s" % i)
           params    .append(v)
@@ -505,35 +508,38 @@ EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR ("
     
 
   def _destroy_collect_storids(self, destroyed_storids, modified_relations, storid):
-    for (blank_using,) in list(self.execute("""SELECT s FROM quads WHERE o=%s AND p IN (
-    '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s') AND substr(s, 1, 1)='_'""" % (
-      SOME,
-      ONLY,
-      VALUE,
-      owl_onclass,
-      owl_onproperty,
-      owl_complementof,
-      owl_inverse_property,
-      owl_ondatarange,
-      owl_annotatedsource,
-      owl_annotatedproperty,
-      owl_annotatedtarget,
-    ), (storid,))):
-      if not blank_using in destroyed_storids:
-        destroyed_storids.add(blank_using)
-        self._destroy_collect_storids(destroyed_storids, modified_relations, blank_using)
-        
-    for (c, blank_using) in list(self.execute("""SELECT c, s FROM quads WHERE o=%%s AND p=%s AND substr(s, 1, 1)='_'""" % (
-      rdf_first,
-    ), (storid,))):
-      list_user, root, previouss, nexts, length = self._rdf_list_analyze(blank_using)
-      destroyed_storids.update(previouss)
-      destroyed_storids.add   (blank_using)
-      destroyed_storids.update(nexts)
-      if not list_user in destroyed_storids:
-        destroyed_storids.add(list_user)
-        self._destroy_collect_storids(destroyed_storids, modified_relations, list_user)
-        
+    with self.cursor() as cur :
+      cur.execute("""SELECT s FROM quads WHERE o=%%s AND p IN (
+      '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s') AND substr(s, 1, 1)='_'""" % (
+        SOME,
+        ONLY,
+        VALUE,
+        owl_onclass,
+        owl_onproperty,
+        owl_complementof,
+        owl_inverse_property,
+        owl_ondatarange,
+        owl_annotatedsource,
+        owl_annotatedproperty,
+        owl_annotatedtarget,
+      ), (storid,))
+      for (blank_using,) in list(cur.fetchall()):
+        if not blank_using in destroyed_storids:
+          destroyed_storids.add(blank_using)
+          self._destroy_collect_storids(destroyed_storids, modified_relations, blank_using)
+
+      cur.execute("""SELECT c, s FROM quads WHERE o=%%s AND p='%s' AND substr(s, 1, 1)='_'""" % (
+          rdf_first,
+      ), (storid,))
+      for (c, blank_using) in list(cur.fetchall()):
+        list_user, root, previouss, nexts, length = self._rdf_list_analyze(blank_using)
+        destroyed_storids.update(previouss)
+        destroyed_storids.add   (blank_using)
+        destroyed_storids.update(nexts)
+        if not list_user in destroyed_storids:
+          destroyed_storids.add(list_user)
+          self._destroy_collect_storids(destroyed_storids, modified_relations, list_user)
+          
   def _rdf_list_analyze(self, blank):
     previouss = []
     nexts     = []
@@ -683,7 +689,7 @@ class SubGraph(BaseSubGraph):
           
       if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
       
-      print("PARSE", time.time() - t0, file = sys.stderr)
+      #print("PARSE", time.time() - t0, file = sys.stderr)
 
       new_abbrevs.sort(key = lambda x: x[1])
       values.sort(key = lambda x: x[0])
@@ -696,10 +702,10 @@ class SubGraph(BaseSubGraph):
         cur.copy_from(f, "resources")
       
       with self.cursor() as cur:
-        f = StringIO("\n".join("%s\t%s\t%s\t%s" % (self.c, vs[0], vs[1], vs[2].replace("\t", "\\t").replace('\n', '\\n')) for vs in values))
+        f = StringIO("\n".join("%s\t%s\t%s\t%s" % (self.c, vs[0], vs[1], vs[2].replace("\\", "\\\\").replace("\t", "\\t").replace('\n', '\\n')) for vs in values))
         cur.copy_from(f, "quads")
         
-      print("INSERT", time.time() - t, file = sys.stderr)
+      #print("INSERT", time.time() - t, file = sys.stderr)
       
       t  = time.time()
       if reindex:
@@ -711,7 +717,7 @@ class SubGraph(BaseSubGraph):
 CREATE UNIQUE INDEX index_resources_iri ON resources(iri);
 CREATE INDEX index_quads_s ON quads(s);
 CREATE INDEX index_quads_o ON quads(o);""")
-      print("INDEX", time.time() - t, file = sys.stderr)
+      #print("INDEX", time.time() - t, file = sys.stderr)
       t  = time.time()
       
       self.sql.execute("""set maintenance_work_mem = %s""", (DEFAULT_WORK_MEM,))
@@ -743,7 +749,7 @@ CREATE INDEX index_quads_o ON quads(o);""")
         with self.cursor() as cur:
           cur.execute("UPDATE ontologies SET last_update=%s WHERE c=%s", (date, self.c,))
           
-      print("FIN", time.time() - t, file = sys.stderr)
+      #print("FIN", time.time() - t, file = sys.stderr)
       
       return onto_base_iri
       

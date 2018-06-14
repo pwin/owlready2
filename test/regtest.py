@@ -32,10 +32,22 @@ HERE = os.path.dirname(os.path.abspath(__file__)) or "."
 onto_path.append(HERE)
 get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
 
+BACKEND = "sqlite"
+if "--postgresql" in sys.argv:
+  sys.argv.remove("--postgresql")
+  BACKEND = "postgresql"
+
+_QUADSTORE_ID = 0
+
+def remove_dbs():
+  for i in range(1, _QUADSTORE_ID + 1):
+    os.system("dropdb owlready2_quadstore_%s &" % i)
+if BACKEND == "postgresql":
+  atexit.register(remove_dbs)
 
 class BaseTest(object):
   def setUp(self):
-    self.nb_triple = len(default_world.graph)
+    self.nb_triple    = len(default_world.graph)
     
   def assert_nb_created_triples(self, x):
     assert (len(default_world.graph) - self.nb_triple) == x
@@ -73,10 +85,19 @@ class BaseTest(object):
     return filename
     
   def new_world(self):
-    filename = self.new_tmp_file()
-    world = World(filename = filename)
+    global _QUADSTORE_ID
+    
+    if   BACKEND == "sqlite":
+      filename = self.new_tmp_file()
+      world = World(filename = filename)
+      
+    elif BACKEND == "postgresql":
+      _QUADSTORE_ID += 1
+      os.system("createdb owlready2_quadstore_%s" % _QUADSTORE_ID)
+      world = World(backend = "postgresql", dbname = "owlready2_quadstore_%s" % _QUADSTORE_ID)
+      
     return world
-
+  
   def new_ontology(self):
     global next_id
     next_id += 1
@@ -211,7 +232,7 @@ class Test(BaseTest, unittest.TestCase):
   def test_world_5(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
-    world.set_backend(filename = ":memory:")
+    if BACKEND == "sqlite": world.set_backend(filename = ":memory:")
     assert set(world.classes()) == { n.Meat, n.Tomato, n.Eggplant, n.Olive, n.Vegetable, n.NonPizza, n.Pizza, n.Cheese, n.VegetarianPizza, n.Topping }
     assert set(world.data_properties()) == { n.price }
     assert set(world.object_properties()) == { n.has_topping, n.has_main_topping, n.main_topping_of, n.topping_of }
@@ -2671,7 +2692,7 @@ I took a placebo
   def test_format_15(self):
     world = self.new_world()
     onto  = world.get_ontology("http://www.test.org/test_breakline.owl").load()
-    
+
     assert onto.C.comment.first() == r"""Comment long
 on
 multiple lines with " and ’ and \ and & and < and > and é."""

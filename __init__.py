@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-VERSION = "0.8"
+VERSION = "0.9"
 
 JAVA_EXE   = "java"
 

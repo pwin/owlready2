@@ -440,7 +440,7 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
         destroyed_storids.add(blank_using)
         self._destroy_collect_storids(destroyed_storids, modified_relations, blank_using)
         
-    for (c, blank_using) in list(self.execute("""SELECT c, s FROM quads WHERE o=? AND p=%s AND substr(s, 1, 1)='_'""" % (
+    for (c, blank_using) in list(self.execute("""SELECT c, s FROM quads WHERE o=? AND p='%s' AND substr(s, 1, 1)='_'""" % (
       rdf_first,
     ), (storid,))):
       list_user, root, previouss, nexts, length = self._rdf_list_analyze(blank_using)

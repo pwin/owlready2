@@ -211,10 +211,8 @@ _cache = [None] * (2 ** 16) #50000
 _cache_index = 0
 
 class World(_GraphManager):
-  def __init__(self, backend = "sqlite", filename = ":memory:"):
+  def __init__(self, backend = "sqlite", filename = ":memory:", dbname = "owlready2_quadstore", **kargs):
     global owl_world
-    
-    assert backend == "sqlite"
     
     self.world            = self
     self.filename         = filename
@@ -223,37 +221,37 @@ class World(_GraphManager):
     self._reasoning_props = {}
     self._entities        = weakref.WeakValueDictionary()
     self._rdflib_store    = None
+    self.graph            = None
     
     if filename:
-      self.graph = Graph(filename)
-      for method in self.graph.__class__.READ_METHODS: setattr(self, method, getattr(self.graph, method))
-    else:
-      self.graph = None
+      self.set_backend(backend, filename, dbname, **kargs)
+      #self.graph = Graph(filename)
+      #for method in self.graph.__class__.READ_METHODS: setattr(self, method, getattr(self.graph, method))
       
     if not owl_world is None:
-      self._entities .update(owl_world._entities) # add OWL entities in the world
+      self._entities.update(owl_world._entities) # add OWL entities in the world
       self._props.update(owl_world._props)
       
-    if self.graph:
-      for iri in self.graph.ontologies_iris():
-        self.get_ontology(iri) # Create all possible ontologies
-        
+    #if self.graph:
+    #  for iri in self.graph.ontologies_iris():
+    #    self.get_ontology(iri) # Create all possible ontologies
+    
   def set_backend(self, backend = "sqlite", filename = ":memory:", dbname = "owlready2_quadstore", **kargs):
     if   backend == "sqlite":
       from owlready2.triplelite import Graph
-      if len(self.graph):
+      if self.graph and len(self.graph):
         self.graph = Graph(filename, clone = self.graph, **kargs)
       else:
         self.graph = Graph(filename, **kargs)
-    elif backend == "mysql":
-      from owlready2.driver_mysql import Graph
-      if len(self.graph):
-        raise ValueError
-      else:
-        self.graph = Graph(dbname, **kargs)
+    #elif backend == "mysql":
+    #  from owlready2.driver_mysql import Graph
+    #  if self.graph and len(self.graph):
+    #    raise ValueError
+    #  else:
+    #    self.graph = Graph(dbname, **kargs)
     elif backend == "postgresql":
       from owlready2.driver_postgresql import Graph
-      if len(self.graph):
+      if self.graph and len(self.graph):
         raise ValueError
       else:
         self.graph = Graph(dbname, **kargs)

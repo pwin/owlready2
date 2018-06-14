@@ -25,9 +25,11 @@ if len(sys.argv) <= 1: sys.argv.append("install")
 
 import setuptools
 
+version = open(os.path.join(HERE, "__init__.py")).read().split('VERSION = "', 1)[1].split('"', 1)[0]
+
 setuptools.setup(
   name         = "Owlready2",
-  version      = "0.8",
+  version      = version,
   license      = "LGPLv3+",
   description  = "A package for ontology-oriented programming in Python: load OWL 2.0 ontologies as Python objects, modify them, save them, and perform reasoning via HermiT. Includes an optimized RDF quadstore.",
   long_description = open(os.path.join(HERE, "README.rst")).read(),
