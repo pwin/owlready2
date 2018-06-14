@@ -45,7 +45,7 @@ class OwlReadyOntologyParsingError(OwlReadyError): pass
 def to_literal(o):
   if isinstance(o, locstr) and o.lang: return '"%s"@%s' % (o, o.lang)
   datatype, unparser = _universal_datatype_2_abbrev_unparser.get(o.__class__) or (None, None)
-  if datatype is None: raise ValueError("Cannot store literal '%s'!" % o)
+  if datatype is None: raise ValueError("Cannot store literal '%s' of type '%s'!" % (o, type(o)))
   return '"%s"%s' % (unparser(o), datatype)
   
 def from_literal(l):
