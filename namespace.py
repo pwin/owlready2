@@ -225,7 +225,7 @@ class World(_GraphManager):
     
     if filename:
       self.set_backend(backend, filename, dbname, **kargs)
-      #self.graph = Graph(filename)
+      #self.graph = Graph(filename, world = self)
       #for method in self.graph.__class__.READ_METHODS: setattr(self, method, getattr(self.graph, method))
       
     if not owl_world is None:
@@ -240,21 +240,21 @@ class World(_GraphManager):
     if   backend == "sqlite":
       from owlready2.triplelite import Graph
       if self.graph and len(self.graph):
-        self.graph = Graph(filename, clone = self.graph, **kargs)
+        self.graph = Graph(filename, world = self, clone = self.graph, **kargs)
       else:
-        self.graph = Graph(filename, **kargs)
+        self.graph = Graph(filename, world = self, **kargs)
     #elif backend == "mysql":
     #  from owlready2.driver_mysql import Graph
     #  if self.graph and len(self.graph):
     #    raise ValueError
     #  else:
-    #    self.graph = Graph(dbname, **kargs)
+    #    self.graph = Graph(dbname, world = self, **kargs)
     elif backend == "postgresql":
       from owlready2.driver_postgresql import Graph
       if self.graph and len(self.graph):
         raise ValueError
       else:
-        self.graph = Graph(dbname, **kargs)
+        self.graph = Graph(dbname, world = self, **kargs)
     else:
       raise ValueError("Unsupported backend type '%s'!" % backend)
     for method in self.graph.__class__.READ_METHODS: setattr(self, method, getattr(self.graph, method))

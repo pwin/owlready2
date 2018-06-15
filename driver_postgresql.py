@@ -34,7 +34,7 @@ HIGH_WORK_MEM = "1GB"
 
 class Graph(BaseMainGraph):
   _SUPPORT_CLONING = False
-  def __init__(self, dbname = "owlready2_quadstore", new = False, clone = None, **kargs):
+  def __init__(self, dbname = "owlready2_quadstore", new = False, clone = None, world = None, **kargs):
     #try:
     self.db = psycopg2.connect(dbname = dbname, **kargs)
     #except psycopg2.OperationalError:

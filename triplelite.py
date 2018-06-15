@@ -29,7 +29,7 @@ from owlready2.base import _universal_abbrev_2_iri
 
 class Graph(BaseMainGraph):
   _SUPPORT_CLONING = True
-  def __init__(self, filename, clone = None, exclusive = True):
+  def __init__(self, filename, clone = None, exclusive = True, world = None):
     exists        = os.path.exists(filename) and os.path.getsize(filename) # BEFORE creating db!
     initialize_db = (clone is None) and ((filename == ":memory:") or (not exists))
     
@@ -41,6 +41,7 @@ class Graph(BaseMainGraph):
     self.c_2_onto          = {}
     self.onto_2_subgraph   = {}
     self.last_numbered_iri = {}
+    self.world             = world
     
     if initialize_db:
       self.current_blank    = 0
@@ -88,10 +89,13 @@ class Graph(BaseMainGraph):
       self.abbreviate   = self.abbreviate_sql
       self.unabbreviate = self.unabbreviate_sql
       self.refactor     = self.refactor_sql
+    if self.world:
+      self.world.abbreviate   = self.abbreviate
+      self.world.unabbreviate = self.unabbreviate
     for subgraph in self.onto_2_subgraph.values():
-      subgraph.abbreviate   = self.abbreviate
-      subgraph.unabbreviate = self.unabbreviate
-    
+      subgraph.onto.abbreviate   = subgraph.abbreviate   = self.abbreviate
+      subgraph.onto.unabbreviate = subgraph.unabbreviate = self.unabbreviate
+      
   def sub_graph(self, onto):
     new_in_quadstore = False
     c = self.execute("SELECT c FROM ontologies WHERE iri=?", (onto.base_iri,)).fetchone()
