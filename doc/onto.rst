@@ -10,7 +10,7 @@ The IRI is a sort of URL; IRIs are used as identifier for ontologies.
 
 ::
 
-   >>> from owlready import *
+   >>> from owlready2 import *
    
    >>> onto = get_ontology("http://test.org/onto.owl")
 
