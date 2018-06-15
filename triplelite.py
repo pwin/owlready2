@@ -579,7 +579,7 @@ class SubGraph(BaseSubGraph):
       if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
       cur.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
       cur.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
-
+      
       if reindex:
         cur.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
         cur.execute("""CREATE INDEX index_quads_s ON quads(s)""")
@@ -587,9 +587,10 @@ class SubGraph(BaseSubGraph):
         
         
       onto_base_iri = cur.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND quads.o=? AND resources.storid=quads.s LIMIT 1", (self.c, owl_ontology)).fetchone()
+      if onto_base_iri: onto_base_iri = onto_base_iri[0]
+      else:             onto_base_iri = ""
       
-      if onto_base_iri:
-        onto_base_iri = onto_base_iri[0]
+      if onto_base_iri and (not onto_base_iri.endswith("/")):
         use_hash = cur.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (self.c, onto_base_iri + "#%")).fetchone()
         if use_hash: onto_base_iri = onto_base_iri + "#"
         else:
