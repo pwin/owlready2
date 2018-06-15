@@ -464,6 +464,26 @@ class Test(BaseTest, unittest.TestCase):
     onto_path.remove(temp_dir.name)
     temp_dir.cleanup()
     
+  def test_ontology_16(self):
+    w = self.new_world()
+    o = w.get_ontology("http://test.org/test_ontoslash/").load()
+    
+    assert o.base_iri == "http://test.org/test_ontoslash/"
+    assert o.Class1
+    assert o.Class2
+    assert o.Class1.iri == "http://test.org/test_ontoslash/Class1"
+    assert o.Class2.iri == "http://test.org/test_ontoslash/Class2"
+    
+  def test_ontology_17(self):
+    w = self.new_world()
+    o = w.get_ontology("file://%s/test_ontoslash.owl" % HERE).load()
+    
+    assert o.base_iri == "http://test.org/test_ontoslash/"
+    assert o.Class1
+    assert o.Class2
+    assert o.Class1.iri == "http://test.org/test_ontoslash/Class1"
+    assert o.Class2.iri == "http://test.org/test_ontoslash/Class2"
+    
     
   def test_class_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

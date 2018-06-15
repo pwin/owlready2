@@ -725,10 +725,10 @@ CREATE INDEX index_quads_o ON quads(o);""")
       with self.cursor() as cur:
         cur.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=%s AND quads.o=%s AND resources.storid=quads.s LIMIT 1", (self.c, owl_ontology))
         onto_base_iri = cur.fetchone()
-        
-      if onto_base_iri:
-        onto_base_iri = onto_base_iri[0]
-        
+        if onto_base_iri: onto_base_iri = onto_base_iri[0]
+        else:             onto_base_iri = ""
+       
+      if onto_base_iri and (not onto_base_iri.endswith("/")):
         onto_base_iri_hash = "%s#" % onto_base_iri
         for e in entities:
           if e.startswith(onto_base_iri_hash):
