@@ -56,8 +56,8 @@ copyright = '2014-2017, Jean-Baptiste LAMY'
 #
 # The full version, including alpha/beta/rc tags.
 import os.path, re
-s = open(os.path.join(os.path.dirname(__file__), "..", "setup.py")).read()
-release = re.findall('version\\s*=\\s*"(.*?)"', s)[0]
+s = open(os.path.join(os.path.dirname(__file__), "..", "__init__.py")).read()
+release = re.findall('VERSION\\s*=\\s*"(.*?)"', s)[0]
 # The short X.Y version.
 version = ".".join(release.split(".")[:2])
 

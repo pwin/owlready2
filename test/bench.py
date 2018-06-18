@@ -14,6 +14,9 @@ default_world.set_backend("postgresql", user = "jiba")
 onto_path.append(os.path.dirname(__file__))
 onto_path.append("/home/jiba/telechargements/base_med/")
 
+dron_ndc = get_ontology("http://purl.obolibrary.org/obo/dron/dron-ndc.owl").load()
+dron = get_ontology("http://purl.obolibrary.org/obo/dron.owl").load()
+vto = get_ontology("http://purl.obolibrary.org/obo/vto.owl").load()
 go = get_ontology("http://purl.obolibrary.org/obo/go.owl").load()
 default_world.save()
 
