@@ -75,7 +75,7 @@ class Not(ClassConstruct):
     if not Class is None: self.__dict__["Class"] = Class
     
   def __eq__(self, other):
-    return isinstance(other, Not) and (self.Class is other.Class)
+    return isinstance(other, Not) and (self.Class == other.Class)
   
   __hash__ = object.__hash__
   
@@ -116,7 +116,7 @@ class Inverse(ClassConstruct):
     return object.__new__(Class)
   
   def __eq__(self, other):
-    return isinstance(other, Inverse) and (self.property is other.property)
+    return isinstance(other, Inverse) and (self.property == other.property)
   
   __hash__ = object.__hash__
   

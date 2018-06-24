@@ -1574,6 +1574,11 @@ class Test(BaseTest, unittest.TestCase):
     
     assert a == b
     
+  def test_construct_restriction_6(self):
+    n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
+    
+    assert Not(n.has_topping.some(n.Meat)) in n.VegetarianPizza.is_a
+    
   def test_and_or_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     
