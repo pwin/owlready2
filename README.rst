@@ -216,6 +216,7 @@ version 2 - 0.9
 * Add 'exclusive = False' option for SQLite3 backend (slower, but allows multiple uses)
 * Use unique index in sqlite3 quadstore on resources table
 * Optimize sqlite3 quadstore by caching IRI dict (5% faster)
+* Add == support for class construct
 * Bugfixes:
   - Fix imported ontologies
   - Fix saving ontologies in onto_path
