@@ -276,7 +276,7 @@ class EntityClass(type):
           for equivalent in descendant.equivalent_to.indirect():
             if isinstance(equivalent, Class.__class__) and not equivalent in s:
               equivalent._fill_descendants(s, True)
-                
+              
   def subclasses(Class, only_loaded = False):
     if only_loaded:
       r = []

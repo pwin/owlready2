@@ -74,6 +74,11 @@ class Not(ClassConstruct):
     super().__init__(ontology, bnode)
     if not Class is None: self.__dict__["Class"] = Class
     
+  def __eq__(self, other):
+    return isinstance(other, Not) and (self.Class is other.Class)
+  
+  __hash__ = object.__hash__
+  
   def __repr__(self): return "Not(%s)" % (self.Class)
   
   def __getattr__(self, attr):
@@ -110,6 +115,11 @@ class Inverse(ClassConstruct):
       if Property.inverse_property: return Property.inverse_property
     return object.__new__(Class)
   
+  def __eq__(self, other):
+    return isinstance(other, Inverse) and (self.property is other.property)
+  
+  __hash__ = object.__hash__
+  
   def __init__(self, Property, ontology = None, bnode = None, simplify = True):
     super().__init__(ontology, bnode)
     self.__dict__["property"] = Property
@@ -143,6 +153,11 @@ class LogicalClassConstruct(ClassConstruct):
       self.Classes = CallbackList(Classes, self, LogicalClassConstruct._callback)
     ClassConstruct.__init__(self, ontology, bnode)
     
+  def __eq__(self, other):
+    return isinstance(other, self.__class__) and (self.Classes == other.Classes)
+  
+  __hash__ = object.__hash__
+  
   def _set_ontology(self, ontology):
     if ontology and (self._list_bnode is None): self._list_bnode = ontology.world.new_blank_node()
     for Class in self.Classes:
@@ -235,7 +250,12 @@ class Restriction(ClassConstruct):
       self.__dict__["value"]     = value
       
     super().__init__(ontology, bnode)
-    
+
+  def __eq__(self, other):
+    return isinstance(other, Restriction) and (self.type is other.type) and (self.property is other.property) and (self.value == other.value) and (self.cardinality == other.cardinality)
+  
+  __hash__ = object.__hash__
+  
   def __repr__(self):
     if (self.type == SOME) or (self.type == ONLY) or (self.type == VALUE) or (self.type == HAS_SELF):
       return """%s.%s(%s)""" % (self.property, _restriction_type_2_label[self.type], self.value)
@@ -326,6 +346,11 @@ class OneOf(ClassConstruct):
       self.instances = CallbackList(instances, self, OneOf._callback)
     ClassConstruct.__init__(self, ontology, bnode)
     
+  def __eq__(self, other):
+    return isinstance(other, OneOf) and (self.instances == other.instances)
+  
+  __hash__ = object.__hash__
+  
   def __getattr__(self, attr):
     if attr == "instances":
       self.instances = CallbackList(self.ontology._parse_list(self._list_bnode), self, OneOf._callback)

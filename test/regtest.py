@@ -1566,7 +1566,13 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_triple(bnode, EXACTLY, '"5"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
     self.assert_triple(bnode, owl_ondatarange, n.abbreviate("http://www.w3.org/2001/XMLSchema#decimal"))
     assert len(list(default_world.get_triples(bnode, None, None))) == 4
-
+    
+  def test_construct_restriction_5(self):
+    n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
+    a = n.has_topping.some(n.Vegetable)
+    b = n.has_topping.some(n.Vegetable)
+    
+    assert a == b
     
   def test_and_or_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

@@ -159,7 +159,7 @@ class BaseSubGraph(BaseGraph):
         current_line = 0
         while line:
           current_line += 1
-          if not line.startswith("#"):
+          if (not line.startswith("#")) and (not line.startswith("\n")):
             s,p,o = splitter.split(line[:-3], 2)
             
             if   s.startswith("<"): s = s[1:-1]
