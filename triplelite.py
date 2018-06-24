@@ -608,7 +608,8 @@ class SubGraph(BaseSubGraph):
       self.parent.select_abbreviate_method()
       
       return onto_base_iri
-      
+    
+    
     return on_prepare_triple, self.parent.new_blank_node, new_literal, abbreviate, on_finish
 
 

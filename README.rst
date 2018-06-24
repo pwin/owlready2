@@ -221,7 +221,8 @@ version 2 - 0.9
   - Fix imported ontologies
   - Fix saving ontologies in onto_path
   - Fix clear() on CallbackList
-  - Fix bug in Class IRI in ontology whose base IRI ends with a /
+  - Fix bug in Class IRI in ontologies whose base IRI ends with a /
+  - Fix imported ontologies in ontologies whose base IRI ends with a /
 
 Links
 -----
