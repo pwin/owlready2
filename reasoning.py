@@ -131,7 +131,7 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
               concept1 = concept1 or world._get_by_storid(concept_iri1)
               concept2 = concept2 or world._get_by_storid(concept_iri2)
               if not concept1 is concept2: new_equivs[concept1].append(concept2)
-              
+
   with LOADING: # Because triples were asserted above => only modify Python objects WITHOUT creating new triples!
     for concept1, concepts2 in new_equivs.items():
       for concept2 in concepts2:
@@ -166,4 +166,6 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
             if not added in new_is_a: new_is_a.append(added)
           child_eq.is_a.reinit(new_is_a)
           
+  if debug: print("* Owlready * (NB: only changes on entities loaded in Python are shown, other changes are done but not listed)", file = sys.stderr)
+  
   if not keep_tmp_file: os.unlink(tmp.name)
