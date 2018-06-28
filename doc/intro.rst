@@ -14,6 +14,11 @@ Owlready2 can:
 
  - Re-classify instances automatically, using the HermiT reasoner.
 
+   
+If you need to "convert" formulas between Protégé, Owlready2 and/or Description Logics, the following cheat sheet may be of interest:
+
+`The great table of Description Logics and formal ontology notations <http://www.lesfleursdunormal.fr/static/_downloads/great_ontology_table.pdf>`_
+
 
 Short example: What can I do with Owlready?
 -------------------------------------------
@@ -84,7 +89,7 @@ Export to OWL file:
 Architecture
 ------------
 
-Owlready2 maintains a RDF quadstore in an optimized SQLite3 database,
+Owlready2 maintains a RDF quadstore in an optimized database (SQLite3 or PostgresQL),
 either in memory or on the disk (see :doc:`world`). It provides a high-level access to the Classes and the
 objects in the ontology (aka. ontology-oriented programming). Classes and Invididuals are loaded
 dynamically from the quadstore as needed, cached in memory and destroyed when no longer needed.
