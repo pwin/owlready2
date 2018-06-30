@@ -105,7 +105,7 @@ del owl_world._props["AnnotationProperty"]
 
 default_world = IRIS = World()
 get_ontology  = default_world.get_ontology
-
+get_namespace = default_world.get_namespace
 
 
 def default_render_func(entity):

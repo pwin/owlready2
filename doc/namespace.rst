@@ -10,7 +10,7 @@ but the IRI of GO entities are not of the form 'http://purl.obolibrary.org/obo/g
 Accessing entities defined in another namespace
 -----------------------------------------------
 
-These entities can be accessed in Owlready2 using a namespace. The .get_namepace(base_iri) method of an ontology
+These entities can be accessed in Owlready2 using a namespace. The get_namepace(base_iri) global function
 returns a namespace for the given base IRI.
 
 The namespace can then be used with the dot notation, similarly to the ontology.
@@ -23,7 +23,7 @@ The namespace can then be used with the dot notation, similarly to the ontology.
    >>> print(go.GO_0000001) # Not in the right namespace
    None
    
-   >>> obo = go.get_namespace("http://purl.obolibrary.org/obo/")
+   >>> obo = get_namespace("http://purl.obolibrary.org/obo/")
    
    >>> print(obo.GO_0000001)
    obo.GO_0000001
@@ -34,7 +34,20 @@ The namespace can then be used with the dot notation, similarly to the ontology.
    >>> print(obo.GO_0000001.label)
    ['mitochondrion inheritance']
 
+   
+.get_namepace(base_iri) can also be called on an Ontology, for example:
 
+::
+   
+   >>> obo = go.get_namespace("http://purl.obolibrary.org/obo/")
+
+Namespaces created on an Ontology can also be used for asserting facts and creating classes, instances,...:
+
+::
+
+   >>> with obo:
+   >>>     class MyNewClass(Thing): pass # Create http://purl.obolibrary.org/obo/MyNewClass
+   
 
 Creating classes in a specific namespace
 ----------------------------------------

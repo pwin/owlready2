@@ -217,6 +217,7 @@ version 2 - 0.9
 * Use unique index in sqlite3 quadstore on resources table
 * Optimize sqlite3 quadstore by caching IRI dict (5% faster)
 * Add == support for class construct
+* Add get_namespace() support on World
 * Bugfixes:
   - Fix imported ontologies
   - Fix saving ontologies in onto_path

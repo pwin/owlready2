@@ -33,17 +33,30 @@ def set_log_level(x):
   _LOG_LEVEL = x
   
 class Namespace(object):  
-  def __init__(self, ontology, base_iri, name = None):
+  def __init__(self, world_or_ontology, base_iri, name = None):
     if not(base_iri.endswith("#") or base_iri.endswith("/")): raise ValueError("base_iri must end with '#' or '/' !")
     name = name or base_iri[:-1].rsplit("/", 1)[-1]
     if name.endswith(".owl") or name.endswith(".rdf"): name = name[:-4]
-    self.ontology = ontology
-    self.world    = ontology and ontology.world
+    
+    if   isinstance(world_or_ontology, Ontology):
+      self.ontology = world_or_ontology
+      self.world    = world_or_ontology.world
+      self.ontology._namespaces[base_iri] = self
+      
+    elif isinstance(world_or_ontology, World):
+      self.ontology = None
+      self.world    = world_or_ontology
+      self.world._namespaces[base_iri] = self
+      
+    else:
+      self.ontology = None
+      self.world    = None
+      
     self.base_iri = base_iri
     self.name     = name
-    if ontology: ontology._namespaces[base_iri] = self
     
   def __enter__(self):
+    if self.ontology is None: raise ValueError("Cannot assert facts in this namespace: it is not linked to an ontology! (it is probably a global namespace created by get_namespace(); please use your_ontology.get_namespace() instead)")
     CURRENT_NAMESPACES.append(self)
     
   def __exit__(self, exc_type = None, exc_val = None, exc_tb = None):
@@ -220,6 +233,7 @@ class World(_GraphManager):
     self._props           = {}
     self._reasoning_props = {}
     self._entities        = weakref.WeakValueDictionary()
+    self._namespaces      = weakref.WeakValueDictionary()
     self._rdflib_store    = None
     self.graph            = None
     
@@ -300,6 +314,12 @@ class World(_GraphManager):
     if base_iri in self.ontologies: return self.ontologies[base_iri]
     return Ontology(self, base_iri)
   
+  def get_namespace(self, base_iri, name = ""):
+    if (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
+    r = self._namespaces.get(base_iri)
+    if not r is None: return r
+    return Namespace(self, base_iri, name or base_iri[:-1].rsplit("/", 1)[-1])
+    
   
   def get(self, iri):
     return self._entities.get(self.abbreviate(iri))
@@ -404,7 +424,7 @@ class World(_GraphManager):
       if ontology.has_triple(bnode, None, None):
         return ontology._parse_bnode(bnode)
       
-      
+     
 class Ontology(Namespace, _GraphManager):
   def __init__(self, world, base_iri, name = None):
     self.world       = world # Those 2 attributes are required before calling Namespace.__init__
