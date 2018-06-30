@@ -77,6 +77,8 @@ as if they were class properties in Owlready. For example:
    >>> NonPlaceboDrug.has_for_active_principle
    [onto.ActivePrinciple]
 
+These class attributes can also be modified (e.g. NonPlaceboDrug.has_for_active_principle.append(...) ).
+
 
 Logical operators (intersection, union and complement)
 ------------------------------------------------------
