@@ -368,11 +368,13 @@ class ThingClass(EntityClass):
       
       if functional:
         for r in _inherited_property_value_restrictions(Class, Prop, set()):
-          if (r.type == VALUE): return r.value
+          #if (r.type == VALUE): return r.value
+          if (r.type == VALUE) or (r.type == SOME): return r.value
         return None
       else:
         return RoleFilerList(
-          (r.value for r in _inherited_property_value_restrictions(Class, Prop, set()) if (r.type == VALUE)),
+          #(r.value for r in _inherited_property_value_restrictions(Class, Prop, set()) if (r.type == VALUE)),
+          (r.value for r in _inherited_property_value_restrictions(Class, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
           Class, Prop)
       
       
@@ -413,10 +415,9 @@ class ThingClass(EntityClass):
     
     if removed:
       for r in list(_inherited_property_value_restrictions(Class, Prop, set())):
-        if r.type == VALUE:
-          if (r.value in removed) and (r in Class.is_a):
-            Class.is_a.remove(r)
-            #if inverse:
+        if (r.value in removed) and (r in Class.is_a):
+          Class.is_a.remove(r)
+          if r.type == VALUE:
             if isinstance(Prop, ObjectPropertyClass):
               for r2 in r.value.is_a:
                 if isinstance(r2, Restriction) and ((r2.property is inverse) or (isinstance(r2.property, Inverse) and (r2.property.property is Prop))) and (r2.type == SOME) and (r2.value is Class):
@@ -424,10 +425,12 @@ class ThingClass(EntityClass):
                   break
                 
     for v in new - old:
-      Class.is_a.append(Prop.value(v))
-      #if inverse:
-      if isinstance(Prop, ObjectPropertyClass):
-        v.is_a.append(Inverse(Prop).some(Class))
+      if isinstance(v, EntityClass):
+        Class.is_a.append(Prop.some(v))
+      else:
+        Class.is_a.append(Prop.value(v))
+        if isinstance(Prop, ObjectPropertyClass):
+          v.is_a.append(Inverse(Prop).some(Class))
         
   def __setattr__(Class, attr, value):
     if attr in SPECIAL_ATTRS:

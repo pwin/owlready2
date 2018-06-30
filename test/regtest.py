@@ -2549,6 +2549,48 @@ I took a placebo
     assert len(C.is_a) == 1
     assert len(d.is_a) == 1
     
+  def test_class_prop_10(self):
+    onto = self.new_ontology()
+    with onto:
+      class D(Thing): pass
+      class R(Thing): pass
+      class rel(ObjectProperty):
+        domain   = [D]
+        range    = [R]
+    D.is_a.append(rel.some(R))
+    
+    assert D.rel == [R]
+    
+    D.rel.remove(R)
+    
+    assert D.rel == []
+    
+    assert D.is_a == [Thing]
+    
+    
+  def test_class_prop_11(self):
+    onto = self.new_ontology()
+    with onto:
+      class D(Thing): pass
+      class R(Thing): pass
+      class rel(ObjectProperty):
+        domain   = [D]
+        range    = [R]
+    D.rel = [R]
+    
+    assert D.rel == [R]
+    assert rel.some(R) in D.is_a
+    
+    bnode = D.is_a[-1].storid
+    self.assert_triple(D.storid, rdfs_subclassof, bnode)
+    self.assert_triple(bnode, rdf_type, owl_restriction)
+    self.assert_triple(bnode, owl_onproperty, rel.storid)
+    self.assert_triple(bnode, SOME, R.storid)
+
+    del D.is_a[-1]
+
+    assert D.rel == []
+    
     
   def test_format_1(self):
     from owlready2.triplelite import _guess_format

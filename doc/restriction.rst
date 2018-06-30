@@ -20,7 +20,16 @@ Restrictions on a Property
    ...     class has_for_active_principle(Drug >> ActivePrinciple):
    ...         pass
 
-For example, a Placebo is a Drug with no Active Principle:
+
+For example, a non-Placebo Drug is a Drug with an Active Principle:
+
+::
+   
+   >>> class NonPlaceboDrug(Drug):
+   ...     equivalent_to = [Drug & has_for_active_principle.some(ActivePrinciple)]
+
+ 
+And a Placebo is a Drug with no Active Principle:
 
 ::
 
@@ -55,6 +64,18 @@ In addition, the Inverse(Property) construct can be used as the inverse of a giv
 Restrictions can be modified *in place* (Owlready2 updates the quadstore automatically), using the
 following attributes: .property, .type (SOME, ONLY, MIN, MAX, EXACTLY or VALUE), .cardinality
 and .value (a Class, an Individual, a class contruct or another restriction).
+
+
+Existential restrictions as class properties
+--------------------------------------------
+
+Existential restrictions (i.e. SOME restrictions) and role-fillers (i.e. VALUES restrictions) can be accessed
+as if they were class properties in Owlready. For example:
+
+::
+   
+   >>> NonPlaceboDrug.has_for_active_principle
+   [onto.ActivePrinciple]
 
 
 Logical operators (intersection, union and complement)

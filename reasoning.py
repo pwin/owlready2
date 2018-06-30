@@ -93,45 +93,47 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
   new_parents = defaultdict(list)
   new_equivs  = defaultdict(list)
   for relation, concept_iris in _HERMIT_RESULT_REGEXP.findall(output):
-    concept_iris = [ontology.abbreviate(x) for x in concept_iris[1:-1].split("> <")]
+    concept_storids = [ontology.abbreviate(x) for x in concept_iris[1:-1].split("> <")]
     owl_relation = _HERMIT_2_OWL[relation]
     
     if  relation in _IS_A_RELATIONS:
       if concept_iris[0].startswith("http://www.w3.org/2002/07/owl"): continue
       
-      if not ontology.world.has_triple(concept_iris[0], owl_relation, concept_iris[1]):
-        ontology.add_triple(concept_iris[0], owl_relation, concept_iris[1])
+      if not ontology.world.has_triple(concept_storids[0], owl_relation, concept_storids[1]):
+        ontology.add_triple(concept_storids[0], owl_relation, concept_storids[1])
         
-      child = world._entities.get(concept_iris[0])
+      child = world._entities.get(concept_storids[0])
       
       if not child is None:
-        parent = world._get_by_storid(concept_iris[1])
-        new_parents[child].append(parent)
-        
+        parent = world._get_by_storid(concept_storids[1])
+        if parent is None:
+          print("* Owlready2 * Warning: Cannot find new parent '%s'" % concept_iris[1], file = sys.stderr)
+        else:
+          new_parents[child].append(parent)
+          
     elif relation in _EQUIV_RELATIONS:
       if "http://www.w3.org/2002/07/owl#Nothing" in concept_iris:
-        for concept_iri in concept_iris:
+        for concept_iri, concept_storid in zip(concept_iris, concept_storids):
           if concept_iri.startswith("http://www.w3.org/2002/07/owl"): continue
-          if not ontology.world.has_triple(concept_iri, owl_relation, owl_nothing):
-            ontology.add_triple(concept_iri, owl_relation, owl_nothing)
-          concept = world._entities.get(concept_iri)
+          if not ontology.world.has_triple(concept_storid, owl_relation, owl_nothing):
+            ontology.add_triple(concept_storid, owl_relation, owl_nothing)
+          concept = world._entities.get(concept_storid)
           if concept: new_equivs[concept].append(Nothing)
           
       else:
-        for concept_iri1 in concept_iris:
+        for concept_iri1, concept_storid1 in zip(concept_iris, concept_storids):
           if concept_iri1.startswith("http://www.w3.org/2002/07/owl"): continue
-          for concept_iri2 in concept_iris:
-            if not ontology.world.has_triple(concept_iri1, owl_relation, concept_iri2):
-              ontology.add_triple(concept_iri1, owl_relation, concept_iri2)
-            concept1 = world._entities.get(concept_iri1)
-            concept2 = world._entities.get(concept_iri2)
+          for concept_iri2, concept_storid2 in zip(concept_iris, concept_storids):
+            if concept_iri1 == concept_iri2: continue
+            if not ontology.world.has_triple(concept_storid1, owl_relation, concept_storid2):
+              ontology.add_triple(concept_storid1, owl_relation, concept_storid2)
+            concept1 = world._entities.get(concept_storid1)
+            concept2 = world._entities.get(concept_storid2)
             if concept1 or concept2:
-              #concept1 = concept1 or world[concept_iri1]
-              #concept2 = concept2 or world[concept_iri2]
-              concept1 = concept1 or world._get_by_storid(concept_iri1)
-              concept2 = concept2 or world._get_by_storid(concept_iri2)
+              concept1 = concept1 or world._get_by_storid(concept_storid1)
+              concept2 = concept2 or world._get_by_storid(concept_storid2)
               if not concept1 is concept2: new_equivs[concept1].append(concept2)
-
+              
   with LOADING: # Because triples were asserted above => only modify Python objects WITHOUT creating new triples!
     for concept1, concepts2 in new_equivs.items():
       for concept2 in concepts2:
