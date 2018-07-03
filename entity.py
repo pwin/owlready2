@@ -425,7 +425,7 @@ class ThingClass(EntityClass):
                   break
                 
     for v in new - old:
-      if isinstance(v, EntityClass):
+      if isinstance(v, EntityClass) or isinstance(v, ClassConstruct):
         Class.is_a.append(Prop.some(v))
       else:
         Class.is_a.append(Prop.value(v))

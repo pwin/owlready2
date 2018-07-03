@@ -2451,7 +2451,7 @@ I took a placebo
     O.rel.append("b")
     O.rel.append("c")
     O.rel.remove("b")
-    
+
     assert len(O.is_a) == 3
     assert O.is_a[-2].property is rel
     assert O.is_a[-2].type == VALUE
