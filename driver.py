@@ -323,7 +323,7 @@ def _save(f, format, graph):
     for type in [
         "owl:Ontology",
         "owl:ObjectProperty",
-        "owl:DataProperty",
+        "owl:DatatypeProperty",
         "owl:AnnotationProperty",
         "owl:AllDisjointProperties",
         "owl:Class",
