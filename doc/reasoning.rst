@@ -119,6 +119,10 @@ The reasoner *deduced* that drug2 is an Association Drug, and that drug3 is a Pl
 
 Also notice how the example combines automatic classification of OWL Classes with polymorphism on Python Classes.
 
+
+Inconsistent classes and ontologies
+-----------------------------------
+
 In case of inconsistent ontology, an OwlReadyInconsistentOntologyError is raised.
 
 Inconcistent classes may occur without making the entire ontology inconsistent, as long as these classes have
