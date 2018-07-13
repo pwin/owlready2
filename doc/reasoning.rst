@@ -129,3 +129,12 @@ be obtained as follows:
 
    >>> list(default_world.inconsistent_classes())
 
+In addition, the consistency of a given class can be tested by checking for Nothing in its equivalent classes,
+as follows:
+
+::
+
+   >>> if Nothing in Drug.equivalent_to:
+   ...       print("Drug is inconsistent!")
+
+   
