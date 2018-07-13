@@ -118,3 +118,14 @@ In this example, drug1, drug2 and drug3 Classes have changed!
 The reasoner *deduced* that drug2 is an Association Drug, and that drug3 is a Placebo.
 
 Also notice how the example combines automatic classification of OWL Classes with polymorphism on Python Classes.
+
+In case of inconsistent ontology, an OwlReadyInconsistentOntologyError is raised.
+
+Inconcistent classes may occur without making the entire ontology inconsistent, as long as these classes have
+no individuals. Inconsistent classes are inferred as equivalent to Nothing. They can
+be obtained as follows:
+
+::
+
+   >>> list(default_world.inconsistent_classes())
+
