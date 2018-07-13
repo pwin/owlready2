@@ -1771,6 +1771,53 @@ I took a drug with 2 active principles
 I took a placebo
 """
     
+  def test_reasoning_4(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test.owl")
+    
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      class p(ObjectProperty, FunctionalProperty):
+        domain = [C]
+        range  = [D]
+        
+      class F(C):
+        is_a = [p.some(E)]
+        
+      AllDisjoint([C, D, E])
+      
+    sync_reasoner(world, debug = 0)
+    
+    assert Nothing in F.equivalent_to
+    assert F in list(world.inconsistent_classes())
+    
+  def test_reasoning_5(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test.owl")
+    
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      class p(ObjectProperty, FunctionalProperty):
+        domain = [C]
+        range  = [D]
+        
+      class F(C):
+        is_a = [p.some(E)]
+        
+      f = F()
+      AllDisjoint([C, D, E])
+
+    try:
+      sync_reasoner(world, debug = 0)
+    except OwlReadyInconsistentOntologyError:
+      return
+
+    assert False
+    
     
   def test_disjoint_1(self):
     world = self.new_world()

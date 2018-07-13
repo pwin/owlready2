@@ -142,6 +142,10 @@ class _GraphManager(object):
     for s in self.get_triples_po(rdf_type, owl_class):
       if not s.startswith("_"): yield self.world._get_by_storid(s)
       
+  def inconsistent_classes(self):
+    for s in self.get_transitive_sym(owl_nothing, owl_equivalentclass):
+      if not s.startswith("_"): yield self.world._get_by_storid(s)
+      
   def data_properties(self):
     for s in self.get_triples_po(rdf_type, owl_data_property):
       if not s.startswith("_"): yield self.world._get_by_storid(s)

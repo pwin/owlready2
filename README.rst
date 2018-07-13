@@ -225,7 +225,15 @@ version 2 - 0.9
   - Fix clear() on CallbackList
   - Fix bug in Class IRI in ontologies whose base IRI ends with a /
   - Fix imported ontologies in ontologies whose base IRI ends with a /
+  
+version 2 - 0.10
+****************
 
+* Add OwlReadyInconsistentOntologyError and Word.inconsistent_classes()
+* Bugfixes:
+  - Fix reasoning when obtaining classes equivalent to nothing
+    
+    
 Links
 -----
 

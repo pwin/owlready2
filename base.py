@@ -38,6 +38,7 @@ class OwlReadyDupplicatedNameWarning      (OwlReadyWarning): pass
 class OwlReadyError(Exception): pass
 class OwlReadySharedBlankNodeError(OwlReadyError): pass
 class OwlReadyOntologyParsingError(OwlReadyError): pass
+class OwlReadyInconsistentOntologyError(OwlReadyError): pass
 
 
 

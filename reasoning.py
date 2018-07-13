@@ -24,6 +24,7 @@ from owlready2.base            import *
 from owlready2.prop            import *
 from owlready2.namespace       import *
 from owlready2.class_construct import *
+from owlready2.individual      import *
 
 _HERMIT_RESULT_REGEXP = re.compile("^([A-Za-z]+)\\( ((?:<(?:[^>]+)>\s*)+) \\)$", re.MULTILINE)
 
@@ -82,7 +83,14 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
     print("* Owlready2 * Running HermiT...", file = sys.stderr)
     print("    %s" % " ".join(command), file = sys.stderr)
     t0 = time.time()
-  output = subprocess.check_output(command)
+    
+  try:
+    output = subprocess.check_output(command, stderr = subprocess.STDOUT)
+  except subprocess.CalledProcessError as e:
+    if (e.returncode == 1) and (b"Inconsistent ontology" in e.output):
+      raise OwlReadyInconsistentOntologyError()
+    raise
+  
   output = output.decode("utf8").replace("\r","")
   if debug:
     print("* Owlready2 * HermiT took %s seconds" % (time.time() - t0), file = sys.stderr)
@@ -115,6 +123,7 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
       if "http://www.w3.org/2002/07/owl#Nothing" in concept_iris:
         for concept_iri, concept_storid in zip(concept_iris, concept_storids):
           if concept_iri.startswith("http://www.w3.org/2002/07/owl"): continue
+          if concept_storid == owl_nothing: continue
           if not ontology.world.has_triple(concept_storid, owl_relation, owl_nothing):
             ontology.add_triple(concept_storid, owl_relation, owl_nothing)
           concept = world._entities.get(concept_storid)
