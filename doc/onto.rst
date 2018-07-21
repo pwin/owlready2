@@ -172,6 +172,11 @@ arguments. The supported keywords are:
 The value associated to each keyword can be a single value or a list of several values.
 A star * can be used as a jocker in string values.
 
+.. warning::
+
+   .search() does not perform any kind of reasoning, it just searches in asserted facts.
+   In addition, it cannot find Classes through SOME or ONLY restrictions.
+
 For example, for searching for all entities with an IRI ending with 'Topping':
 
 ::
@@ -181,7 +186,7 @@ For example, for searching for all entities with an IRI ending with 'Topping':
    pizza_onto.TomatoTopping, pizza_onto.Topping]
 
 In addition, the special value "*" can be used as a wildcard for any object.
-For example, the following line searches for all entities that are related
+For example, the following line searches for all individuals that are related
 to another one with the 'has_topping' relation:
 
 ::
