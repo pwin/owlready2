@@ -241,14 +241,14 @@ class World(_GraphManager):
     self._rdflib_store    = None
     self.graph            = None
     
+    if not owl_world is None:
+      self._entities.update(owl_world._entities) # add OWL entities in the world
+      self._props.update(owl_world._props)
+      
     if filename:
       self.set_backend(backend, filename, dbname, **kargs)
       #self.graph = Graph(filename, world = self)
       #for method in self.graph.__class__.READ_METHODS: setattr(self, method, getattr(self.graph, method))
-      
-    if not owl_world is None:
-      self._entities.update(owl_world._entities) # add OWL entities in the world
-      self._props.update(owl_world._props)
       
     #if self.graph:
     #  for iri in self.graph.ontologies_iris():
@@ -340,7 +340,7 @@ class World(_GraphManager):
   def _get_by_storid2(self, storid, full_iri = None, main_type = None, main_onto = None, trace = None):
     entity = self._entities.get(storid)
     if not entity is None: return entity
-
+    
     with LOADING:
       types       = []
       is_a_bnodes = []
