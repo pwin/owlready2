@@ -229,6 +229,7 @@ version 2 - 0.9
 version 2 - 0.10
 ****************
 
+* Add Ontology.metadata for adding/querying ontology metadata
 * Add OwlReadyInconsistentOntologyError and Word.inconsistent_classes()
 * Bugfixes:
   - Fix reasoning when obtaining classes equivalent to nothing

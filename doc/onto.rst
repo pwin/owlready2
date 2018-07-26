@@ -210,6 +210,20 @@ Owlready classes and individuals can be used as values within search(), as follo
 For more complex queries, SQPARQL can be used with RDFlib (see :doc:`world`).
 
 
+Ontology metadata
+-----------------
+
+The metadata of the ontology can be accessed with .metadata, in read and write access:
+
+::
+
+   >>> print(onto.metadata.comment)
+   [...]
+   >>> onto.metadata.comment.append("my first comment")
+
+Any annotation can be used with .metadata.
+
+
 Importing other ontologies
 --------------------------
 

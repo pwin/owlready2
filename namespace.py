@@ -438,6 +438,7 @@ class Ontology(Namespace, _GraphManager):
     self._bnodes               = weakref.WeakValueDictionary()
     self.storid                = world.abbreviate(base_iri[:-1])
     self._imported_ontologies  = CallbackList([], self, Ontology._import_changed)
+    self.metadata              = Metadata(self, self.storid)
     
     if world.graph is None:
       self.graph = None
@@ -519,7 +520,8 @@ class Ontology(Namespace, _GraphManager):
         self.storid = self.world.abbreviate(new_base_iri[:-1])
       else:
         self.storid = self.world.abbreviate(new_base_iri)
-        
+      self.metadata = Metadata(self, self.storid) # Metadata depends on storid
+      
     # Search for property names
     self._load_properties()
     
@@ -766,6 +768,31 @@ class Ontology(Namespace, _GraphManager):
         self.add_triple(bnode, rdf_rest, rdf_nil)
         
   def __repr__(self): return """get_ontology("%s")""" % (self.base_iri)
+  
+  
+class Metadata(object):
+  def __init__(self, namespace, storid):
+    object.__setattr__(self, "namespace", namespace)
+    object.__setattr__(self, "storid"   , storid)
+    
+  def __getattr__(self, attr):
+    Prop = self.namespace.world._props.get(attr)
+    values = [self.namespace.ontology._to_python(o) for o in self.namespace.world.get_triples_sp(self.storid, Prop.storid)]
+    values = ValueList(values, self, Prop)
+    self.__dict__[attr] = values
+    return values
+  
+  def __setattr__(self, attr, values):
+    Prop = self.namespace.world._props.get(attr)
+    if isinstance(Prop, AnnotationPropertyClass):
+        if not isinstance(values, list):
+          if values is None: values = []
+          else:              values = [values]
+        getattr(self, attr).reinit(values)
+        
+    else:
+      raise ValueError("Metadata can only used defined annotation properties!")
+  
   
   
 def _open_onto_file(base_iri, name, mode = "r", only_local = False):

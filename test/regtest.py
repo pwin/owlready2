@@ -489,6 +489,35 @@ class Test(BaseTest, unittest.TestCase):
     o = w.get_ontology("file://%s/test_ontoslash.owl" % HERE).load()
     
     assert len(o.imported_ontologies) == 1
+        
+  def test_ontology_19(self):
+    w = self.new_world()
+    o = w.get_ontology("http://test.org/t.owl")
+    
+    o.metadata.comment = "com1"
+    o.metadata.comment.append("com2")
+    
+    self.assert_triple(o.storid, comment.storid, to_literal("com1"), w)
+    self.assert_triple(o.storid, comment.storid, to_literal("com2"), w)
+
+    o.save("/tmp/t.owl")
+    
+  def test_ontology_20(self):
+    w = self.new_world()
+    o = w.get_ontology("file://%s/test_ontoslash.owl" % HERE).load()
+    
+    o.metadata.comment = "com1"
+    o.metadata.comment.append("com2")
+    
+    self.assert_triple(o.storid, comment.storid, to_literal("com1"), w)
+    self.assert_triple(o.storid, comment.storid, to_literal("com2"), w)
+    
+  def test_ontology_21(self):
+    w = self.new_world()
+    o = w.get_ontology("file://%s/test_ontoslash.owl" % HERE).load()
+    
+    assert o.metadata.comment == ["TEST"]
+    
     
     
   def test_class_1(self):

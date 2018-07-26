@@ -57,6 +57,7 @@ owlready2.namespace.FusionClass             = FusionClass
 owlready2.namespace.AllDisjoint             = AllDisjoint
 owlready2.namespace.ConstrainedDatatype     = ConstrainedDatatype
 owlready2.namespace.Inverse                 = Inverse
+owlready2.namespace.ValueList               = ValueList
 owlready2.entity.Thing              = Thing
 owlready2.entity.ClassConstruct     = ClassConstruct
 owlready2.entity.And                = And

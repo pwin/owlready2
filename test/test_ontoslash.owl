@@ -9,6 +9,7 @@
      xmlns:xml="http://www.w3.org/XML/1998/namespace">
     <owl:Ontology rdf:about="http://test.org/test_ontoslash/">
          <owl:imports rdf:resource="http://www.semanticweb.org/jiba/ontologies/2017/0/test"/>
+         <rdfs:comment rdf:datatype="http://www.w3.org/2001/XMLSchema#string">TEST</rdfs:comment>
     </owl:Ontology>
     
 
