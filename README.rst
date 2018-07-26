@@ -233,6 +233,7 @@ version 2 - 0.10
 * Bugfixes:
   - Fix reasoning when obtaining classes equivalent to nothing
   - Fix World creation with backend parameters
+  - Fix error when adding property at the class definition level
   
     
 Links

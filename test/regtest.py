@@ -737,6 +737,15 @@ class Test(BaseTest, unittest.TestCase):
         
     assert len(world._entities) == nb # Check that the redefinition did not load additional classes
     
+  def test_class_21(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test.owl")
+    
+    with onto:
+      class MyClass(Thing): comment = "abc"
+      
+    self.assert_triple(MyClass.storid, comment.storid, to_literal("abc"), world)
+    
     
   def test_individual_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

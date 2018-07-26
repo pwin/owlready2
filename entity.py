@@ -145,7 +145,8 @@ class EntityClass(type):
       if Prop is None:
         type.__setattr__(Class, k, v)
       else:
-        delattr(Class, k) # Remove the value initially stored by obj_dict in __new__
+        try: delattr(Class, k) # Remove the value initially stored by obj_dict in __new__
+        except: pass
         setattr(Class, k, v)
         
   def get_equivalent_to(Class):
