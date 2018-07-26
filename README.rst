@@ -231,6 +231,7 @@ version 2 - 0.10
 
 * Add Ontology.metadata for adding/querying ontology metadata
 * Add OwlReadyInconsistentOntologyError and Word.inconsistent_classes()
+* Small optimization
 * Bugfixes:
   - Fix reasoning when obtaining classes equivalent to nothing
   - Fix World creation with backend parameters

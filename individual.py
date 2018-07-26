@@ -255,9 +255,8 @@ class Thing(metaclass = ThingClass):
     else:
       Prop = self.namespace.world._props.get(attr)
       if Prop:
-        old_value = self.__dict__.get(attr, None)
-        
         if Prop.is_functional_for(self.__class__):
+          old_value = self.__dict__.get(attr, None)
           if Prop.inverse_property and (not old_value is None):
             old_value.__dict__.pop(Prop.inverse_property.python_name, None) # Remove => force reloading; XXX optimizable
             self.namespace.ontology.del_triple(old_value.storid, Prop.inverse_property.storid, self.storid) # Also remove inverse
