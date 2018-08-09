@@ -52,7 +52,10 @@ class Graph(BaseMainGraph):
       self.execute("""CREATE TABLE quads (c INTEGER, s TEXT, p TEXT, o TEXT)""")
       self.execute("""CREATE TABLE ontologies (c INTEGER PRIMARY KEY, iri TEXT, last_update DOUBLE)""")
       self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
-      self.execute("""CREATE TABLE resources (storid TEXT PRIMARY KEY, iri TEXT) WITHOUT ROWID""")
+      try:
+        self.execute("""CREATE TABLE resources (storid TEXT PRIMARY KEY, iri TEXT) WITHOUT ROWID""")
+      except sqlite3.OperationalError: # Old SQLite3 does not support WITHOUT ROWID -- here it is just an optimization
+        self.execute("""CREATE TABLE resources (storid TEXT PRIMARY KEY, iri TEXT)""")
       self.db.executemany("INSERT INTO resources VALUES (?,?)", _universal_abbrev_2_iri.items())
       self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
       self.execute("""CREATE INDEX index_quads_s ON quads(s)""")
