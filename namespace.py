@@ -809,8 +809,9 @@ def _open_onto_file(base_iri, name, mode = "r", only_local = False):
 def _get_onto_file(base_iri, name, mode = "r", only_local = False):
   if base_iri.endswith("#") or base_iri.endswith("/"): base_iri = base_iri[:-1]
   if base_iri.startswith("file://"): return base_iri[7:]
+  
   for dir in onto_path:
-    filename = os.path.join(dir, base_iri[:-1].rsplit("/", 1)[-1])
+    filename = os.path.join(dir, base_iri.rsplit("/", 1)[-1])
     if os.path.exists(filename): return filename
     for ext in ["", ".nt", ".ntriples", ".rdf", ".owl"]:
       filename = os.path.join(dir, "%s%s" % (name, ext))

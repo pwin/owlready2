@@ -236,6 +236,7 @@ version 2 - 0.10
   - Fix reasoning when obtaining classes equivalent to nothing
   - Fix World creation with backend parameters
   - Fix error when adding property at the class definition level
+  - Fix loading of ontology files with no extension from onto_path
   - Support old SQLite3 versions that do not accept WITHOUT ROWID
 
     
