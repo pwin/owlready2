@@ -397,13 +397,16 @@ class World(_GraphManager):
         entity = ThingClass(name, tuple(is_a_entities) or (Thing,), { "namespace" : namespace, "storid" : storid } )
         
       elif main_type is ObjectPropertyClass:
-        entity = ObjectPropertyClass(name, tuple(types) or (ObjectProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
+        types = tuple(t for t in types if t.iri != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")
+        entity = ObjectPropertyClass(name, types or (ObjectProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
         
       elif main_type is DataPropertyClass:
-        entity = DataPropertyClass(name, tuple(types) or (DataProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
+        types = tuple(t for t in types if t.iri != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")
+        entity = DataPropertyClass(name, types or (DataProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
         
       elif main_type is AnnotationPropertyClass:
-        entity = AnnotationPropertyClass(name, tuple(types) or (AnnotationProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
+        types = tuple(t for t in types if t.iri != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")
+        entity = AnnotationPropertyClass(name, types or (AnnotationProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
         
       elif main_type is Thing:
         if   len(types) == 1: Class = types[0]
