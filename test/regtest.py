@@ -2696,10 +2696,13 @@ I took a placebo
     import re, owlready2.owlxml_2_ntriples
     
     triples1 = ""
-    def on_triple(s,p,o):
+    def on_prepare_triple(s,p,o):
       nonlocal triples1
+      if not s.startswith("_"): s = "<%s>" % s
+      p = "<%s>" % p
+      if not (o.startswith("_") or o.startswith('"')): o = "<%s>" % o
       triples1 += "%s %s %s .\n" % (s,p,o)
-    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_owlxml.owl"), on_triple)
+    owlready2.driver.parse_owlxml(os.path.join(HERE, "test_owlxml.owl"), on_prepare_triple)
     
     f = open(os.path.join(HERE, "test_owlxml.ntriples"), "rb")
     triples2 = f.read().decode("unicode-escape")
@@ -2707,17 +2710,15 @@ I took a placebo
     
     self.assert_ntriples_equivalent(triples1, triples2)
     
-    #triples1 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples1)
-    #triples2 = re.sub(r"\_\:[a-zA_Z0-9]+", "_", triples2)
     
-    #triples1 = triples1.split("\n")
-    #triples2 = triples2.split("\n")
+    triples1 = ""
+    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_owlxml.owl"), on_prepare_triple)
+     
+    self.assert_ntriples_equivalent(triples1, triples2)
     
-    #missing = set(triples2) - set(triples1)
-    #exceed  = set(triples1) - set(triples2)
+    # Verify Cython PYX version is used
+    assert owlready2.driver.parse_owlxml != owlready2.owlxml_2_ntriples.parse
     
-    #assert not missing
-    #assert not exceed
     
   def test_format_3(self):
     world = self.new_world()
@@ -2772,15 +2773,24 @@ I took a placebo
     import re, owlready2.owlxml_2_ntriples
     
     triples1 = ""
-    def on_triple(s,p,o):
+    def on_prepare_triple(s,p,o):
       nonlocal triples1
+      if not s.startswith("_"): s = "<%s>" % s
+      p = "<%s>" % p
+      if not (o.startswith("_") or o.startswith('"')): o = "<%s>" % o
       triples1 += "%s %s %s .\n" % (s,p,o)
-    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_owlxml_2.owl"), on_triple)
+    owlready2.driver.parse_owlxml(os.path.join(HERE, "test_owlxml_2.owl"), on_prepare_triple)
     
     f = open(os.path.join(HERE, "test_owlxml_2.ntriples"), "rb")
     triples2 = f.read().decode("unicode-escape")
     f.close()
     
+    self.assert_ntriples_equivalent(triples1, triples2)
+
+    
+    triples1 = ""
+    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_owlxml_2.owl"), on_prepare_triple)
+
     self.assert_ntriples_equivalent(triples1, triples2)
     
   def test_format_9(self):
@@ -2842,14 +2852,23 @@ I took a placebo
     import re, owlready2.owlxml_2_ntriples
     
     triples1 = ""
-    def on_triple(s,p,o):
+    def on_prepare_triple(s,p,o):
       nonlocal triples1
+      if not s.startswith("_"): s = "<%s>" % s
+      p = "<%s>" % p
+      if not (o.startswith("_") or o.startswith('"')): o = "<%s>" % o
       triples1 += "%s %s %s .\n" % (s,p,o)
-    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_propchain_owlxml.owl"), on_triple)
+    owlready2.driver.parse_owlxml(os.path.join(HERE, "test_propchain_owlxml.owl"), on_prepare_triple)
     
     f = open(os.path.join(HERE, "test_propchain.ntriples"), "rb")
     triples2 = f.read().decode("unicode-escape")
     f.close()
+    
+    self.assert_ntriples_equivalent(triples1, triples2)
+
+    
+    triples1 = ""
+    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_propchain_owlxml.owl"), on_prepare_triple)
     
     self.assert_ntriples_equivalent(triples1, triples2)
     
@@ -2907,6 +2926,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert len(onto.graph) == 9
     
   def test_format_20(self):
+    import owlready2.rdfxml_2_ntriples
     world = self.new_world()
     n = world.get_ontology("http://www.test.org/test_ns.owl").load()
     
@@ -2917,12 +2937,24 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     rapper.wait()
     
     triples2 = ""
-    def on_triple(s,p,o):
+    def on_prepare_triple(s,p,o):
       nonlocal triples2
+      if not s.startswith("_"): s = "<%s>" % s
+      p = "<%s>" % p
+      if not (o.startswith("_") or o.startswith('"')): o = "<%s>" % o
       triples2 += "%s %s %s .\n" % (s,p,o)
-    owlready2.rdfxml_2_ntriples.parse(os.path.join(HERE, "test_ns.owl"), on_triple)
+    owlready2.driver.parse_rdfxml(os.path.join(HERE, "test_ns.owl"), on_prepare_triple)
     
     self.assert_ntriples_equivalent(triples1, triples2)
+    
+    
+    triples2 = ""
+    owlready2.rdfxml_2_ntriples.parse(os.path.join(HERE, "test_ns.owl"), on_prepare_triple)
+    
+    self.assert_ntriples_equivalent(triples1, triples2)
+    
+    # Verify that Cython PYX version is used
+    assert owlready2.driver.parse_rdfxml != owlready2.rdfxml_2_ntriples.parse
     
   def test_format_21(self):
     world = self.new_world()

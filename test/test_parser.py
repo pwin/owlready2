@@ -8,6 +8,7 @@ def rm(f):
   
 
 def do(c):
+  #print(c)
   r = os.system(c)
   if r: raise Exception("Error when running:'%s'!" % c)
 

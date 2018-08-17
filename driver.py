@@ -19,10 +19,18 @@
 
 from functools import lru_cache
 
+import owlready2
 from owlready2.base import *
 
-import owlready2.rdfxml_2_ntriples
-import owlready2.owlxml_2_ntriples
+try:
+  from rdfxml_2_ntriples_pyx import parse_rdfxml
+except:
+  from owlready2.rdfxml_2_ntriples import parse as parse_rdfxml
+
+try:
+  from owlxml_2_ntriples_pyx import parse_owlxml
+except:
+  from owlready2.owlxml_2_ntriples import parse as parse_owlxml
 
 
 class BaseGraph(object):
@@ -193,12 +201,12 @@ class BaseSubGraph(BaseGraph):
       
     elif format == "rdfxml":
       on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)
-      owlready2.rdfxml_2_ntriples.parse(f, None, on_prepare_triple, new_blank, new_literal, default_base)
+      parse_rdfxml(f, on_prepare_triple, new_blank, new_literal, default_base)
       onto_base_iri = on_finish()
       
     elif format == "owlxml":
       on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples, "datatypeIRI")
-      owlready2.owlxml_2_ntriples.parse(f, None, on_prepare_triple, new_blank, new_literal)
+      parse_owlxml(f, on_prepare_triple, new_blank, new_literal)
       onto_base_iri = on_finish()
       
     else:

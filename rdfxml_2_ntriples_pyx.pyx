@@ -20,35 +20,34 @@
 import sys, xml, xml.parsers.expat
 from collections import defaultdict
 
-try:
-  from owlready2.base import OwlReadyOntologyParsingError
-except:
-  class OwlReadyOntologyParsingError(Exception): pass
+from owlready2.base import OwlReadyOntologyParsingError
 
 
-  
-def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, default_base = ""):
-  parser = xml.parsers.expat.ParserCreate(None, "")
+def parse_rdfxml(object f, object on_prepare_triple = None, object new_blank = None, object new_literal = None, str default_base = ""):
+  cdef object parser = xml.parsers.expat.ParserCreate(None, "")
   try:
     parser.buffer_text          = True
     parser.specified_attributes = True
   except: pass
   
-  stack                    = [["", ""]] # List of [parse type, value] pairs
-  prefixes                 = {}
-  prefixess                = [prefixes]
-  tag_is_predicate         = False
-  current_blank            = 0
-  current_fake_blank       = 0
-  current_content          = ""
-  current_attrs            = None
-  nb_triple                = 0
-  bns                      = defaultdict(set)
-  dont_create_unnamed_bn   = False
-  axiom_annotation_sources = {}
-  axiom_annotation_props   = {}
-  axiom_annotation_targets = {}
-  triples_with_unnamed_bn  = defaultdict(list)
+  cdef list stack                    = [["", ""]] # List of [parse type, value] pairs
+  cdef dict prefixes                 = {}
+  cdef list prefixess                = [prefixes]
+  cdef bint tag_is_predicate         = False
+  cdef int current_blank             = 0
+  cdef int current_fake_blank        = 0
+  cdef str current_content           = ""
+  cdef dict current_attrs            = None
+  cdef int nb_triple                 = 0
+  cdef object bns                    = defaultdict(set)
+  cdef bint dont_create_unnamed_bn   = False
+  cdef dict axiom_annotation_sources = {}
+  cdef dict axiom_annotation_props   = {}
+  cdef dict axiom_annotation_targets = {}
+  cdef object triples_with_unnamed_bn= defaultdict(list)
+  
+  cdef xml_base, xml_dir
+  
   if default_base:
     xml_base = default_base
     if xml_base.endswith("#") or xml_base.endswith("/"): xml_base = xml_base[:-1]
@@ -58,7 +57,7 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
     xml_dir                  = ""
     
   if not on_prepare_triple:
-    def on_prepare_triple(s,p,o):
+    def on_prepare_triple(str s, str p, str o):
       nonlocal nb_triple
       nb_triple += 1
       if not s.startswith("_"): s = "<%s>" % s
@@ -76,19 +75,24 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
     current_fake_blank += 1
     return "_ %s" % current_fake_blank
   
-  node_2_blanks = defaultdict(new_blank)
-  known_nodes   = set()
+  cdef object node_2_blanks = defaultdict(new_blank)
+  cdef set known_nodes      = set()
   
   if not new_literal:
-    def new_literal(value, attrs):
+    def new_literal(str value, dict attrs):
       value = value.replace('"', '\\"').replace("\n", "\\n")
-      lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
+      cdef str lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
       if lang: return '"%s"@%s' % (value, lang)
-      datatype = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype")
+      cdef str datatype = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype")
       if datatype: return '"%s"^^<%s>' % (value, datatype)
       return '"%s"' % (value)
     
-  def new_list(l):
+  def new_list(list l):
+    cdef str bn
+    cdef str bn0
+    cdef str bn_next
+    cdef int i
+    
     bn = bn0 = new_blank()
     
     if l:
@@ -106,7 +110,8 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
       
     return bn0
   
-  def add_to_bn(bn, type, rel, value):
+  def add_to_bn(str bn, str type, str rel, value):
+    nonlocal bns, known_nodes
     if type == "COL":
       value = tuple(frozenset(bns[v])
                     if v.startswith("_") and (not v in known_nodes)
@@ -116,22 +121,24 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
     else:
       if value.startswith("_") and (not value in known_nodes): value = frozenset(bns[value])
       bns[bn].add((type, rel, value))
-    
-  def startNamespace(prefix, uri):
-    nonlocal prefixes
+      
+  def startNamespace(str prefix, str uri):
+    nonlocal prefixess, prefixes
     prefixes = prefixes.copy()
     prefixess.append(prefixes)
     
     if prefix: prefixes[prefix  ] = uri
     else:      prefixes[""      ] = uri
       
-  def endNamespace(prefix):
-    nonlocal prefixes
+  def endNamespace(str prefix):
+    nonlocal prefixess, prefixes
     prefixess.pop()
     prefixes = prefixess[-1]
     
-  def startElement(tag, attrs):
-    nonlocal tag_is_predicate, current_content, current_attrs, dont_create_unnamed_bn, xml_base, xml_dir
+  def startElement(str tag, dict attrs):
+    nonlocal tag_is_predicate, stack, current_content, current_attrs, dont_create_unnamed_bn, xml_base, xml_dir, known_nodes, node_2_blanks
+    cdef str iri
+    cdef str namespace_base
     
     tag_is_predicate = not tag_is_predicate
     if tag_is_predicate:
@@ -206,8 +213,12 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
         stack[-1][1] = iri
         
         
-  def endElement(tag):
-    nonlocal tag_is_predicate, dont_create_unnamed_bn
+  def endElement(str tag):
+    nonlocal tag_is_predicate, dont_create_unnamed_bn,  stack, axiom_annotation_sources, axiom_annotation_props, axiom_annotation_targets, triples_with_unnamed_bn
+    cdef str iri
+    cdef str parse_type
+    cdef object value
+    cdef list triples
     
     if tag_is_predicate:
       parse_type, value = stack.pop()
@@ -265,8 +276,8 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
     tag_is_predicate = not tag_is_predicate
     
     
-  def characters(content):
-    nonlocal current_content
+  def characters(str content):
+    nonlocal current_content,  stack
     if stack[-1][0] == "Literal": current_content += content
     
     
@@ -286,16 +297,24 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
   except Exception as e:
     raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), parser.CurrentLineNumber, parser.CurrentColumnNumber)) from e
   
-  
+  cdef object content_2_bns
+  cdef str bn
+  cdef set content
   if triples_with_unnamed_bn:
     content_2_bns = defaultdict(list)
     for bn, content in bns.items():
       if not bn.startswith("_ "):
         content_2_bns[frozenset(content)].append(bn)
         
-    def rebuild_bn(content):
-      bn = new_blank()
+    def rebuild_bn(object content):
+      nonlocal content_2_bns
+      cdef str bn = new_blank()
       content_2_bns[frozenset(content)].append(bn)
+      cdef tuple i
+      cdef object drop
+      cdef str p
+      cdef object o
+      cdef list l
       for i in content:
         if   i[0] == "REL":
           drop, p, o = i
@@ -333,10 +352,7 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
             
           if candidates_bn: o = candidates_bn[-1]
           else:
-            #print()
-            #print("rebuild", o, content)
             o = rebuild_bn(content)
-            #print()
           on_prepare_triple(axiom_iri,p,o)
         except Exception as e:
           raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), line, column)) from e
@@ -345,11 +361,23 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
   return nb_triple
 
 
-if __name__ == "__main__":
-  filename = sys.argv[-1]
+def _create_triplelite_func(object abbreviate, list values, str datatype_attr):
+  def on_prepare_triple(str s, str p, str o):
+    nonlocal values
+    
+    if not s.startswith("_"): s = abbreviate(s)
+    p = abbreviate(p)
+    if not (o.startswith("_") or o.startswith('"')): o = abbreviate(o)
+    
+    values.append((s,p,o))
+    
+  def new_literal(str value, dict attrs):
+    nonlocal datatype_attr
+    cdef str lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
+    if lang: return '"%s"@%s' % (value, lang)
+    cdef str datatype = attrs.get(datatype_attr)
+    if datatype: return '"%s"%s' % (value, abbreviate(datatype))
+    return '"%s"' % (value)
   
-  import time
-  t = time.time()
-  nb_triple = parse(filename)
-  t = time.time() - t
-  print("# %s triples read in %ss" % (nb_triple, t), file = sys.stderr)
+  return on_prepare_triple, new_literal
+

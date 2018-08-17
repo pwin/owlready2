@@ -19,14 +19,11 @@
 
 import sys, xml.parsers.expat
 
-try:
-  from owlready2.base import OwlReadyOntologyParsingError
-except:
-  class OwlReadyOntologyParsingError(Exception): pass
+from owlready2.base import OwlReadyOntologyParsingError
 
-rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+cdef str rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 
-types = {
+cdef dict types = {
   "http://www.w3.org/2002/07/owl#Class"              : "http://www.w3.org/2002/07/owl#Class",
   "http://www.w3.org/2002/07/owl#NamedIndividual"    : "http://www.w3.org/2002/07/owl#NamedIndividual",
   "http://www.w3.org/2002/07/owl#ObjectProperty"     : "http://www.w3.org/2002/07/owl#ObjectProperty",
@@ -34,7 +31,7 @@ types = {
   "http://www.w3.org/2002/07/owl#AnnotationProperty" : "http://www.w3.org/2002/07/owl#AnnotationProperty",
 }
 
-prop_types = {
+cdef dict prop_types = {
   "http://www.w3.org/2002/07/owl#FunctionalObjectProperty"        : "http://www.w3.org/2002/07/owl#FunctionalProperty",
   "http://www.w3.org/2002/07/owl#FunctionalDataProperty"          : "http://www.w3.org/2002/07/owl#FunctionalProperty",
   "http://www.w3.org/2002/07/owl#InverseFunctionalObjectProperty" : "http://www.w3.org/2002/07/owl#InverseFunctionalProperty",
@@ -51,7 +48,7 @@ prop_types = {
   "http://www.w3.org/2002/07/owl#TransitiveDataProperty"          : "http://www.w3.org/2002/07/owl#TransitiveProperty",
 }
 
-sub_ofs = {
+cdef dict sub_ofs = {
   "http://www.w3.org/2002/07/owl#SubClassOf"              : "http://www.w3.org/2000/01/rdf-schema#subClassOf",
   "http://www.w3.org/2002/07/owl#SubPropertyOf"           : "http://www.w3.org/2000/01/rdf-schema#subPropertyOf",
   "http://www.w3.org/2002/07/owl#SubObjectPropertyOf"     : "http://www.w3.org/2000/01/rdf-schema#subPropertyOf",
@@ -59,7 +56,7 @@ sub_ofs = {
   "http://www.w3.org/2002/07/owl#SubAnnotationPropertyOf" : "http://www.w3.org/2000/01/rdf-schema#subPropertyOf",
   }
 
-equivs = {
+cdef dict equivs = {
   "http://www.w3.org/2002/07/owl#EquivalentClasses" : "http://www.w3.org/2002/07/owl#equivalentClass",
   "http://www.w3.org/2002/07/owl#EquivalentProperties" : "http://www.w3.org/2002/07/owl#equivalentProperty",
   "http://www.w3.org/2002/07/owl#EquivalentObjectProperties" : "http://www.w3.org/2002/07/owl#equivalentProperty",
@@ -68,7 +65,7 @@ equivs = {
   "http://www.w3.org/2002/07/owl#SameIndividual" : "http://www.w3.org/2002/07/owl#sameAs",
   }
 
-restrs = {
+cdef dict restrs = {
   "http://www.w3.org/2002/07/owl#ObjectSomeValuesFrom" : "http://www.w3.org/2002/07/owl#someValuesFrom",
   "http://www.w3.org/2002/07/owl#ObjectAllValuesFrom"  : "http://www.w3.org/2002/07/owl#allValuesFrom",
   "http://www.w3.org/2002/07/owl#DataSomeValuesFrom"   : "http://www.w3.org/2002/07/owl#someValuesFrom",
@@ -77,7 +74,7 @@ restrs = {
   "http://www.w3.org/2002/07/owl#DataHasValue"         : "http://www.w3.org/2002/07/owl#hasValue",
   }
 
-qual_card_restrs = {
+cdef dict qual_card_restrs = {
   "http://www.w3.org/2002/07/owl#ObjectExactCardinality" : "http://www.w3.org/2002/07/owl#qualifiedCardinality",
   "http://www.w3.org/2002/07/owl#ObjectMinCardinality"   : "http://www.w3.org/2002/07/owl#minQualifiedCardinality",
   "http://www.w3.org/2002/07/owl#ObjectMaxCardinality"   : "http://www.w3.org/2002/07/owl#maxQualifiedCardinality",
@@ -86,7 +83,7 @@ qual_card_restrs = {
   "http://www.w3.org/2002/07/owl#DataMaxCardinality"     : "http://www.w3.org/2002/07/owl#maxQualifiedCardinality",
   }
 
-card_restrs = {
+cdef dict card_restrs = {
   "http://www.w3.org/2002/07/owl#ObjectExactCardinality" : "http://www.w3.org/2002/07/owl#cardinality",
   "http://www.w3.org/2002/07/owl#ObjectMinCardinality"   : "http://www.w3.org/2002/07/owl#minCardinality",
   "http://www.w3.org/2002/07/owl#ObjectMaxCardinality"   : "http://www.w3.org/2002/07/owl#maxCardinality",
@@ -95,7 +92,7 @@ card_restrs = {
   "http://www.w3.org/2002/07/owl#DataMaxCardinality"     : "http://www.w3.org/2002/07/owl#maxCardinality",
   }
 
-disjoints = {
+cdef dict disjoints = {
   "http://www.w3.org/2002/07/owl#DisjointClasses"              : ("http://www.w3.org/2002/07/owl#AllDisjointClasses"   , "http://www.w3.org/2002/07/owl#disjointWith", "http://www.w3.org/2002/07/owl#members"),
   "http://www.w3.org/2002/07/owl#DisjointObjectProperties"     : ("http://www.w3.org/2002/07/owl#AllDisjointProperties", "http://www.w3.org/2002/07/owl#propertyDisjointWith", "http://www.w3.org/2002/07/owl#members"),
   "http://www.w3.org/2002/07/owl#DisjointDataProperties"       : ("http://www.w3.org/2002/07/owl#AllDisjointProperties", "http://www.w3.org/2002/07/owl#propertyDisjointWith", "http://www.w3.org/2002/07/owl#members"),
@@ -105,29 +102,29 @@ disjoints = {
 
 
 
-def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
-  parser = xml.parsers.expat.ParserCreate(None, "")
+def parse_owlxml(object f, object on_prepare_triple = None, object new_blank = None, object new_literal = None):
+  cdef object parser = xml.parsers.expat.ParserCreate(None, "")
   try:
     parser.buffer_text          = True
     parser.specified_attributes = True
   except: pass
   
-  ontology_iri           = ""
-  objs                   = []
-  annots                 = []
-  prefixes               = {}
-  current_content        = ""
-  current_attrs          = None
-  current_blank          = 0
-  in_declaration         = False
-  in_prop_chain          = False
-  before_declaration     = True
-  last_cardinality       = "0"
-  nb_triple              = 0
-
-
+  cdef str ontology_iri           = ""
+  cdef list objs                  = []
+  cdef list annots                = []
+  cdef dict prefixes              = {}
+  cdef str current_content        = ""
+  cdef dict current_attrs         = None
+  cdef int current_blank          = 0
+  cdef bint in_declaration        = False
+  cdef bint in_prop_chain         = False
+  cdef bint before_declaration    = True
+  cdef str last_cardinality       = "0"
+  cdef int nb_triple              = 0
+  
+  
   if not on_prepare_triple:
-    def on_prepare_triple(s,p,o):
+    def on_prepare_triple(str s, str p, str o):
       nonlocal nb_triple
       nb_triple += 1
       if not s.startswith("_"): s = "<%s>" % s
@@ -141,15 +138,20 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
       return "_:%s" % current_blank
     
   if not new_literal:
-    def new_literal(value, attrs):
+    def new_literal(str value, dict attrs):
       value = value.replace('"', '\\"').replace("\n", "\\n")
-      lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
+      cdef str lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
       if lang: return '"%s"@%s' % (value, lang)
-      datatype = attrs.get("datatypeIRI")
+      cdef str datatype = attrs.get("datatypeIRI")
       if datatype: return '"%s"^^<%s>' % (value, datatype)
       return '"%s"' % (value)
     
-  def new_list(l):
+  def new_list(list l):
+    cdef str bn
+    cdef str bn0
+    cdef str bn_next
+    cdef int i
+    
     bn = bn0 = new_blank()
     
     if l:
@@ -169,11 +171,14 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
   
   
   
-  def unabbreviate_IRI(abbreviated_iri):
+  def unabbreviate_IRI(str abbreviated_iri):
+    cdef str prefix, name
     prefix, name = abbreviated_iri.split(":", 1)
     return prefixes[prefix] + name
   
-  def get_IRI(attrs):
+  def get_IRI(dict attrs):
+    nonlocal ontology_iri
+    cdef str iri
     if "IRI" in attrs:
       iri = attrs["IRI"]
       if not iri: return ontology_iri
@@ -181,7 +186,7 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
       return iri
     return unabbreviate_IRI(attrs["abbreviatedIRI"])
   
-  def startElement(tag, attrs):
+  def startElement(str tag, dict attrs):
     nonlocal current_content, current_attrs, in_declaration, before_declaration, last_cardinality, in_prop_chain, ontology_iri
     current_content = ""
     if   (tag == "http://www.w3.org/2002/07/owl#Prefix"):
@@ -232,7 +237,7 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
     elif (tag == "RDF") or (tag == "rdf:RDF"): raise ValueError("Not an OWL/XML file! (It seems to be an OWL/RDF file)")
     
     
-  def endElement(tag):
+  def endElement(str tag):
     nonlocal in_declaration, objs, in_prop_chain
 
     if   (tag == "http://www.w3.org/2002/07/owl#Declaration"):
@@ -416,12 +421,13 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
       objs[-2:] = [bn]
     
       
-  def characters(content):
+  def characters(str content):
     nonlocal current_content
     current_content += content
     
   def purge_annotations(on_iri):
     nonlocal annots
+    cdef str s,p,o, prop_iri, value
     if isinstance(on_iri, tuple):
       s,p,o  = on_iri
       on_iri = new_blank()
@@ -434,12 +440,10 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
     annots = []
 
 
-  #parser.StartNamespaceDeclHandler = startNamespace
-  #parser.EndNamespaceDeclHandler   = endNamespace
   parser.StartElementHandler       = startElement
   parser.EndElementHandler         = endElement
   parser.CharacterDataHandler      = characters
-  
+
   try:
     if isinstance(f, str):
       f = open(f, "rb")
@@ -456,19 +460,9 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
 
 
     
-def _rindex(l):
+cdef int _rindex(list l):
   i = len(l) - 1
   while l[i] != "(": i -= 1
   return i
 
     
-
-
-if __name__ == "__main__":
-  filename = sys.argv[-1]
-
-  import time
-  t = time.time()
-  nb_triple = parse(filename)
-  t = time.time() - t
-  print("# %s triples read in %ss" % (nb_triple, t), file = sys.stderr)

@@ -27,6 +27,17 @@ import setuptools
 
 version = open(os.path.join(HERE, "__init__.py")).read().split('VERSION = "', 1)[1].split('"', 1)[0]
 
+try:
+  import Cython.Build
+  extensions = [
+    setuptools.Extension("rdfxml_2_ntriples_pyx", ["rdfxml_2_ntriples_pyx.pyx"]),
+    setuptools.Extension("owlxml_2_ntriples_pyx", ["owlxml_2_ntriples_pyx.pyx"]),
+  ]
+  extensions = Cython.Build.cythonize(extensions)
+except:
+  extensions = []
+
+  
 setuptools.setup(
   name         = "Owlready2",
   version      = version,
@@ -56,4 +67,6 @@ setuptools.setup(
   package_dir  = {"owlready2" : "."},
   packages     = ["owlready2"],
   package_data = {"owlready2" : ["owlready_ontology.owl", "hermit/*.*", "hermit/org/semanticweb/HermiT/cli/*"]},
+  
+  ext_modules = extensions,
 )

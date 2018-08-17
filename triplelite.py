@@ -537,37 +537,54 @@ class SubGraph(BaseSubGraph):
     
   def create_parse_func(self, filename = None, delete_existing_triples = True, datatype_attr = "http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype"):
     values       = []
-    abbrevs      = {}
     new_abbrevs  = []
-
+    
     cur = self.db.cursor()
     
-    def abbreviate(iri): # Re-implement for speed
-      storid = abbrevs.get(iri)
-      if not storid is None: return storid
-      r = cur.execute("SELECT storid FROM resources WHERE iri=? LIMIT 1", (iri,)).fetchone()
-      if r:
-        abbrevs[iri] = r[0]
-        return r[0]
-      self.parent.current_resource += 1
-      storid = _int_base_62(self.parent.current_resource)
-      new_abbrevs.append((storid, iri))
-      abbrevs[iri] = storid
-      return storid
-    
-    def on_prepare_triple(s, p, o):
-      if not s.startswith("_"): s = abbreviate(s)
-      p = abbreviate(p)
-      if not (o.startswith("_") or o.startswith('"')): o = abbreviate(o)
+    # Re-implement abbreviate() for speed
+    if self.parent.abbreviate_d is None:
+      abbrevs = {}
+      def abbreviate(iri):
+        storid = abbrevs.get(iri)
+        if not storid is None: return storid
+        r = cur.execute("SELECT storid FROM resources WHERE iri=? LIMIT 1", (iri,)).fetchone()
+        if r:
+          abbrevs[iri] = r[0]
+          return r[0]
+        self.parent.current_resource += 1
+        storid = _int_base_62(self.parent.current_resource)
+        new_abbrevs.append((storid, iri))
+        abbrevs[iri] = storid
+        return storid
+    else:
+      abbrevs = self.parent.abbreviate_d
+      def abbreviate(iri):
+        storid = abbrevs.get(iri)
+        if not storid is None: return storid
+        
+        self.parent.current_resource += 1
+        storid = _int_base_62(self.parent.current_resource)
+        new_abbrevs.append((storid, iri))
+        abbrevs[iri] = storid
+        return storid
       
-      values.append((s,p,o))
+    try:
+      import rdfxml_2_ntriples_pyx
+      on_prepare_triple, new_literal = rdfxml_2_ntriples_pyx._create_triplelite_func(abbreviate, values, datatype_attr)
+    except:
+      def on_prepare_triple(s, p, o):
+        if not s.startswith("_"): s = abbreviate(s)
+        p = abbreviate(p)
+        if not (o.startswith("_") or o.startswith('"')): o = abbreviate(o)
+        values.append((s,p,o))
+        
+      def new_literal(value, attrs):
+        lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
+        if lang: return '"%s"@%s' % (value, lang)
+        datatype = attrs.get(datatype_attr)
+        if datatype: return '"%s"%s' % (value, abbreviate(datatype))
+        return '"%s"' % (value)
       
-    def new_literal(value, attrs):
-      lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
-      if lang: return '"%s"@%s' % (value, lang)
-      datatype = attrs.get(datatype_attr)
-      if datatype: return '"%s"%s' % (value, abbreviate(datatype))
-      return '"%s"' % (value)
     
     def on_finish():
       if filename: date = os.path.getmtime(filename)
