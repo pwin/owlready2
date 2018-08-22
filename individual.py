@@ -147,6 +147,12 @@ class Thing(metaclass = ThingClass):
               if not LOADING:
                 already_existing.namespace.ontology.add_triple(already_existing.storid, rdf_type, C.storid)
                 
+        bases = ThingClass._find_base_classes(already_existing.is_a)
+        if len(bases) == 1:
+          already_existing.__class__ = bases[0]
+        else:
+          already_existing.__class__ = FusionClass._get_fusion_class(bases)
+          
         if not LOADING:
           for attr, value in kargs.items(): setattr(already_existing, attr, value)
           

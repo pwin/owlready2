@@ -1047,15 +1047,19 @@ class Test(BaseTest, unittest.TestCase):
     world   = self.new_world()
     onto = get_ontology("http://test.org/t.owl")
     with onto:
-      class Emp(Thing): pass
-      class Emp2(Thing): pass
+      class Emp1(Thing):
+        def f1(self): pass
+      class Emp2(Thing):
+        def f2(self): pass
 
-    e = Emp()
+    e = Emp1()
     Emp2(e)
-
-    assert isinstance(e, Emp)
-    assert isinstance(e, Emp2)
     
+    e.f1()
+    e.f2()
+    
+    assert isinstance(e, Emp1)
+    assert isinstance(e, Emp2)
     
   def test_prop_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
