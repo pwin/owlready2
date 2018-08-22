@@ -28,7 +28,7 @@ Owlready2 can:
 
  - Tested up to 100 millions of RDF triples (but can potentially support more).
 
- - In addition, the quadstore is compatible with the RDFlib Pyton module, which can be used to perform SPARQL queries.
+ - In addition, the quadstore is compatible with the RDFlib Python module, which can be used to perform SPARQL queries.
    
 Owlready has been created by Jean-Baptiste Lamy at the LIMICS reseach lab.
 It is available under the GNU LGPL licence v3.
