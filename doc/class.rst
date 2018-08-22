@@ -140,6 +140,13 @@ subclasses). It returns a generator.
 
    >>> for i in Drug.instances(): print(i)
 
+Multiple calls with the individual name and namespace will returns the same individual
+(without creating a dupplicate), and update the individual if property values are given.
+   
+::
+
+   >>> assert Drug("my_drug3") is Drug("my_drug3") 
+
 Finally, Individuals also have the .equivalent_to attribute (which correspond to the "same as" relation).
 
 

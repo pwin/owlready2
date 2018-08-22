@@ -230,6 +230,7 @@ version 2 - 0.10
 ****************
 
 * Add Ontology.metadata for adding/querying ontology metadata
+* Allows multiple individual creations with the same name/IRI, now returning the same individuals
 * Add OwlReadyInconsistentOntologyError and Word.inconsistent_classes()
 * Implement RDF/XML and OWL/XML parsing in Cython (25% speed boost for parsing)
 * Small optimization

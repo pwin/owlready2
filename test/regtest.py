@@ -778,6 +778,7 @@ class Test(BaseTest, unittest.TestCase):
     
   def test_individual_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
+
     assert isinstance(n.ma_tomate, n.Tomato)
     assert isinstance(n.ma_tomate, n.Vegetable)
     assert isinstance(n.ma_tomate, n.Topping)
@@ -1013,6 +1014,47 @@ class Test(BaseTest, unittest.TestCase):
       
     assert left_ventricular.part_of == [heart]
     assert set(left_ventricular.part_of.indirect()) == { heart, abdomen }
+    
+  def test_individual_17(self):
+    world   = self.new_world()
+    onto = get_ontology("http://test.org/t.owl")
+    with onto:
+      class Emp(Thing): pass
+      class Emp2(Thing): pass
+      class p1(Thing >> int): pass
+      class p2(Thing >> int): pass
+      
+    e1 = Emp("e")
+    e2 = Emp("e")
+    
+    assert e1 is e2
+    
+    f1 = Emp("f")
+    f2 = Emp2("f")
+    
+    assert f1 is f2
+    assert isinstance(f1, Emp)
+    assert isinstance(f2, Emp2)
+    
+    g1 = Emp("g", p1 = [1])
+    g2 = Emp("g", p2 = [2])
+    
+    assert g1 is g2
+    assert g1.p1 == [1]
+    assert g1.p2 == [2]
+    
+  def test_individual_18(self):
+    world   = self.new_world()
+    onto = get_ontology("http://test.org/t.owl")
+    with onto:
+      class Emp(Thing): pass
+      class Emp2(Thing): pass
+
+    e = Emp()
+    Emp2(e)
+
+    assert isinstance(e, Emp)
+    assert isinstance(e, Emp2)
     
     
   def test_prop_1(self):

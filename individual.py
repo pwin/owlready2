@@ -128,29 +128,59 @@ class Thing(metaclass = ThingClass):
     self.namespace.world.refactor(self.storid, new_iri)
   iri = property(get_iri, set_iri)
   
+  def __new__(Class, name = None, namespace = None, **kargs):
+    if name:
+      if isinstance(name, Thing):
+        namespace = name.namespace
+        name      = name.name
+      else:
+        namespace = namespace or CURRENT_NAMESPACES[-1] or Class.namespace
+      already_existing = namespace.world._entities.get(namespace.world.abbreviate("%s%s" % (namespace.base_iri, name)))
+      
+      if not already_existing is None:
+        if not isinstance(already_existing, Class):
+          if isinstance(Class, FusionClass): Classes =  Class.__bases__
+          else:                              Classes = (Class,)
+          for C in Classes:
+            if not C in already_existing.is_a:
+              already_existing.is_a._append(C)
+              if not LOADING:
+                already_existing.namespace.ontology.add_triple(already_existing.storid, rdf_type, C.storid)
+                
+        if not LOADING:
+          for attr, value in kargs.items(): setattr(already_existing, attr, value)
+          
+        return already_existing
+
+    return object.__new__(Class)
+  
   def __init__(self, name = None, namespace = None, **kargs):
     self.namespace = namespace or CURRENT_NAMESPACES[-1] or self.__class__.namespace
-    if isinstance(self.__class__, FusionClass):
-      self.__dict__["is_a"] = CallbackList(self.__class__.__bases__, self, Thing._instance_is_a_changed)
-    else:
-      self.__dict__["is_a"] = CallbackList([self.__class__], self, Thing._instance_is_a_changed)
-    self.__dict__["_equivalent_to"] = None
     if name:
+      is_new = not "storid" in self.__dict__
       iri = "%s%s" % (self.namespace.base_iri, name)
       self._name = name
     else:
+      is_new = True
       iri = self.namespace.world.new_numbered_iri("%s%s" % (self.namespace.base_iri, self.generate_default_name()))
       self._name = iri[len(self.namespace.base_iri):]
-    self.storid = self.namespace.world.abbreviate(iri)
-    self.namespace.world._entities[self.storid] = self
-    
-    if not LOADING:
-      self.namespace.ontology.add_triple(self.storid, rdf_type, owl_named_individual)
-      for parent in self.is_a:
-        self.namespace.ontology.add_triple(self.storid, rdf_type, parent.storid)
-        
-      for attr, value in kargs.items(): setattr(self, attr, value)
       
+    if is_new:
+      self.__dict__["_equivalent_to"] = None
+      self.storid = self.namespace.world.abbreviate(iri)
+      self.namespace.world._entities[self.storid] = self
+      if isinstance(self.__class__, FusionClass):
+        self.__dict__["is_a"] = CallbackList(self.__class__.__bases__, self, Thing._instance_is_a_changed)
+      else:
+        self.__dict__["is_a"] = CallbackList([self.__class__], self, Thing._instance_is_a_changed)
+        
+      if not LOADING:
+        self.namespace.ontology.add_triple(self.storid, rdf_type, owl_named_individual)
+        for parent in self.is_a:
+          self.namespace.ontology.add_triple(self.storid, rdf_type, parent.storid)
+          
+        for attr, value in kargs.items(): setattr(self, attr, value)
+        
   def generate_default_name(self): return self.__class__.name.lower()
   
   def _get_is_instance_of(self):    return self.is_a
