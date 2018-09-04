@@ -97,7 +97,7 @@ class PropertyClass(EntityClass):
     
   def get_domain(Prop):
     if Prop._domain is None:
-      Prop._domain = CallbackList((Prop.namespace.world._to_python(o) for o in Prop.namespace.world.get_triples_sp(Prop.storid, rdf_domain)),
+      Prop._domain = CallbackList((Prop.namespace.world._to_python(o, default_to_none = True) for o in Prop.namespace.world.get_triples_sp(Prop.storid, rdf_domain)),
                                   Prop, PropertyClass._domain_changed)
     return Prop._domain
 
@@ -124,7 +124,7 @@ class PropertyClass(EntityClass):
   def get_range(Prop):
     if Prop._range is None:
       Prop._range = CallbackList(
-        (_universal_abbrev_2_datatype.get(o) or Prop.namespace.world._to_python(o)
+        (_universal_abbrev_2_datatype.get(o) or Prop.namespace.world._to_python(o, default_to_none = True)
          for o in Prop.namespace.world.get_triples_sp(Prop.storid, rdf_range)),
         Prop, PropertyClass._range_changed)
     return Prop._range

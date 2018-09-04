@@ -128,10 +128,10 @@ class _GraphManager(object):
       if first != rdf_nil: yield first
       bnode = self.get_triple_sp(bnode, rdf_rest)
   
-  def _to_python(self, o):
+  def _to_python(self, o, default_to_none = False):
     if   o.startswith("_"): return self._parse_bnode(o)
     elif o.startswith('"'): return from_literal(o)
-    else: return self.world._get_by_storid(o)
+    else: return self.world._get_by_storid(o, default_to_none = default_to_none)
     raise ValueError
   
   def _to_rdf(self, o):
@@ -331,13 +331,13 @@ class World(_GraphManager):
   def __getitem__(self, iri):
     return self._get_by_storid(self.abbreviate(iri), iri)
   
-  def _get_by_storid(self, storid, full_iri = None, main_type = None, main_onto = None, trace = None):
+  def _get_by_storid(self, storid, full_iri = None, main_type = None, main_onto = None, trace = None, default_to_none = True):
     try:
-      return self._get_by_storid2(storid, full_iri, main_type, main_onto)
+      return self._get_by_storid2(storid, full_iri, main_type, main_onto, default_to_none)
     except RecursionError:
-      return self._get_by_storid2(storid, full_iri, main_type, main_onto, ())
+      return self._get_by_storid2(storid, full_iri, main_type, main_onto, default_to_none, ())
     
-  def _get_by_storid2(self, storid, full_iri = None, main_type = None, main_onto = None, trace = None):
+  def _get_by_storid2(self, storid, full_iri = None, main_type = None, main_onto = None, default_to_none = True, trace = None):
     entity = self._entities.get(storid)
     if not entity is None: return entity
     
@@ -393,7 +393,6 @@ class World(_GraphManager):
             
       # Read and create with classes first, but not construct, in order to break cycles.
       if   main_type is ThingClass:
-        #entity = ThingClass(name, (Thing,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
         entity = ThingClass(name, tuple(is_a_entities) or (Thing,), { "namespace" : namespace, "storid" : storid } )
         
       elif main_type is ObjectPropertyClass:
@@ -414,7 +413,9 @@ class World(_GraphManager):
         else:                 Class = Thing
         entity = Class(name, namespace = namespace)
         
-      else: return None
+      else:
+        if default_to_none: return None
+        return full_iri or self.unabbreviate(storid)
       
       if is_a_bnodes:
         list.extend(entity.is_a, (onto._parse_bnode(bnode) for onto, bnode in is_a_bnodes))

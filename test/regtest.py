@@ -1061,6 +1061,15 @@ class Test(BaseTest, unittest.TestCase):
     assert isinstance(e, Emp1)
     assert isinstance(e, Emp2)
     
+  def test_individual_19(self):
+    world   = self.new_world()
+    onto = get_ontology("http://test.org/test_undeclared_entity.owl").load()
+    
+    assert onto.C.hasRelatedSynonym == ["http://test.org/test_undeclared_entity.owl#genid1217"]
+    
+    assert onto.i.hasRelatedSynonym == ["http://test.org/test_undeclared_entity.owl#genid1219"]
+    
+    
   def test_prop_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     assert "has_topping" in default_world._props

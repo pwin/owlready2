@@ -152,7 +152,7 @@ class EntityClass(type):
   def get_equivalent_to(Class):
     if Class._equivalent_to is None:
       Class._equivalent_to = _EquivalentToList(
-          [Class.namespace.world._to_python(o)
+          [Class.namespace.world._to_python(o, default_to_none = True)
            for o in Class.namespace.world.get_triples_sp(Class.storid, Class._owl_equivalent)
           ], Class, Class.__class__._class_equivalent_to_changed)
     return Class._equivalent_to

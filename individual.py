@@ -218,7 +218,7 @@ class Thing(metaclass = ThingClass):
   def get_equivalent_to(self):
     if self._equivalent_to is None:
       self._equivalent_to = _EquivalentToList(
-        [self.namespace.world._to_python(o)
+        [self.namespace.world._to_python(o, default_to_none = True)
          for o in self.namespace.world.get_triples_sp(self.storid, owl_equivalentindividual)
         ], self, Thing._instance_equivalent_to_changed)
     return self._equivalent_to

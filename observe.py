@@ -28,7 +28,7 @@ import editobj3.introsp
 class ObservedOntology(Ontology):
   def _get_pred_value(self, subject, predicate):
     if   predicate == rdf_type:
-      return list(filter(None, [self._to_python(o) for o in self.get_triples_sp(subject, predicate)]))
+      return list(filter(None, [self._to_python(o, default_to_none = True) for o in self.get_triples_sp(subject, predicate)]))
     else:
       return [self._to_python(o) for o in self.get_triples_sp(subject, predicate)]
     

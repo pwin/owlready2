@@ -83,7 +83,7 @@ class Not(ClassConstruct):
   
   def __getattr__(self, attr):
     if attr == "Class":
-      self.__dict__["Class"] = C = self.ontology._to_python(self.ontology.get_triple_sp(self.storid, owl_complementof))
+      self.__dict__["Class"] = C = self.ontology._to_python(self.ontology.get_triple_sp(self.storid, owl_complementof), default_to_none = True)
       return C
     return super().__getattribute__(attr)
   
@@ -290,13 +290,13 @@ class Restriction(ClassConstruct):
     if attr == "value":
       if (self.type == SOME) or (self.type == ONLY) or (self.type == VALUE) or (self.type == HAS_SELF):
         v = self.ontology.get_triple_sp(self.storid, self.type)
-        v = self.__dict__["value"] = _universal_abbrev_2_datatype.get(v) or self.ontology.world._to_python(v)
+        v = self.__dict__["value"] = _universal_abbrev_2_datatype.get(v) or self.ontology.world._to_python(v, default_to_none = True)
       else:
         v = self.ontology.get_triple_sp(self.storid, owl_onclass) or self.ontology.get_triple_sp(self.storid, owl_ondatarange)
         if v is None:
           v = self.__dict__["value"] = None
         else:
-          v = self.__dict__["value"] = _universal_abbrev_2_datatype.get(v) or self.ontology.world._to_python(v)
+          v = self.__dict__["value"] = _universal_abbrev_2_datatype.get(v) or self.ontology.world._to_python(v, default_to_none = True)
       return v
     return super().__getattribute__(attr)
   
