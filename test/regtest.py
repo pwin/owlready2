@@ -1409,6 +1409,73 @@ class Test(BaseTest, unittest.TestCase):
     assert set(o.price.get_relations()) == { (o.ma_pizza, 9.9) }
     assert set(o.has_topping.get_relations()) == { (o.ma_pizza, o.mon_frometon), (o.ma_pizza, o.ma_tomate) }
     
+  def test_prop_26(self):
+    world   = self.new_world()
+    n       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with n:
+      class O(Thing): pass
+      class C(Thing): pass
+      o = O()
+      
+      class p(Thing >> Thing): pass
+      
+      class Q(Thing):
+        is_a = [p.value(o), p.some(C)]
+        
+        
+      q = Q()
+      
+    assert q.p == []
+    assert set(q.p.indirect()) == { o, C }
+    
+  def test_prop_27(self):
+    world   = self.new_world()
+    n       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with n:
+      class O(Thing): pass
+      class C(Thing): pass
+      o = O()
+      
+      class p(Thing >> Thing): pass
+      
+      class Q(Thing):
+        is_a = [p.value(o), p.some(C)]
+        
+      class Q2(Thing): pass
+        
+        
+      q = Q()
+      q.is_a.append(Q2)
+      
+    assert q.p == []
+    assert set(q.p.indirect()) == { o, C }
+    
+  def test_prop_28(self):
+    world   = self.new_world()
+    n       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with n:
+      
+      class p(Thing >> Thing, TransitiveProperty): pass
+      
+      class C1(Thing): pass
+      class C2(Thing): pass
+      class C3(Thing): pass
+      class C4(Thing): pass
+      c1 = C1()
+      c2 = C2()
+      c3 = C3()
+      
+      c1.p = [c2]
+      c2.p = [c3]
+      
+      C3.is_a = [p.some(C4)]
+      
+    assert c1.p == [c2]
+    assert set(c1.p.indirect()) == { c2, c3, C4 }
+    
     
   def test_prop_inverse_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

@@ -355,7 +355,9 @@ class ThingClass(EntityClass):
   def __getattr__(Class, attr):
     Prop = Class.namespace.world._props.get(attr)
     if Prop is None: raise AttributeError("'%s' property is not defined." % attr)
-    
+    return Class._get_class_prop_value(Prop, attr)
+  
+  def _get_class_prop_value(Class, Prop, attr):
     if issubclass_python(Prop, AnnotationProperty):
       # Do NOT cache as such in __dict__, to avoid inheriting annotations
       attr = "__%s" % attr

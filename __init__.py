@@ -76,6 +76,7 @@ owlready2.disjoint.Or = Or
 owlready2.prop.Restriction             = Restriction
 owlready2.prop.ClassConstruct          = ClassConstruct
 owlready2.prop.AnnotationProperty      = AnnotationProperty
+owlready2.prop.Thing                   = Thing
 owlready2.prop.ValueList               = ValueList
 owlready2.prop._check_superclasses     = True
 owlready2.individual._keep_most_specific = _keep_most_specific

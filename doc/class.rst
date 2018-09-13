@@ -160,8 +160,16 @@ For a given Individual, the values of a property can be obtained with the usual
 
    >>> print(onto.my_drug.has_for_active_principle)
    []
-   
 
+Similarly, the .indirect() methods can be used to obtain a generator for all indirectely related entities
+(i.e. those asserted at the class level with restriction, or implied by transistive properties, etc):
+
+::
+
+   >>> print(list(onto.my_drug.has_for_active_principle.indirect()))
+   []
+
+   
 Introspecting Individuals
 -------------------------
 

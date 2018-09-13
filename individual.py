@@ -67,11 +67,12 @@ class ValueList(CallbackListWithLanguage):
       yield n.ontology._to_python(o)
       
   def indirect(self):
+    if issubclass(self._Prop, ReflexiveProperty): yield self._obj
     if (not issubclass(self._Prop, TransitiveProperty)) and (not issubclass(self._Prop, SymmetricProperty)):
-      if issubclass(self._Prop, ReflexiveProperty): yield self._obj
-      for Prop in self._Prop.descendants(): yield from Prop[self._obj]
+      for Prop in self._Prop.descendants():
+        yield from Prop[self._obj]
+        yield from Prop[self._obj.__class__]
     else:
-      if issubclass(self._Prop, ReflexiveProperty): yield self._obj
       n = self._obj.namespace
       prop_storids = []
       for Prop in self._Prop.descendants():
@@ -84,10 +85,13 @@ class ValueList(CallbackListWithLanguage):
         else:
           if issubclass(Prop, SymmetricProperty): yield from Prop[self._obj].symmetric()
           else:                                   yield from Prop[self._obj]
+          yield from Prop[self._obj.__class__]
           
       if prop_storids:
         for o in n.world.get_transitive_sp_indirect(self._obj.storid, prop_storids):
-          yield n.ontology._to_python(o)
+          o = n.ontology._to_python(o)
+          yield o
+          yield from Prop[o.__class__]
           
         
   def _callback(self, obj, old):
@@ -263,7 +267,9 @@ class Thing(metaclass = ThingClass):
     if Prop is None:
       if attr == "equivalent_to": return self.get_equivalent_to() # Needed
       raise AttributeError("'%s' property is not defined." % attr)
-    
+    return self._get_instance_prop_value(Prop, attr)
+  
+  def _get_instance_prop_value(self, Prop, attr):
     values = [self.namespace.ontology._to_python(o) for o in self.namespace.world.get_triples_sp(self.storid, Prop.storid)]
     if Prop.is_functional_for(self.__class__):
       if (not values) and Prop.inverse_property:

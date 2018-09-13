@@ -234,6 +234,7 @@ version 2 - 0.10
 * Add OwlReadyInconsistentOntologyError and Word.inconsistent_classes()
 * Implement RDF/XML and OWL/XML parsing in Cython (25% speed boost for parsing)
 * Small optimization
+* Extend individual.prop.indirect() to include relations asserted at the class level
 * Bugfixes:
   - Fix reasoning when obtaining classes equivalent to nothing
   - Fix World creation with backend parameters
