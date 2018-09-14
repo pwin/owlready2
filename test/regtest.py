@@ -1498,6 +1498,28 @@ class Test(BaseTest, unittest.TestCase):
     assert kale.has_taste == []
     assert set(kale.has_taste.indirect()) == { Bitter }
     
+  def test_prop_30(self):
+    world   = self.new_world()
+    n       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with n:
+      class Ingredient(Thing): pass
+      class Kale(Ingredient): pass
+      
+      class Taste(Thing): pass
+      
+      class has_taste(Ingredient >> Taste): pass
+      
+      bitter = Taste()
+      Kale.is_a.append(has_taste.value(bitter))
+      
+      kale = Kale()
+      
+    print(kale.has_taste)
+    print(set(kale.has_taste.indirect()))
+    assert kale.has_taste == []
+    assert set(kale.has_taste.indirect()) == { bitter }
+    
     
   def test_prop_inverse_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
