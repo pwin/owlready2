@@ -1457,7 +1457,6 @@ class Test(BaseTest, unittest.TestCase):
     n       = world.get_ontology("http://www.semanticweb.org/test.owl")
     
     with n:
-      
       class p(Thing >> Thing, TransitiveProperty): pass
       
       class C1(Thing): pass
@@ -1475,6 +1474,29 @@ class Test(BaseTest, unittest.TestCase):
       
     assert c1.p == [c2]
     assert set(c1.p.indirect()) == { c2, c3, C4 }
+    
+  def test_prop_29(self):
+    world   = self.new_world()
+    n       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with n:
+      class Ingredient(Thing): pass
+      class Kale(Ingredient): pass
+      
+      class Taste(Thing): pass
+      class Bitter(Taste): pass
+      
+      class has_taste(Ingredient >> Taste): pass
+      
+      bitter = Bitter()
+      Kale.is_a.append(has_taste.some(Bitter))
+      
+      kale = Kale()
+      
+    print(kale.has_taste)
+    print(set(kale.has_taste.indirect()))
+    assert kale.has_taste == []
+    assert set(kale.has_taste.indirect()) == { Bitter }
     
     
   def test_prop_inverse_1(self):

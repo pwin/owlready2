@@ -372,15 +372,12 @@ class ThingClass(EntityClass):
       
       if functional:
         for r in _inherited_property_value_restrictions(Class, Prop, set()):
-          #if (r.type == VALUE): return r.value
           if (r.type == VALUE) or (r.type == SOME): return r.value
         return None
       else:
         return RoleFilerList(
-          #(r.value for r in _inherited_property_value_restrictions(Class, Prop, set()) if (r.type == VALUE)),
           (r.value for r in _inherited_property_value_restrictions(Class, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
           Class, Prop)
-      
       
   def constructs(Class, Prop = None):
     def _top_bn(s):
