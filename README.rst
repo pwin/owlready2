@@ -235,6 +235,7 @@ version 2 - 0.10
 * Implement RDF/XML and OWL/XML parsing in Cython (25% speed boost for parsing)
 * Small optimization
 * Extend individual.prop.indirect() to include relations asserted at the class level
+* Add .query_owlready() method to RDF graph 
 * Bugfixes:
   - Fix reasoning when obtaining classes equivalent to nothing
   - Fix World creation with backend parameters
@@ -244,6 +245,7 @@ version 2 - 0.10
   - Support old SQLite3 versions that do not accept WITHOUT ROWID
   - Fix reference to undeclared entities (they were replaced by None, now by their IRI)
   - Fix loading and saving ontologies whose base IRI ends with /
+  - Fix RDF query using string
     
 Links
 -----

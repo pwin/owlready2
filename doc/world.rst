@@ -120,3 +120,14 @@ In particular, the RDFlib graph can be used for performing SPARQL queries:
    }"""))
 
 
+
+
+The results can be automatically converted to Python and Owlready using the .query_owlready() method instead of .query():
+
+::
+
+   >>> r = list(graph.query_owlready("""SELECT ?p WHERE {
+     <http://www.semanticweb.org/jiba/ontologies/2017/0/test#ma_pizza> <http://www.semanticweb.org/jiba/ontologies/2017/0/test#price> ?p .
+   }"""))
+
+

@@ -3310,6 +3310,40 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
     assert list(r)[0][0].toPython() == 9.9
     
+  def test_rdflib_3(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/test.owl")
+    with n:
+      class O(Thing): pass
+      class p(Thing >> str): pass
+      o = O("o")
+      o.p = ["D"]
+      
+    g = world.as_rdflib_graph()
+    
+    r = g.query_owlready("""
+    PREFIX P: <http://www.semanticweb.org/test.owl#>
+    SELECT ?x WHERE {
+    ?x P:p "D".
+    }
+    """)
+    assert list(r)[0][0] is o
+    
+    r = g.query_owlready("""
+    PREFIX P: <http://www.semanticweb.org/test.owl#>
+    SELECT ?x WHERE {
+    ?x P:p "E".
+    }
+    """)
+    assert not list(r)
+    
+    r = g.query_owlready("""
+    PREFIX P: <http://www.semanticweb.org/test.owl#>
+    SELECT ?x WHERE {
+    P:o P:p ?x.
+    }
+    """)
+    assert list(r) == [["D"]]
     
   def test_refactor_1(self):
     world = self.new_world()

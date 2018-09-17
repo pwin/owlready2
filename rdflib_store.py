@@ -20,6 +20,8 @@
 import rdflib, rdflib.store
 from rdflib import URIRef, BNode, Literal
 
+from owlready2.base import from_literal
+
 class TripleLiteRDFlibStore(rdflib.store.Store):
   context_aware = True
   
@@ -28,12 +30,14 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     self.triplelite = world.graph
     super().__init__()
     
-    self.main_graph            = rdflib.Graph(store = self)
+    self.main_graph            = TripleLiteRDFlibGraph(store = self)
+    self.main_graph.onto       = None
     self.main_graph.triplelite = self.triplelite
     
     self.context_graphs = {}
     for onto, triplelite in self.triplelite.onto_2_subgraph.items():
-      graph            = rdflib.Graph(store = self, identifier = URIRef(onto.base_iri))
+      graph            = TripleLiteRDFlibGraph(store = self, identifier = URIRef(onto.base_iri))
+      graph.onto       = onto
       graph.triplelite = triplelite
       self.context_graphs[onto] = graph
       
@@ -57,6 +61,7 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
           o = '"%s"' % o.value
       else:
         o = '"%s"@%s' % (o.value, o.language)
+        
     return s,p,o
   
   def _owlready_2_rdflib(self, s,p,o):
@@ -86,12 +91,7 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
   def triples(self, triple_pattern, context = None):
     s,p,o = self._rdflib_2_owlready(triple_pattern)
     
-    #print(triple_pattern)
-    #print(context, s,p,o)
-    #print(context.triplelite.get_triples(s,p,o))
-    #print()
-    
-    for s,p,o in context.triplelite.get_triples(s,p,o):
+    for s,p,o in context.triplelite.get_triples(s,p,o, True):
       yield self._owlready_2_rdflib(s,p,o), context
       
   def __len__(self, context = None):
@@ -104,5 +104,25 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
       triple = self._rdflib_2_owlready(triple)
       for graph in self.context_graphs.values():
         if graph.triplelite.has_triple(*triple): yield graph
-    
-  
+
+
+class TripleLiteRDFlibGraph(rdflib.Graph):
+  def query_owlready(self, query, *args, **kargs):
+    r = self.query(query, *args, **kargs)
+    for line in r:
+      line2 = [self._rdflib_2_owlready(i) for i in line]
+      yield line2
+      
+  def _rdflib_2_owlready(self, o):
+    if   isinstance(o, rdflib.term.URIRef ): o = self.store.world[str(o)]
+    elif isinstance(o, rdflib.term.BNode  ): o = (self.store.onto or self.store.world)._parse_bnode(o)
+    elif isinstance(o, rdflib.term.Literal):
+      if o.language is None:
+        if o.datatype:
+          o = '"%s"%s' % (o.value, self.triplelite.abbreviate(str(o.datatype)))
+        else:
+          o = '"%s"' % o.value
+      else:
+        o = '"%s"@%s' % (o.value, o.language)
+      o = from_literal(o)
+    return o

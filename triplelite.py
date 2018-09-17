@@ -182,21 +182,37 @@ class Graph(BaseMainGraph):
     self.current_blank += 1
     return "_%s" % _int_base_62(self.current_blank)
   
-  def get_triples(self, s, p, o):
+  def get_triples(self, s, p, o, ignore_missing_datatype = False):
     if s is None:
       if p is None:
         if o is None: cur = self.execute("SELECT s,p,o FROM quads")
-        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE o=?", (o,))
+        else:
+          if ignore_missing_datatype and o.endswith('"'):
+            cur = self.execute("SELECT s,p,o FROM quads WHERE SUBSTR(o,1,?)=?", (len(o), o,))
+          else:
+            cur = self.execute("SELECT s,p,o FROM quads WHERE o=?", (o,))
       else:
         if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE p=?", (p,))
-        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE p=? AND o=?", (p, o,))
+        else:
+          if ignore_missing_datatype and o.endswith('"'):
+            cur = self.execute("SELECT s,p,o FROM quads WHERE p=? AND SUBSTR(o,1,?)=?", (p, len(o), o,))
+          else:
+            cur = self.execute("SELECT s,p,o FROM quads WHERE p=? AND o=?", (p, o,))
     else:
       if p is None:
         if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE s=?", (s,))
-        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND o=?", (s, o,))
+        else:
+          if ignore_missing_datatype and o.endswith('"'):
+            cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND SUBSTR(o,1,?)=?", (s, len(o), o,))
+          else:
+            cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND o=?", (s, o,))
       else:
         if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND p=?", (s, p,))
-        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND p=? AND o=?", (s, p, o,))
+        else:
+          if ignore_missing_datatype and o.endswith('"'):
+            cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND p=? AND SUBSTR(o,1,?)=?", (s, p, len(o), o))
+          else:
+            cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND p=? AND o=?", (s, p, o,))
     return cur.fetchall()
     
   def get_quads(self, s, p, o, c):
