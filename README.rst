@@ -243,7 +243,7 @@ version 2 - 0.10
   - Fix properties defined with type 'RDF Property' and subproperty of 'OWL Data/Object/Annotation Property'
   - Support old SQLite3 versions that do not accept WITHOUT ROWID
   - Fix reference to undeclared entities (they were replaced by None, now by their IRI)
-    
+  - Fix loading and saving ontologies whose base IRI ends with /
     
 Links
 -----

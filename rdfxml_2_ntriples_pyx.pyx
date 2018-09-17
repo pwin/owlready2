@@ -18,6 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys, xml, xml.parsers.expat
+from urllib.parse import urljoin
 from collections import defaultdict
 
 from owlready2.base import OwlReadyOntologyParsingError
@@ -161,7 +162,7 @@ def parse_rdfxml(object f, object on_prepare_triple = None, object new_blank = N
             if not iri:                 iri = xml_base
             elif   iri.startswith("#"): iri = xml_base + iri
             elif   iri.startswith("/"): iri = xml_dir  + iri[1:]
-            else:                       iri = xml_dir  + iri
+            else:                       iri = urljoin(xml_dir, iri)
           stack.append(["Resource", iri])
           
         else:
@@ -197,7 +198,7 @@ def parse_rdfxml(object f, object on_prepare_triple = None, object new_blank = N
           if not iri:                 iri = xml_base
           elif   iri.startswith("#"): iri = xml_base + iri
           elif   iri.startswith("/"): iri = xml_dir  + iri[1:]
-          else:                       iri = xml_dir  + iri
+          else:                       iri = urljoin(xml_dir, iri)
           
       if tag != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Description":
         if not iri.startswith("_ "):

@@ -623,7 +623,8 @@ class SubGraph(BaseSubGraph):
           else:         onto_base_iri = onto_base_iri + "#"
         cur.execute("UPDATE ontologies SET last_update=?,iri=? WHERE c=?", (date, onto_base_iri, self.c,))
       else:
-        cur.execute("UPDATE ontologies SET last_update=? WHERE c=?", (date, self.c,))
+        #cur.execute("UPDATE ontologies SET last_update=? WHERE c=?", (date, self.c,))
+        cur.execute("UPDATE ontologies SET last_update=?,iri=? WHERE c=?", (date, onto_base_iri, self.c,))
         
       self.parent.select_abbreviate_method()
       

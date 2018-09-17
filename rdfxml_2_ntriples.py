@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, xml, xml.parsers.expat
+import sys, xml, xml.parsers.expat, urllib.parse
 from collections import defaultdict
 
 try:
@@ -154,7 +154,7 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
             if not iri:                 iri = xml_base
             elif   iri.startswith("#"): iri = xml_base + iri
             elif   iri.startswith("/"): iri = xml_dir  + iri[1:]
-            else:                       iri = xml_dir  + iri
+            else:                       iri = urllib.parse.urljoin(xml_dir, iri)
           stack.append(["Resource", iri])
           
         else:
@@ -190,7 +190,7 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
           if not iri:                 iri = xml_base
           elif   iri.startswith("#"): iri = xml_base + iri
           elif   iri.startswith("/"): iri = xml_dir  + iri[1:]
-          else:                       iri = xml_dir  + iri
+          else:                       iri = urllib.parse.urljoin(xml_dir, iri)
           
       if tag != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Description":
         if not iri.startswith("_ "):

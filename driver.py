@@ -241,8 +241,6 @@ def _save(f, format, graph):
   if   format == "ntriples":
     unabbreviate = lru_cache(None)(graph.unabbreviate)
     
-    #if c is None: graph.sql.execute("SELECT s,p,o FROM quads")
-    #else:         graph.sql.execute("SELECT s,p,o FROM quads WHERE c=?", (c,))
     for s,p,o in graph._iter_triples():
       if   s.startswith("_"): s = "_:%s" % s[1:]
       else:                   s = "<%s>" % unabbreviate(s)
@@ -261,12 +259,9 @@ def _save(f, format, graph):
   elif format == "nquads":
     unabbreviate = lru_cache(None)(graph.unabbreviate)
     
-    #c_2_iri = { c : iri for c, iri in graph.sql.execute("SELECT c, iri FROM ontologies") }
     c_2_iri = { c : iri for c, iri in graph._iter_ontology_iri() }
+    print(c_2_iri)
     
-    #if c is None: graph.sql.execute("SELECT c, s,p,o FROM quads")
-    #else:         graph.sql.execute("SELECT c, s,p,o FROM quads WHERE c=?", (c,))
-    #for c, s,p,o in graph.sql.fetchall():
     for c, s,p,o in graph._iter_triples(True):
       if   s.startswith("_"): s = "_:%s" % s[1:]
       else:                   s = "<%s>" % unabbreviate(s)
@@ -285,28 +280,34 @@ def _save(f, format, graph):
   elif format == "rdfxml":
     @lru_cache(None)
     def unabbreviate(storid):
-      return graph.unabbreviate(storid).replace("&", "&amp;")
+      r = graph.unabbreviate(storid).replace("&", "&amp;")
+      if r.startswith(base_iri):
+        if base_iri.endswith("/"): return r[len(base_iri) :]
+        else:                      return r[len(base_iri) - 1 :]
+      return r
+      #return graph.unabbreviate(storid).replace("&", "&amp;")
     
-    #base_iri = graph.sql.execute("SELECT iri FROM ontologies WHERE c=?", (c,)).fetchone()[0]
     base_iri = graph._iter_ontology_iri(graph.c)
     
-    #if c is None: graph.sql.execute("SELECT s,p,o FROM quads ORDER BY s")
-    #else:         graph.sql.execute("SELECT s,p,o FROM quads WHERE c=? ORDER BY s", (c,))
-    
     xmlns = {
-      base_iri[:-1] : "",
-      base_iri : "#",
+#      base_iri[:-1] : "",
+#      base_iri : "#",
       "http://www.w3.org/1999/02/22-rdf-syntax-ns#" : "rdf:",
       "http://www.w3.org/2001/XMLSchema#" : "xsd:",
       "http://www.w3.org/2000/01/rdf-schema#" : "rdfs:",
       "http://www.w3.org/2002/07/owl#" : "owl:",
     }
+    if base_iri.endswith("/"):
+      xmlns[base_iri] = ""
+    else:
+      xmlns[base_iri[:-1]] = ""
+      xmlns[base_iri     ] = "#"
     xmlns_abbbrevs = set(xmlns.values())
     @lru_cache(None)
     def abbrev(x):
       splitted   = x.rsplit("#", 1)
       splitted_s = x.rsplit("/", 1)
-      if   (len(splitted  ) == 2) and (len(splitted[1]) < len(splitted_s[1])):
+      if   (len(splitted  ) == 2) and (len(splitted_s) == 2) and (len(splitted[1]) < len(splitted_s[1])):
         left = splitted[0] + "#"
       elif (len(splitted_s) == 2):
         splitted = splitted_s
@@ -384,7 +385,7 @@ def _save(f, format, graph):
           
         elif current_s:
           current_s = unabbreviate(current_s)
-          if current_s.startswith(base_iri): current_s = current_s[len(base_iri)-1 :]
+          #if current_s.startswith(base_iri): current_s = current_s[len(base_iri)-1 :]
           l.append("""<%s rdf:about="%s">""" % (type, current_s))
           
         else:
@@ -401,7 +402,7 @@ def _save(f, format, graph):
           
         elif current_s:
           current_s = unabbreviate(current_s)
-          if current_s.startswith(base_iri): current_s = current_s[len(base_iri)-1 :]
+          #if current_s.startswith(base_iri): current_s = current_s[len(base_iri)-1 :]
           l.append("""<%s rdf:about="%s"/>""" % (type, current_s))
           
         else:
@@ -448,7 +449,7 @@ def _save(f, format, graph):
                 pass
               else:
                 i = unabbreviate(i)
-                if i.startswith(base_iri): i = i[len(base_iri)-1 :]
+                #if i.startswith(base_iri): i = i[len(base_iri)-1 :]
                 s_lines.append("""    <rdf:Description rdf:about="%s"/>""" % i)
           else:
             l = bn_2_inner_list[o]
@@ -459,7 +460,7 @@ def _save(f, format, graph):
           
       else:
         o = unabbreviate(o)
-        if o.startswith(base_iri): o = o[len(base_iri)-1 :]
+        #if o.startswith(base_iri): o = o[len(base_iri)-1 :]
         s_lines.append("""  <%s rdf:resource="%s"/>""" % (p, o))
         
     purge()
@@ -480,9 +481,10 @@ def _save(f, format, graph):
       if   abbrev == "":  decls.append('xml:base="%s"' % iri)
       elif abbrev == "#": decls.append('xmlns="%s"' % iri)
       else:               decls.append('xmlns:%s="%s"' % (abbrev[:-1], iri))
+    if base_iri.endswith("/"):
+      decls.append('xmlns="%s"' % base_iri)
       
     f.write(b"""<?xml version="1.0"?>\n""")
     f.write(("""<rdf:RDF %s>\n\n""" % "\n         ".join(decls)).encode("utf8"))
     f.write( """\n""".join(flatten(sum(lines, []))).encode("utf8"))
     f.write(b"""\n\n</rdf:RDF>\n""")
-    

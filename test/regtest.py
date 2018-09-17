@@ -1493,8 +1493,6 @@ class Test(BaseTest, unittest.TestCase):
       
       kale = Kale()
       
-    print(kale.has_taste)
-    print(set(kale.has_taste.indirect()))
     assert kale.has_taste == []
     assert set(kale.has_taste.indirect()) == { Bitter }
     
@@ -1515,8 +1513,6 @@ class Test(BaseTest, unittest.TestCase):
       
       kale = Kale()
       
-    print(kale.has_taste)
-    print(set(kale.has_taste.indirect()))
     assert kale.has_taste == []
     assert set(kale.has_taste.indirect()) == { bitter }
     
@@ -3133,6 +3129,36 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert o.Prop1.iri == "http://www.test.org/test_id.owl#Prop1"
     assert o.Prop2.iri == "http://www.test.org/test_id.owl#Prop2"
     
+  def test_format_22(self):
+    world = self.new_world()
+    o = world.get_ontology("http://www.test.org/test_url").load()
+    
+    assert o.O
+    assert o.O2
+    assert o.O3
+    assert issubclass(o.O2, o.O)
+    assert issubclass(o.O3, o.O2)
+    assert set(o.search(subclass_of = o.O)) == { o.O2, o.O3 }
+    
+  def test_format_23(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.test.org/test_url").load()
+    
+    import subprocess
+    rapper = subprocess.Popen(["rapper", "-q", "-g", os.path.join(HERE, "test_url.owl")], stdout = subprocess.PIPE)
+    triples1 = rapper.stdout.read().decode("unicode-escape")
+    rapper.stdout.close()
+    rapper.wait()
+    
+    rapper = subprocess.Popen(["rapper", "-q", "-g", "-", "http://www.test.org/test_url"], stdin = subprocess.PIPE, stdout = subprocess.PIPE)
+    n.save(rapper.stdin, "rdfxml")
+    rapper.stdin.close()
+    triples2 = rapper.stdout.read().decode("unicode-escape")
+    rapper.stdout.close()
+    rapper.wait()
+    
+    self.assert_ntriples_equivalent(triples1, triples2)
+   
     
   def test_search_1(self):
     world = self.new_world()
