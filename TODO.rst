@@ -7,7 +7,7 @@ Owlready2 TODO list
 * Obtain individual property value inferred by HermiT
 * Add rule support
 * Add support for Pellet
-  
+
 * Support additional file formats:
   * OWL/XML write
   * JSON
