@@ -139,8 +139,12 @@ class Thing(metaclass = ThingClass):
         name      = name.name
       else:
         namespace = namespace or CURRENT_NAMESPACES[-1] or Class.namespace
-      already_existing = namespace.world._entities.get(namespace.world.abbreviate("%s%s" % (namespace.base_iri, name)))
-      
+      if LOADING:
+        already_existing = None
+        #already_existing = namespace.world._entities.get(namespace.world.abbreviate("%s%s" % (namespace.base_iri, name)))
+      else:
+        already_existing = namespace.world["%s%s" % (namespace.base_iri, name)]
+        
       if not already_existing is None:
         if not isinstance(already_existing, Class):
           if isinstance(Class, FusionClass): Classes =  Class.__bases__

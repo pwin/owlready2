@@ -247,6 +247,13 @@ version 2 - 0.10
   - Fix loading and saving ontologies whose base IRI ends with /
   - Fix RDF query using string
     
+version 2 - 0.11
+****************
+
+* Bugfixes:
+  - Fix creation of an individual that already exists in the quadstore
+
+
 Links
 -----
 
