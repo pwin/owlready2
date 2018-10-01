@@ -49,6 +49,7 @@ class Graph(BaseMainGraph):
     self.c_2_onto          = {}
     self.onto_2_subgraph   = {}
     self.last_numbered_iri = {}
+    self.c                 = None
     
     self.sql.execute("""set maintenance_work_mem = %s""", (DEFAULT_WORK_MEM,))
     

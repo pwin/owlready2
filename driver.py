@@ -297,11 +297,15 @@ def _save(f, format, graph):
       "http://www.w3.org/2000/01/rdf-schema#" : "rdfs:",
       "http://www.w3.org/2002/07/owl#" : "owl:",
     }
-    if base_iri.endswith("/"):
-      xmlns[base_iri] = ""
+    if isinstance(base_iri, str):
+      if base_iri.endswith("/"):
+        xmlns[base_iri] = ""
+      else:
+        xmlns[base_iri[:-1]] = ""
+        xmlns[base_iri     ] = "#"
     else:
-      xmlns[base_iri[:-1]] = ""
-      xmlns[base_iri     ] = "#"
+      base_iri = "    " # Non-null, non-URL
+      
     xmlns_abbbrevs = set(xmlns.values())
     @lru_cache(None)
     def abbrev(x):

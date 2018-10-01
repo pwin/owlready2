@@ -42,6 +42,7 @@ class Graph(BaseMainGraph):
     self.onto_2_subgraph   = {}
     self.last_numbered_iri = {}
     self.world             = world
+    self.c                 = None
     
     if initialize_db:
       self.current_blank    = 0

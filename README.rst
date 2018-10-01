@@ -253,6 +253,7 @@ version 2 - 0.11
 * Bugfixes:
   - Fix creation of an individual that already exists in the quadstore
   - Fix missing import of EntityClass in class_construct.py
+  - Fix World.save() with RDF/XML format
 
 Links
 -----
