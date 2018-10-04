@@ -42,6 +42,25 @@ _HERMIT_2_OWL = {
   "EquivalentDataProperties"   : owl_equivalentproperty,
 }
 
+_OWL_2_TYPE = {
+  rdfs_subclassof          : "class",
+  rdfs_subpropertyof       : "property",
+  rdf_type                 : "individual",
+  owl_equivalentclass      : "class",
+  owl_equivalentproperty   : "property",
+  owl_equivalentindividual : "individual",
+}
+_TYPE_2_IS_A = {
+  "class"                 : rdfs_subclassof,
+  "property"              : rdfs_subpropertyof,
+  "individual"            : rdf_type,
+}
+_TYPE_2_EQUIVALENT_TO = {
+  "class"                 : owl_equivalentclass,
+  "property"              : owl_equivalentproperty,
+  "individual"            : owl_equivalentindividual,
+}
+
 _INFERRENCES_ONTOLOGY = "http://inferrences/"
 
 _IS_A_RELATIONS  = {"SubClassOf", "SubObjectPropertyOf", "SubDataPropertyOf", "Type"}
@@ -97,9 +116,11 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
     if debug > 1:
       print("* Owlready2 * HermiT output:", file = sys.stderr)
       print(output, file = sys.stderr)
-      
+
+
   new_parents = defaultdict(list)
   new_equivs  = defaultdict(list)
+  entity_2_type = {}
   for relation, concept_iris in _HERMIT_RESULT_REGEXP.findall(output):
     concept_storids = [ontology.abbreviate(x) for x in concept_iris[1:-1].split("> <")]
     owl_relation = _HERMIT_2_OWL[relation]
@@ -107,49 +128,81 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
     if  relation in _IS_A_RELATIONS:
       if concept_iris[0].startswith("http://www.w3.org/2002/07/owl"): continue
       
-      if not ontology.world.has_triple(concept_storids[0], owl_relation, concept_storids[1]):
-        ontology.add_triple(concept_storids[0], owl_relation, concept_storids[1])
-        
-      child = world._entities.get(concept_storids[0])
+      new_parents[concept_storids[0]].append(concept_storids[1])
+      entity_2_type[concept_storids[0]] = _OWL_2_TYPE[owl_relation]
       
-      if not child is None:
-        parent = world._get_by_storid(concept_storids[1])
-        if parent is None:
-          print("* Owlready2 * Warning: Cannot find new parent '%s'" % concept_iris[1], file = sys.stderr)
-        else:
-          new_parents[child].append(parent)
-          
     elif relation in _EQUIV_RELATIONS:
       if "http://www.w3.org/2002/07/owl#Nothing" in concept_iris:
         for concept_iri, concept_storid in zip(concept_iris, concept_storids):
           if concept_iri.startswith("http://www.w3.org/2002/07/owl"): continue
           if concept_storid == owl_nothing: continue
-          if not ontology.world.has_triple(concept_storid, owl_relation, owl_nothing):
-            ontology.add_triple(concept_storid, owl_relation, owl_nothing)
-          concept = world._entities.get(concept_storid)
-          if concept: new_equivs[concept].append(Nothing)
+          
+          new_equivs[concept_storid].append(owl_nothing)
+          entity_2_type[concept_storid] = _OWL_2_TYPE[owl_relation]
           
       else:
         for concept_iri1, concept_storid1 in zip(concept_iris, concept_storids):
           if concept_iri1.startswith("http://www.w3.org/2002/07/owl"): continue
           for concept_iri2, concept_storid2 in zip(concept_iris, concept_storids):
             if concept_iri1 == concept_iri2: continue
-            if not ontology.world.has_triple(concept_storid1, owl_relation, concept_storid2):
-              ontology.add_triple(concept_storid1, owl_relation, concept_storid2)
-            concept1 = world._entities.get(concept_storid1)
-            concept2 = world._entities.get(concept_storid2)
-            if concept1 or concept2:
-              concept1 = concept1 or world._get_by_storid(concept_storid1)
-              concept2 = concept2 or world._get_by_storid(concept_storid2)
-              if not concept1 is concept2: new_equivs[concept1].append(concept2)
-              
+            new_equivs[concept_storid1].append(concept_storid2)
+            entity_2_type[concept_storid1] = _OWL_2_TYPE[owl_relation]
+            
+
+  _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, entity_2_type)
+  
+  if debug: print("* Owlready * (NB: only changes on entities loaded in Python are shown, other changes are done but not listed)", file = sys.stderr)
+  
+  if not keep_tmp_file: os.unlink(tmp.name)
+
+
+
+
+def _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, entity_2_type):
+  new_parents_loaded = defaultdict(list)
+  new_equivs_loaded  = defaultdict(list)
+
+  for child_storid, parent_storids in new_parents.items():
+    for parent_storid in parent_storids:
+      owl_relation = _TYPE_2_IS_A[entity_2_type[child_storid]]
+      if not ontology.world.has_triple(child_storid, owl_relation, parent_storid):
+        ontology.add_triple(child_storid, owl_relation, parent_storid)
+        
+    child = world._entities.get(child_storid)
+    if not child is None:
+      l = new_parents_loaded[child] = []
+      for parent_storid in parent_storids:
+        parent = world._get_by_storid(parent_storid)
+        if parent is None:
+          print("* Owlready2 * Warning: Cannot find new parent '%s'" % parent_storid, file = sys.stderr)
+        else:
+          l.append(parent)
+          
+  for concept1_storid, concept2_storids in new_equivs.items():
+    for concept2_storid in concept2_storids:
+      owl_relation = _TYPE_2_EQUIVALENT_TO[entity_2_type[concept1_storid]]
+      if not ontology.world.has_triple(concept1_storid, owl_relation, concept2_storid):
+        ontology.add_triple(concept1_storid, owl_relation, concept2_storid)
+        
+      if concept2_storid == owl_nothing:
+        concept1 = world._entities.get(concept1_storid)
+        if not concept1 is None: new_equivs_loaded[concept1].append(Nothing)
+      else:
+        concept1 = world._entities.get(concept1_storid)
+        concept2 = world._entities.get(concept2_storid)
+        if concept1 or concept2:
+          concept1 = concept1 or world._get_by_storid(concept1_storid)
+          concept2 = concept2 or world._get_by_storid(concept2_storid)
+          if not concept1 is concept2: new_equivs_loaded[concept1].append(concept2)
+        
+  
   with LOADING: # Because triples were asserted above => only modify Python objects WITHOUT creating new triples!
-    for concept1, concepts2 in new_equivs.items():
+    for concept1, concepts2 in new_equivs_loaded.items():
       for concept2 in concepts2:
         if debug: print("* Owlready * Equivalenting:", concept1, concept2, file = sys.stderr)
         concept1.equivalent_to._append(concept2)
         
-    for child, parents in new_parents.items():
+    for child, parents in new_parents_loaded.items():
       old = set(parent for parent in child.is_a if not isinstance(parent, ClassConstruct))
       new = set(parents)
       
@@ -166,7 +219,7 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
       for added   in new - old: new_is_a.append(added)
       
       child.is_a.reinit(new_is_a)
-      
+            
       for child_eq in child.equivalent_to.indirect():
         if isinstance(child_eq, ThingClass):
           if debug: print("* Owlready * Reparenting %s (since equivalent):" % child_eq, old, "=>", new, file = sys.stderr)
@@ -177,6 +230,3 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
             if not added in new_is_a: new_is_a.append(added)
           child_eq.is_a.reinit(new_is_a)
           
-  if debug: print("* Owlready * (NB: only changes on entities loaded in Python are shown, other changes are done but not listed)", file = sys.stderr)
-  
-  if not keep_tmp_file: os.unlink(tmp.name)
