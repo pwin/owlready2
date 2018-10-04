@@ -468,7 +468,7 @@ class RoleFilerList(CallbackListWithLanguage):
 
 def _inherited_property_value_restrictions(x, Prop, already):
   if   isinstance(x, Restriction):
-    if (x.property is Prop): yield x
+    if (Prop is None) or (x.property is Prop): yield x
     
   elif isinstance(x, EntityClass) or isinstance(x, Thing):
     for parent in itertools.chain(x.is_a, x.equivalent_to.indirect()):

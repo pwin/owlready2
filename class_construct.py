@@ -158,6 +158,14 @@ class LogicalClassConstruct(ClassConstruct):
   
   __hash__ = object.__hash__
   
+  def __rshift__(Domain, Range):
+    import owlready2.prop
+    owlready2.prop._next_domain_range = (Domain, Range)
+    if isinstance(Range, ThingClass) or isinstance(Range, ClassConstruct):
+      return owlready2.prop.ObjectProperty
+    else:
+      return owlready2.prop.DataProperty
+    
   def _set_ontology(self, ontology):
     if ontology and (self._list_bnode is None): self._list_bnode = ontology.world.new_blank_node()
     for Class in self.Classes:
