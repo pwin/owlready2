@@ -377,7 +377,7 @@ class ThingClass(EntityClass):
         #  (r.value for r in _inherited_property_value_restrictions(Class, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
         #  Class, Prop)
         return RoleFilerList(
-          (r.value for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()) for r in _property_value_restrictions(SuperClass, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
+          set(r.value for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()) for r in _property_value_restrictions(SuperClass, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
           Class, Prop)
       
   def constructs(Class, Prop = None):
