@@ -255,7 +255,8 @@ version 2 - 0.11
   - Fix creation of an individual that already exists in the quadstore
   - Fix missing import of EntityClass in class_construct.py
   - Fix World.save() with RDF/XML format
-
+  - Fix Thing.subclasses() and Thing.descendants()
+  
 Links
 -----
 

@@ -241,9 +241,16 @@ class EntityClass(type):
     Class._fill_ancestors(s, include_self)
     return s
   
-  def descendants(Class, include_self = True, only_loaded = False):
-    s = set()
-    Class._fill_descendants(s, include_self, only_loaded)
+  def descendants(Class, include_self = True, only_loaded = False, world = None):
+    if Class is Thing:
+      if world is None:
+        import owlready2
+        world = owlready2.default_world
+      s = set(world.classes())
+      if include_self: s.add(Thing)
+    else:
+      s = set()
+      Class._fill_descendants(s, include_self, only_loaded)
     return s
   
   def _fill_ancestors(Class, s, include_self):
@@ -279,21 +286,40 @@ class EntityClass(type):
             if isinstance(equivalent, Class.__class__) and not equivalent in s:
               equivalent._fill_descendants(s, True)
               
-  def subclasses(Class, only_loaded = False):
-    if only_loaded:
+  def subclasses(Class, only_loaded = False, world = None):
+    if Class is Thing:
+      if world is None:
+        import owlready2
+        world = owlready2.default_world
       r = []
-      for x in Class.namespace.world.get_triples_po(Class._rdfs_is_a, Class.storid):
-        if not x.startswith("_"):
-          subclass = Class.namespace.world._entities.get(x)
-          if not descendant is None: r.append(subclass)
+      for x in world.get_triples_po(rdf_type, owl_class):
+        if x.startswith("_"): continue
+        for y in world.get_triples_sp(x, Class._rdfs_is_a):
+          if (y == owl_thing) or y.startswith("_"): continue
+          break
+        else:
+          if only_loaded:
+            subclass = world._entities.get(x)
+            if not subclass is None: r.append(subclass)
+          else:
+            r.append(world._get_by_storid(x, None, ThingClass))
       return r
-      
+    
     else:
-      return [
-        Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
-        for x in Class.namespace.world.get_triples_po(Class._rdfs_is_a, Class.storid)
-        if not x.startswith("_")
-      ]
+      if only_loaded:
+        r = []
+        for x in Class.namespace.world.get_triples_po(Class._rdfs_is_a, Class.storid):
+          if not x.startswith("_"):
+            subclass = Class.namespace.world._entities.get(x)
+            if not subclass is None: r.append(subclass)
+        return r
+      
+      else:
+        return [
+          Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
+          for x in Class.namespace.world.get_triples_po(Class._rdfs_is_a, Class.storid)
+          if not x.startswith("_")
+        ]
 
 
 def issubclass_owlready(Class, Parent_or_tuple):
