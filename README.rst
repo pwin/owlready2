@@ -250,6 +250,7 @@ version 2 - 0.10
 version 2 - 0.11
 ****************
 
+* Use Class.property.indirect() for indirect Class property (instead of Class.property)
 * Bugfixes:
   - Fix creation of an individual that already exists in the quadstore
   - Fix missing import of EntityClass in class_construct.py

@@ -216,11 +216,11 @@ class EntityClass(type):
       else:
         Class.__bases__ = (DataProperty,)
         list.insert(Class.is_a, 0, DataProperty)
-      
+        
     for base in new - old:
       if isinstance(base, ClassConstruct): base._set_ontology(Class.namespace.ontology)
       if not LOADING: Class._add_is_a_triple(base)
-
+      
   def disjoints(Class):
     for s, p, o, c in Class.namespace.world.get_quads(None, rdf_type, Class._owl_alldisjoint, None):
       onto = Class.namespace.world.graph.context_2_user_context(c)
@@ -357,7 +357,7 @@ class ThingClass(EntityClass):
     if Prop is None: raise AttributeError("'%s' property is not defined." % attr)
     return Class._get_class_prop_value(Prop, attr)
   
-  def _get_class_prop_value(Class, Prop, attr):
+  def _get_class_prop_value(Class, Prop, attr, force_list = False):
     if issubclass_python(Prop, AnnotationProperty):
       # Do NOT cache as such in __dict__, to avoid inheriting annotations
       attr = "__%s" % attr
@@ -368,15 +368,16 @@ class ThingClass(EntityClass):
       return values
     
     else:
-      functional = Prop.is_functional_for(Class)
-      
-      if functional:
+      if (not force_list) and Prop.is_functional_for(Class):
         for r in _inherited_property_value_restrictions(Class, Prop, set()):
           if (r.type == VALUE) or (r.type == SOME): return r.value
         return None
       else:
+        #return RoleFilerList(
+        #  (r.value for r in _inherited_property_value_restrictions(Class, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
+        #  Class, Prop)
         return RoleFilerList(
-          (r.value for r in _inherited_property_value_restrictions(Class, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
+          (r.value for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()) for r in _property_value_restrictions(SuperClass, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
           Class, Prop)
       
   def constructs(Class, Prop = None):
@@ -464,7 +465,22 @@ class RoleFilerList(CallbackListWithLanguage):
     self._Prop = Prop
     
   def _callback(self, obj, old): self._obj._on_class_prop_changed(self._Prop, old, self)
+  
+  def indirect(self):
+    for r in _inherited_property_value_restrictions(self._obj, self._Prop, set()):
+      if (r.type == VALUE) or (r.type == SOME):
+        yield r.value
+        
+
+def _property_value_restrictions(x, Prop, already):
+  if   isinstance(x, Restriction):
+    if (Prop is None) or (x.property is Prop): yield x
+    
+  elif isinstance(x, And):
+    for x2 in x.Classes:
+      yield from _property_value_restrictions(x2, Prop, already)
       
+
 
 def _inherited_property_value_restrictions(x, Prop, already):
   if   isinstance(x, Restriction):

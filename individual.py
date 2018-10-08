@@ -71,7 +71,7 @@ class ValueList(CallbackListWithLanguage):
     if (not issubclass(self._Prop, TransitiveProperty)) and (not issubclass(self._Prop, SymmetricProperty)):
       for Prop in self._Prop.descendants():
         yield from Prop[self._obj]
-        yield from Prop[self._obj.__class__]
+        yield from Prop[self._obj.__class__].indirect()
     else:
       n = self._obj.namespace
       prop_storids = []
@@ -85,13 +85,13 @@ class ValueList(CallbackListWithLanguage):
         else:
           if issubclass(Prop, SymmetricProperty): yield from Prop[self._obj].symmetric()
           else:                                   yield from Prop[self._obj]
-          yield from Prop[self._obj.__class__]
+          yield from Prop[self._obj.__class__].indirect()
           
       if prop_storids:
         for o in n.world.get_transitive_sp_indirect(self._obj.storid, prop_storids):
           o = n.ontology._to_python(o)
           yield o
-          yield from Prop[o.__class__]
+          yield from Prop[o.__class__].indirect()
           
         
   def _callback(self, obj, old):
@@ -273,9 +273,9 @@ class Thing(metaclass = ThingClass):
       raise AttributeError("'%s' property is not defined." % attr)
     return self._get_instance_prop_value(Prop, attr)
   
-  def _get_instance_prop_value(self, Prop, attr):
+  def _get_instance_prop_value(self, Prop, attr, force_list = False):
     values = [self.namespace.ontology._to_python(o) for o in self.namespace.world.get_triples_sp(self.storid, Prop.storid)]
-    if Prop.is_functional_for(self.__class__):
+    if (not force_list) and Prop.is_functional_for(self.__class__):
       if (not values) and Prop.inverse_property:
         values = [self.namespace.ontology._to_python(s) for s in self.namespace.world.get_triples_po(Prop.inverse_property.storid, self.storid)]
       if   len(values) > 1:

@@ -266,14 +266,11 @@ class ReasoningPropertyClass(PropertyClass):
   python_name = property(PropertyClass.get_python_name, set_python_name)
   
   def __getitem__(Prop, entity):
-    #values = getattr(entity, Prop.python_name)
     if isinstance(entity, Thing):
-      values = entity._get_instance_prop_value(Prop, Prop.python_name)
+      return entity._get_instance_prop_value(Prop, Prop.python_name, True)
     else:
-      values = entity._get_class_prop_value(Prop, Prop.python_name)
-    if isinstance(values, list): return values
-    return ValueList([values], entity, Prop)
-  
+      return entity._get_class_prop_value(Prop, Prop.python_name, True)
+    
   
 class ObjectPropertyClass(ReasoningPropertyClass):
   _owl_type = owl_object_property

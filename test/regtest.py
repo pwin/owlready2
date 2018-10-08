@@ -1460,7 +1460,7 @@ class Test(BaseTest, unittest.TestCase):
         
       q = Q()
       q.is_a.append(Q2)
-      
+
     assert q.p == []
     assert set(q.p.indirect()) == { o, C }
     
