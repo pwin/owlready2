@@ -339,7 +339,6 @@ def issubclass_owlready(Class, Parent_or_tuple):
 
 issubclass = issubclass_owlready
 
-
 class ThingClass(EntityClass):
   namespace = owlready
   

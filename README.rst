@@ -251,6 +251,7 @@ version 2 - 0.11
 ****************
 
 * Use Class.property.indirect() for indirect Class property (instead of Class.property)
+* Add reload and reload_if_newer parameters to Ontology.load()
 * Bugfixes:
   - Fix creation of an individual that already exists in the quadstore
   - Fix missing import of EntityClass in class_construct.py

@@ -485,8 +485,8 @@ class Ontology(Namespace, _GraphManager):
     if not r is None: return r
     return Namespace(self, base_iri, name or base_iri[:-1].rsplit("/", 1)[-1])
   
-  def load(self, only_local = False, fileobj = None, **args):
-    if self.loaded: return self
+  def load(self, only_local = False, fileobj = None, reload = False, reload_if_newer = False, **args):
+    if self.loaded and (not reload): return self
     if self.base_iri == "http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#":
       f = os.path.join(os.path.dirname(__file__), "owlready_ontology.owl")
     elif not fileobj:
@@ -506,13 +506,20 @@ class Ontology(Namespace, _GraphManager):
       try:     new_base_iri = self.graph.parse(fileobj, default_base = self.base_iri, **args)
       finally: fileobj.close()
     else:
-      if os.path.getmtime(f) <= self.graph.get_last_update_time():
-        if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s (cached)..." % self.name, file = sys.stderr)
-      else:
-        fileobj = open(f, "rb")
+      if (reload_if_newer and (os.path.getmtime(f) > self.graph.get_last_update_time())) or (self.graph.get_last_update_time() == 0.0):
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
+        fileobj = open(f, "rb")
         try:     new_base_iri = self.graph.parse(fileobj, default_base = self.base_iri, **args)
         finally: fileobj.close()
+      else:
+        if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s (cached)..." % self.name, file = sys.stderr)
+      #if os.path.getmtime(f) <= self.graph.get_last_update_time():
+      #  if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s (cached)..." % self.name, file = sys.stderr)
+      #else:
+      #  fileobj = open(f, "rb")
+      #  if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
+      #  try:     new_base_iri = self.graph.parse(fileobj, default_base = self.base_iri, **args)
+      #  finally: fileobj.close()
         
     self.loaded = True
     
