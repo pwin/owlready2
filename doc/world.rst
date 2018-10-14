@@ -11,7 +11,7 @@ Persistent world: storing the quadstore in an SQLite3 file database
 Owlready2 uses an optimized quadstore. By default, the quadstore is stored in memory, but it can also be
 stored in an SQLite3 file. This allows persistance: all ontologies loaded and created are stored in the file,
 and can be reused later.
-This is interesting for big ontogolies: loading huge ontologies can take time, while opening the SQLite3 file
+This is interesting for big ontologies: loading huge ontologies can take time, while opening the SQLite3 file
 takes only a fraction of second, even for big files.
 It also avoid to load huge ontologies in memory, if you only need to access a few
 entities from these ontologies.
@@ -38,6 +38,10 @@ state of the quadstore in the SQLite3 file:
 
 Storing the quadstore in a file does not reduce the performance of Owlready2 (actually,
 it seems that Owlready2 performs a little *faster* when storing the quadstore on the disk).
+
+To reload an ontology stored in the quadstore (when the corresponding OWL file has been updated),
+the reload and reload_if_newer optional parameters of .load() can be used (the former reload the ontology,
+and the latter reload it only if the OWL file is more recent).
 
 By default, Owlready2 opens the SQLite3 database in exclusive mode. This mode is faster, but it does not allow
 several programs to use the same database simultaneously. If you need to have several Python programs that
