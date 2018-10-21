@@ -251,6 +251,7 @@ version 2 - 0.11
 ****************
 
 * Support Pellet reasoner in addition to HermiT
+* Support loading of huge OWL files (incremental load)
 * Use Class.property.indirect() for indirect Class property (instead of Class.property)
 * Add reload and reload_if_newer parameters to Ontology.load()
 * Bugfixes:

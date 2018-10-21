@@ -197,17 +197,32 @@ class BaseSubGraph(BaseGraph):
         onto_base_iri = on_finish()
         
       except Exception as e:
+        if len(self) == 0:
+          self._add_triple(self.onto.storid, rdf_type, owl_ontology)
         raise OwlReadyOntologyParsingError("NTriples parsing error in file %s, line %s." % (getattr(f, "name", "???"), current_line)) from e
-      
+
+      if not self.has_triple(self.onto.storid, rdf_type, owl_ontology): # Not always present (e.g. not in dbpedia)
+        self._add_triple(self.onto.storid, rdf_type, owl_ontology)
+        
     elif format == "rdfxml":
-      on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)
-      parse_rdfxml(f, on_prepare_triple, new_blank, new_literal, default_base)
-      onto_base_iri = on_finish()
+      try:
+        on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)
+        parse_rdfxml(f, on_prepare_triple, new_blank, new_literal, default_base)
+        onto_base_iri = on_finish()
+      except OwlReadyOntologyParsingError as e:
+        if len(self) == 0:
+          self._add_triple(self.onto.storid, rdf_type, owl_ontology)
+        raise e
       
     elif format == "owlxml":
-      on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples, "datatypeIRI")
-      parse_owlxml(f, on_prepare_triple, new_blank, new_literal)
-      onto_base_iri = on_finish()
+      try:
+        on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples, "datatypeIRI")
+        parse_owlxml(f, on_prepare_triple, new_blank, new_literal)
+        onto_base_iri = on_finish()
+      except OwlReadyOntologyParsingError as e:
+        if len(self) == 0:
+          self._add_triple(self.onto.storid, rdf_type, owl_ontology)
+        raise e
       
     else:
       raise ValueError("Unsupported format %s." % format)

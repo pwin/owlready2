@@ -3001,7 +3001,7 @@ I took a placebo
       onto.load()
     except OwlReadyOntologyParsingError:
       ok = 1
-      
+    
     assert ok == 1
     assert not onto.loaded
     assert len(world.graph) == 1

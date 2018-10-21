@@ -362,7 +362,7 @@ def parse_rdfxml(object f, object on_prepare_triple = None, object new_blank = N
   return nb_triple
 
 
-def _create_triplelite_func(object abbreviate, list values, str datatype_attr):
+def _create_triplelite_func(object abbreviate, list values, insert_triples, str datatype_attr):
   def on_prepare_triple(str s, str p, str o):
     nonlocal values
     
@@ -371,6 +371,7 @@ def _create_triplelite_func(object abbreviate, list values, str datatype_attr):
     if not (o.startswith("_") or o.startswith('"')): o = abbreviate(o)
     
     values.append((s,p,o))
+    if len(values) > 100000: insert_triples()
     
   def new_literal(str value, dict attrs):
     nonlocal datatype_attr

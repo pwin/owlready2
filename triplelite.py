@@ -558,6 +558,17 @@ class SubGraph(BaseSubGraph):
     
     cur = self.db.cursor()
     
+    if delete_existing_triples: cur.execute("DELETE FROM quads WHERE c=?", (self.c,))
+    
+    if len(self.parent) < 100000:
+      cur.execute("""DROP INDEX index_resources_iri""")
+      cur.execute("""DROP INDEX index_quads_s""")
+      cur.execute("""DROP INDEX index_quads_o""")
+      reindex = True
+    else:
+      reindex = False
+      
+      
     # Re-implement abbreviate() for speed
     if self.parent.abbreviate_d is None:
       abbrevs = {}
@@ -585,15 +596,24 @@ class SubGraph(BaseSubGraph):
         abbrevs[iri] = storid
         return storid
       
+    def insert_triples():
+      nonlocal values, new_abbrevs
+      if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
+      cur.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
+      cur.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
+      values      *= 0
+      new_abbrevs *= 0
+      
     try:
       import rdfxml_2_ntriples_pyx
-      on_prepare_triple, new_literal = rdfxml_2_ntriples_pyx._create_triplelite_func(abbreviate, values, datatype_attr)
+      on_prepare_triple, new_literal = rdfxml_2_ntriples_pyx._create_triplelite_func(abbreviate, values, insert_triples, datatype_attr)
     except:
       def on_prepare_triple(s, p, o):
         if not s.startswith("_"): s = abbreviate(s)
         p = abbreviate(p)
         if not (o.startswith("_") or o.startswith('"')): o = abbreviate(o)
         values.append((s,p,o))
+        if len(values) > 1000000: insert_triples()
         
       def new_literal(value, attrs):
         lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
@@ -602,36 +622,25 @@ class SubGraph(BaseSubGraph):
         if datatype: return '"%s"%s' % (value, abbreviate(datatype))
         return '"%s"' % (value)
       
-    
+      
     def on_finish():
       if filename: date = os.path.getmtime(filename)
       else:        date = time.time()
       
-      if delete_existing_triples: cur.execute("DELETE FROM quads WHERE c=?", (self.c,))
-      
-      if len(self.parent) < 100000:
-        cur.execute("""DROP INDEX index_resources_iri""")
-        cur.execute("""DROP INDEX index_quads_s""")
-        cur.execute("""DROP INDEX index_quads_o""")
-        reindex = True
-      else:
-        reindex = False
-        
-      if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
-      cur.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
-      cur.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
+      insert_triples()
       
       if reindex:
         cur.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
         cur.execute("""CREATE INDEX index_quads_s ON quads(s)""")
         cur.execute("""CREATE INDEX index_quads_o ON quads(o)""")
         
-        
       onto_base_iri = cur.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND quads.o=? AND resources.storid=quads.s LIMIT 1", (self.c, owl_ontology)).fetchone()
       if onto_base_iri: onto_base_iri = onto_base_iri[0]
       else:             onto_base_iri = ""
       
-      if onto_base_iri and (not onto_base_iri.endswith("/")):
+      if onto_base_iri.endswith("/"):
+        cur.execute("UPDATE ontologies SET last_update=?,iri=? WHERE c=?", (date, onto_base_iri, self.c,))
+      elif onto_base_iri:
         use_hash = cur.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (self.c, onto_base_iri + "#%")).fetchone()
         if use_hash: onto_base_iri = onto_base_iri + "#"
         else:
@@ -640,8 +649,7 @@ class SubGraph(BaseSubGraph):
           else:         onto_base_iri = onto_base_iri + "#"
         cur.execute("UPDATE ontologies SET last_update=?,iri=? WHERE c=?", (date, onto_base_iri, self.c,))
       else:
-        #cur.execute("UPDATE ontologies SET last_update=? WHERE c=?", (date, self.c,))
-        cur.execute("UPDATE ontologies SET last_update=?,iri=? WHERE c=?", (date, onto_base_iri, self.c,))
+        cur.execute("UPDATE ontologies SET last_update=? WHERE c=?", (date, self.c,))
         
       self.parent.select_abbreviate_method()
       
