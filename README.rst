@@ -250,6 +250,7 @@ version 2 - 0.10
 version 2 - 0.11
 ****************
 
+* Support Pellet reasoner in addition to HermiT
 * Use Class.property.indirect() for indirect Class property (instead of Class.property)
 * Add reload and reload_if_newer parameters to Ontology.load()
 * Bugfixes:
@@ -257,7 +258,8 @@ version 2 - 0.11
   - Fix missing import of EntityClass in class_construct.py
   - Fix World.save() with RDF/XML format
   - Fix Thing.subclasses() and Thing.descendants()
-  
+  - Fix ontology's update time for ontologies created de novo in Python with Owlready
+    
 Links
 -----
 

@@ -31,6 +31,10 @@ _HERMIT_RESULT_REGEXP = re.compile("^([A-Za-z]+)\\( ((?:<(?:[^>]+)>\s*)+) \\)$",
 _HERE = os.path.dirname(__file__)
 _HERMIT_CLASSPATH = os.pathsep.join([os.path.join(_HERE, "hermit"), os.path.join(_HERE, "hermit", "HermiT.jar")])
 
+_PELLET_CLASSPATH = os.pathsep.join(
+  os.path.join(_HERE, "pellet", p) for p in os.listdir(os.path.join(_HERE, "pellet")) if p.endswith(".jar"))
+
+
 _HERMIT_2_OWL = {
   "SubClassOf"                 : rdfs_subclassof,
   "SubPropertyOf"              : rdfs_subpropertyof,
@@ -87,7 +91,7 @@ def _keep_most_specific(s, consider_equivalence = True):
   return r
 
 
-def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
+def sync_reasoner_hermit(x = None, debug = 1, keep_tmp_file = False):
   world = x or owlready2.default_world
   if   isinstance(x, Ontology): ontology = x
   elif CURRENT_NAMESPACES[-1]:  ontology = CURRENT_NAMESPACES[-1].ontology
@@ -155,6 +159,80 @@ def sync_reasoner(x = None, debug = 1, keep_tmp_file = False):
   
   if not keep_tmp_file: os.unlink(tmp.name)
 
+sync_reasoner = sync_reasoner_hermit
+
+
+def sync_reasoner_pellet(x = None, debug = 1, keep_tmp_file = False):
+  world = x or owlready2.default_world
+  if   isinstance(x, Ontology): ontology = x
+  elif CURRENT_NAMESPACES[-1]:  ontology = CURRENT_NAMESPACES[-1].ontology
+  else:                         ontology = world.get_ontology(_INFERRENCES_ONTOLOGY)
+  
+  tmp = tempfile.NamedTemporaryFile("wb", delete = False)
+  world.save(tmp, format = "ntriples")
+  tmp.close()
+  command = [owlready2.JAVA_EXE, "-Xmx2000M", "-cp", _PELLET_CLASSPATH, "pellet.Pellet", "realize", "--ignore-imports", tmp.name]
+  if debug:
+    import time
+    print("* Owlready2 * Running Pellet...", file = sys.stderr)
+    print("    %s" % " ".join(command), file = sys.stderr)
+    t0 = time.time()
+    
+  try:
+    output = subprocess.run(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE, check = True).stdout
+  except subprocess.CalledProcessError as e:
+    if (e.returncode == 1) and (b"ERROR: Ontology is inconsistent" in e.stderr): # XXX
+      raise OwlReadyInconsistentOntologyError()
+    raise
+  
+  output = output.decode("utf8").replace("\r","")
+  if debug:
+    print("* Owlready2 * Pellet took %s seconds" % (time.time() - t0), file = sys.stderr)
+    if debug > 1:
+      print("* Owlready2 * Pellet output:", file = sys.stderr)
+      print(output, file = sys.stderr)
+      
+      
+  new_parents = defaultdict(list)
+  new_equivs  = defaultdict(list)
+  entity_2_type = {}
+  stack = []
+  for line in output.split("\n"):
+    if not line: continue
+    line2 = line.lstrip()
+    depth = len(line) - len(line2)
+    splitted = line2.split(" - ", 1)
+    class_storids = [ontology.abbreviate(class_iri) for class_iri in splitted[0].split(" = ")]
+    
+    if len(class_storids) > 1:
+      for class_storid1 in class_storids:
+        for class_storid2 in class_storids:
+          if not class_storid1 is class_storid2:
+            new_equivs[class_storid1].append(class_storid2)
+            
+    while stack and (stack[-1][0] >= depth): del stack[-1]
+    if len(stack) > 1: # if len(stack) == 1, it only contains Thing => not interesting
+      for class_storid in class_storids:
+        entity_2_type[class_storid] = "class"
+        new_parents[class_storid].extend(stack[-1][1])
+    else:
+      for class_storid in class_storids:
+        entity_2_type[class_storid] = "class"
+    stack.append((depth, class_storids))
+    
+    if len(splitted) == 2:
+      ind_iris = splitted[1][1:-1].split(", ")
+      for ind_iri in ind_iris:
+        ind_storid = ontology.abbreviate(ind_iri)
+        entity_2_type[ind_storid] = "individual"
+        new_parents[ind_storid].extend(class_storids)
+        
+        
+  _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, entity_2_type)
+  
+  if debug: print("* Owlready * (NB: only changes on entities loaded in Python are shown, other changes are done but not listed)", file = sys.stderr)
+  
+  if not keep_tmp_file: os.unlink(tmp.name)
 
 
 

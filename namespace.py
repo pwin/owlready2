@@ -485,6 +485,12 @@ class Ontology(Namespace, _GraphManager):
     if not r is None: return r
     return Namespace(self, base_iri, name or base_iri[:-1].rsplit("/", 1)[-1])
   
+  def __exit__(self, exc_type = None, exc_val = None, exc_tb = None):
+    Namespace.__exit__(self, exc_type, exc_val, exc_tb)
+    if not self.loaded:
+      self.loaded = True
+      if self.graph: self.graph.set_last_update_time(time.time())
+      
   def load(self, only_local = False, fileobj = None, reload = False, reload_if_newer = False, **args):
     if self.loaded and (not reload): return self
     if self.base_iri == "http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#":
@@ -496,7 +502,7 @@ class Ontology(Namespace, _GraphManager):
       
     new_base_iri = None
     if f.startswith("http:") or f.startswith("https:"):
-      if self.graph.get_last_update_time() == 0.0: # Never loaded
+      if  reload or (self.graph.get_last_update_time() == 0.0): # Never loaded
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
         fileobj = urllib.request.urlopen(f)
         try:     new_base_iri = self.graph.parse(fileobj, default_base = self.base_iri, **args)
@@ -506,7 +512,7 @@ class Ontology(Namespace, _GraphManager):
       try:     new_base_iri = self.graph.parse(fileobj, default_base = self.base_iri, **args)
       finally: fileobj.close()
     else:
-      if (reload_if_newer and (os.path.getmtime(f) > self.graph.get_last_update_time())) or (self.graph.get_last_update_time() == 0.0):
+      if reload or (reload_if_newer and (os.path.getmtime(f) > self.graph.get_last_update_time())) or (self.graph.get_last_update_time() == 0.0):
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
         fileobj = open(f, "rb")
         try:     new_base_iri = self.graph.parse(fileobj, default_base = self.base_iri, **args)

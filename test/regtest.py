@@ -518,6 +518,16 @@ class Test(BaseTest, unittest.TestCase):
     
     assert o.metadata.comment == ["TEST"]
     
+  def test_ontology_22(self):
+    w = self.new_world()
+    o = w.get_ontology("http://test.org/test.owl")
+
+    assert o.graph.get_last_update_time() == 0.0
+    
+    with o:
+      class C(Thing): pass
+      
+    assert o.graph.get_last_update_time() != 0.0
     
     
   def test_class_1(self):
@@ -1899,8 +1909,6 @@ class Test(BaseTest, unittest.TestCase):
     with results:
       sync_reasoner(world, debug = 0)
       
-    assert len(results.graph) == 4
-
     self.assert_triple(onto.VegetalianPizza.storid, rdfs_subclassof, onto.VegetarianPizza.storid, world)
     self.assert_triple(onto.pizza_tomato.storid, rdf_type, onto.VegetalianPizza.storid, world)
     self.assert_triple(onto.pizza_tomato_cheese.storid, rdf_type, onto.VegetarianPizza.storid, world)
@@ -1908,6 +1916,8 @@ class Test(BaseTest, unittest.TestCase):
     assert onto.VegetarianPizza in onto.VegetalianPizza.__bases__
     assert onto.pizza_tomato.__class__ is onto.VegetalianPizza
     assert onto.pizza_tomato_cheese.__class__ is onto.VegetarianPizza
+    
+    assert len(results.graph) == 4
     
   def test_reasoning_2(self):
     world = self.new_world()
@@ -4056,7 +4066,7 @@ t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [t.D] []
     
     
 class Paper(BaseTest, unittest.TestCase):
-  def test_paper_ic2017(self):
+  def test_reasoning_paper_ic2017(self):
     world = self.new_world()
     onto = world.get_ontology("http://www.lesfleursdunormal.fr/static/_downloads/paper_ic2017.owl")
     
@@ -4117,7 +4127,7 @@ class Paper(BaseTest, unittest.TestCase):
     assert MaladieHémorragique in Maladie_CI_avec_m.equivalent_to.indirect()
     assert issubclass(MaladieHémorragique, Maladie_CI_avec_m)
     
-  def test_paper_5(self):
+  def test_reasoning_paper_5(self):
     world = self.new_world()
     onto = world.get_ontology("http://www.lesfleursdunormal.fr/static/_downloads/paper_5.owl")
     
@@ -4249,7 +4259,7 @@ class Paper(BaseTest, unittest.TestCase):
     acquired hemorrhagic disorder CI         Ok      CI   
 constitutive hemorrhagic disorder CI         CI      CI   """.strip()
 
-  def test_paper_ic2015(self):
+  def test_reasoning_paper_ic2015(self):
     world = self.new_world()
     onto = world.get_ontology("http://www.lesfleursdunormal.fr/static/_downloads/crepes_et_galettes.owl")
     onto.load()
@@ -4278,6 +4288,20 @@ constitutive hemorrhagic disorder CI         CI      CI   """.strip()
     assert ok == 1
 
 
-    
+# Add test for Pellet
+
+for Class in [Test, Paper]:
+  if Class:
+    for name, func in list(Class.__dict__.items()):
+      if name.startswith("test_reasoning"):
+        def test_pellet(self, func = func):
+          global sync_reasoner
+          sync_reasoner = sync_reasoner_pellet
+          func(self)
+          sync_reasoner = sync_reasoner_hermit
+        setattr(Class, "%s_pellet" % name, test_pellet)
+
+del Class # Else, it is considered as an additional test class!
+        
 if __name__ == '__main__': unittest.main()
   

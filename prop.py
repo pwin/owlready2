@@ -231,7 +231,7 @@ class Property(metaclass = PropertyClass):
       
     ranges  = set(Prop.range)
     singles = set()
-
+    
     for restriction in _inherited_property_value_restrictions(Class, Prop, set()):
       if     restriction.type == ONLY:
         ranges.add(restriction.value)
@@ -240,7 +240,9 @@ class Property(metaclass = PropertyClass):
           cache[Prop] = True
           return True
         singles.add(restriction.value)
+
     cache[Prop] = r = not ranges.isdisjoint(singles)
+    
     return r
 
   @classmethod

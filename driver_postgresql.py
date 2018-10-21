@@ -766,6 +766,9 @@ CREATE INDEX index_quads_o ON quads(o);""")
     self.execute("SELECT last_update FROM ontologies WHERE c=%s", (self.c,))
     return self.fetchone()[0]
   
+  def set_last_update_time(self, t):
+    self.execute("UPDATE ontologies SET last_update=%s WHERE c=%s", (t, self.c))
+    
   def destroy(self):
     self.execute("DELETE FROM quads WHERE c=%s",      (self.c,))
     self.execute("DELETE FROM ontologies WHERE c=%s", (self.c,))

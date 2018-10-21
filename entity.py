@@ -117,9 +117,9 @@ class EntityClass(type):
         is_a           = _is_a,
         _equivalent_to = None,
       )
-
+      
       Class = namespace.world._entities[storid] = _is_a._obj = type.__new__(MetaClass, name, superclasses, obj_dict)
-        
+      
       if not LOADING:
         namespace.ontology.add_triple(storid, rdf_type, MetaClass._owl_type)
         for parent in _is_a: Class._add_is_a_triple(parent)

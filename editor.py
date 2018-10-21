@@ -113,9 +113,6 @@ introsp.MAX_NUMBER_OF_ATTRIBUTE_FOR_EMBEDDING = 0
 
 def _get_priority(Prop):
   return Prop.editobj_priority.first()
-  #priority = ANNOTATIONS[Prop]["editobj_priority"]
-  #if priority: return priority[0]
-  #else:        return None
 
 def _intersect_reduce(s):
   if not s: return set()

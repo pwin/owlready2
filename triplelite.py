@@ -659,6 +659,9 @@ class SubGraph(BaseSubGraph):
   def get_last_update_time(self):
     return self.execute("SELECT last_update FROM ontologies WHERE c=?", (self.c,)).fetchone()[0]
   
+  def set_last_update_time(self, t):
+    self.execute("UPDATE ontologies SET last_update=? WHERE c=?", (t, self.c))
+  
   def destroy(self):
     self.execute("DELETE FROM quads WHERE c=?",      (self.c,))
     self.execute("DELETE FROM ontologies WHERE c=?", (self.c,))
