@@ -27,6 +27,14 @@ from owlready2.driver import _guess_format, _save
 from owlready2.util import _int_base_62, FTS
 from owlready2.base import _universal_abbrev_2_iri
 
+def all_combinations(l):
+  """returns all the combinations of the sublist in the given list (i.e. l[0] x l[1] x ... x l[n])."""
+  if len(l) == 0: return ()
+  if len(l) == 1: return [(a,) for a in l[0]]
+  r = []
+  for a in l[0]: r.extend((a,) + b for b in all_combinations(l[1:]))
+  return r
+
 class Graph(BaseMainGraph):
   _SUPPORT_CLONING = True
   def __init__(self, filename, clone = None, exclusive = True, world = None):
@@ -335,11 +343,13 @@ class Graph(BaseMainGraph):
         if o is None: self.execute("DELETE FROM quads WHERE s=? AND p=?", (s, p,))
         else:         self.execute("DELETE FROM quads WHERE s=? AND p=? AND o=?", (s, p, o,))
         
+        
   def search(self, prop_vals, c = None):
-    tables     = []
-    conditions = []
-    params     = []
-    excepts    = []
+    tables       = []
+    conditions   = []
+    params       = []
+    alternatives = []
+    excepts      = []
     i = 0
     
     for k, v in prop_vals:
@@ -387,22 +397,22 @@ class Graph(BaseMainGraph):
         if v.startswith('"*"'):
           cond1 = "q%s.s = q1.s AND q%s.p = ?" % (i, i)
           cond2 = "q%s.o = q1.s AND q%s.p = ?" % (i, i)
-          params.extend([k[0], k[1]])
+          params1 = [k[0]]
+          params2 = [k[1]]
         else:
           cond1 = "q%s.s = q1.s AND q%s.p = ? AND q%s.o = ?" % (i, i, i)
           cond2 = "q%s.o = q1.s AND q%s.p = ? AND q%s.s = ?" % (i, i, i)
-          params.extend([k[0], v, k[1], v])
-        conditions  .append("((%s) OR (%s))" % (cond1, cond2))
+          params1 = [k[0], v]
+          params2 = [k[1], v]
+        alternatives.append(((cond1, params1), (cond2, params2)))
         
       else: # Prop without inverse
         if i > 1: conditions.append("q%s.s = q1.s" % i)
-        #if k in self.prop_fts:
         if isinstance(v, FTS):
           fts = self.prop_fts[k]
           tables    .append("fts_%s" % fts)
           conditions.append("q%s.rowid = fts_%s.rowid" % (i, fts))
           conditions.append("fts_%s MATCH ?" % fts)
-          #params    .append(v[1:-2]) # v is in the form '"keyword"*' => remove the final * and the "
           params    .append(v)
         else:
           conditions.append("q%s.p = ?" % i)
@@ -416,9 +426,24 @@ class Graph(BaseMainGraph):
           else:
             conditions.append("q%s.o = ?" % i)
             params    .append(v)
-          
-    req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions))
-    
+            
+    if alternatives:
+      conditions0 = conditions
+      params0     = params
+      params      = []
+      reqs        = []
+      for combination in all_combinations(alternatives):
+        combination_conditions, combination_paramss = zip(*combination)
+        req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions0 + list(combination_conditions)))
+        reqs.append(req)
+        params.extend(params0)
+        for combination_params in combination_paramss: params.extend(combination_params)
+      req = "SELECT DISTINCT * FROM (\n%s\n)" % "\nUNION\n".join(reqs)
+      
+    else:
+      req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions))
+      
+      
     if excepts:
       conditions = []
       for except_p in excepts:

@@ -3299,6 +3299,45 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     l = n.search(p = "EF*")
     assert set(l) == { o3, o4 }
     
+  def test_search_8(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/test.owl")
+    with onto:
+      class O(Thing): pass
+      class p(O >> O): pass
+      class i(O >> O):
+        inverse = p
+        
+    o1 = O()
+    o2 = O()
+    o3 = O()
+    o4 = O()
+
+    o1.p = [o2, o3]
+    o4.p = [o2]
+    
+    assert onto.search(p = [o2, o3]) == [o1]
+    
+    o1 = O()
+    o2 = O()
+    o3 = O()
+    o4 = O()
+
+    o1.p = [o2]
+    o3.i = [o1]
+    
+    assert onto.search(p = [o2, o3]) == [o1]
+    
+    o1 = O()
+    o2 = O()
+    o3 = O()
+    o4 = O()
+
+    o2.i = [o1, o4]
+    o3.i = [o1]
+    
+    assert world.search(p = [o2, o3]) == [o1]
+
     
   def test_rdflib_1(self):
     world = self.new_world()
