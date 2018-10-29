@@ -1075,7 +1075,8 @@ class Test(BaseTest, unittest.TestCase):
     world   = self.new_world()
     onto = get_ontology("http://test.org/test_undeclared_entity.owl").load()
     
-    assert onto.C.hasRelatedSynonym == ["http://test.org/test_undeclared_entity.owl#genid1217"]
+    # Can guest it is a class
+    assert [i.iri for i in onto.C.hasRelatedSynonym] == ["http://test.org/test_undeclared_entity.owl#genid1217"]
     
     assert onto.i.hasRelatedSynonym == ["http://test.org/test_undeclared_entity.owl#genid1219"]
     
@@ -3180,7 +3181,21 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     rapper.wait()
     
     self.assert_ntriples_equivalent(triples1, triples2)
-   
+    
+  def test_format_23(self):
+    world = self.new_world()
+    world.set_backend(filename = os.path.join(HERE, "test_quadstore_slash.sqlite3"))
+    onto = world.get_ontology("http://test.org/test_slash/")
+    assert onto.C is not None
+    world.close()
+    
+  def test_format_24(self):
+    world = self.new_world()
+    world.set_backend(filename = os.path.join(HERE, "test_quadstore_slash.sqlite3"))
+    onto = world.get_ontology("http://test.org/test_slash")
+    assert onto.C is not None
+    world.close()
+    
     
   def test_search_1(self):
     world = self.new_world()
@@ -4063,6 +4078,104 @@ t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [t.D] []
     
     l = owlready2.observe.InstancesOfClass(C, order_by = "label", lang = "en", use_observe = True)
     assert list(l) == [c1, c2, c3]
+    
+  def test_fts_1(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/t.owl")
+    with onto:
+      class C(Thing): pass
+      
+      c1 = C(label = ["Maladies du rein"])
+      c2 = C(label = ["Cander du rein", "Cancer rénal"])
+      c3 = C(label = ["Insuffisance rénale"])
+      c4 = C(label = ["Insuffisance cardiaque"])
+      
+    world.full_text_search_properties.append(label)
+    
+    # Normal search
+    assert set(world.search(label = "Maladies du rein")) == { c1 }
+    assert set(world.search(label = "rein")) == set()
+    
+    # FTS search
+    assert set(world.search(label = FTS("rein"))) == { c1, c2 }
+    assert set(world.search(label = FTS("rénal"))) == { c2 }
+    assert set(world.search(label = FTS("rénale"))) == { c3 }
+    assert set(world.search(label = FTS("rénal*"))) == { c2, c3 }
+    assert set(world.search(label = FTS("insuffisance*"))) == { c3, c4 }
+    assert set(world.search(label = FTS("maladies rein"))) == { c1 }
+    
+    world.full_text_search_properties.remove(label)
+    
+  def test_fts_2(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/t.owl")
+    with onto:
+      class C(Thing): pass
+      class p(C >> str): pass
+      
+    world.full_text_search_properties.append(p)
+    
+    c1 = C(p = ["Maladies du rein"])
+    c2 = C(p = ["Cander du rein", "Cancer rénal"])
+    c3 = C(p = ["Insuffisance rénale"])
+    c4 = C(p = ["Insuffisance cardiaque"])
+    
+    #print("R", set(world.search(p = FTS("4S"))))
+    #print()
+    
+    # Normal search
+    assert set(world.search(p = "Maladies du rein")) == { c1 }
+    assert set(world.search(p = "rein")) == set()
+    
+    # FTS search
+    assert set(world.search(p = FTS("rein"))) == { c1, c2 }
+    assert set(world.search(p = FTS("rénal"))) == { c2 }
+    assert set(world.search(p = FTS("rénale"))) == { c3 }
+    assert set(world.search(p = FTS("rénal*"))) == { c2, c3 }
+    assert set(world.search(p = FTS("insuffisance*"))) == { c3, c4 }
+    assert set(world.search(p = FTS("maladies rein"))) == { c1 }
+    
+    destroy_entity(c2)
+    assert set(world.search(p = FTS("rénal*"))) == { c3 }
+    
+    c4.p = ["Insuffisance hépatique"]
+    
+    assert set(world.search(p = FTS("insuffisance cardi*"))) == set()
+    assert set(world.search(p = FTS("insuffisance"))) == { c3, c4 }
+    assert set(world.search(p = FTS("hépatique"))) == { c4 }
+    
+    world.full_text_search_properties.remove(p)
+
+  def test_fts_3(self):
+    tmp = self.new_tmp_file()
+    world = self.new_world()
+    world.set_backend(filename = tmp)
+    onto = world.get_ontology("http://test.org/t.owl#")
+    with onto:
+      class C(Thing): pass
+      class p(C >> str): pass
+      
+    world.full_text_search_properties.append(p)
+    world.full_text_search_properties.append(label)
+    
+    C("c1", p = ["Maladies du rein"])
+    C("c2", p = ["Cander du rein", "Cancer rénal"])
+    C("c3", label = ["Insuffisance rénale"])
+    C("c4", label = ["Insuffisance cardiaque"])
+
+    S = p.storid
+    
+    world.save()
+    world.close()
+    world = None
+    
+    world2 = self.new_world()
+    world2.set_backend(filename = tmp)
+    
+    assert set(world2.full_text_search_properties) == { world2["http://test.org/t.owl#p"], label }
+    
+    assert set(world2.search(p = FTS("rein"))) == { world2["http://test.org/t.owl#c1"], world2["http://test.org/t.owl#c2"] }
+    assert set(world2.search(label = FTS("insuffisance*"))) == { world2["http://test.org/t.owl#c3"], world2["http://test.org/t.owl#c4"] }
     
     
 class Paper(BaseTest, unittest.TestCase):

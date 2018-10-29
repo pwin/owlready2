@@ -24,7 +24,7 @@ import owlready2
 from owlready2.base import *
 from owlready2.driver import BaseMainGraph, BaseSubGraph
 from owlready2.driver import _guess_format, _save
-from owlready2.util import _int_base_62
+from owlready2.util import _int_base_62, FTS
 from owlready2.base import _universal_abbrev_2_iri
 
 class Graph(BaseMainGraph):
@@ -47,12 +47,14 @@ class Graph(BaseMainGraph):
     if initialize_db:
       self.current_blank    = 0
       self.current_resource = 300 # 300 first values are reserved
+      self.prop_fts         = {}
       
       self.execute("""CREATE TABLE store (version INTEGER, current_blank INTEGER, current_resource INTEGER)""")
-      self.execute("""INSERT INTO store VALUES (2, 0, 300)""")
+      self.execute("""INSERT INTO store VALUES (3, 0, 300)""")
       self.execute("""CREATE TABLE quads (c INTEGER, s TEXT, p TEXT, o TEXT)""")
       self.execute("""CREATE TABLE ontologies (c INTEGER PRIMARY KEY, iri TEXT, last_update DOUBLE)""")
       self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
+      self.execute("""CREATE TABLE prop_fts (fts INTEGER PRIMARY KEY, storid TEXT)""")
       try:
         self.execute("""CREATE TABLE resources (storid TEXT PRIMARY KEY, iri TEXT) WITHOUT ROWID""")
       except sqlite3.OperationalError: # Old SQLite3 does not support WITHOUT ROWID -- here it is just an optimization
@@ -73,11 +75,19 @@ class Graph(BaseMainGraph):
       if version == 1:
         self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
         self.execute("""UPDATE store SET version=2""")
-        
+        self.db.commit()
+      if version == 2:
+        self.execute("""CREATE TABLE prop_fts (fts INTEGER PRIMARY KEY, storid TEXT)""")
+        self.execute("""UPDATE store SET version=3""")
+        self.db.commit()
+      self.prop_fts = { storid : fts for (fts, storid) in self.execute("""SELECT * FROM prop_fts;""") }
+      
     self.current_changes = self.db.total_changes
     self.select_abbreviate_method()
-    
 
+  def close(self):
+    self.db.close()
+    
   def select_abbreviate_method(self):
     nb = self.execute("SELECT count(*) FROM resources").fetchone()[0]
     if nb < 100000:
@@ -99,7 +109,25 @@ class Graph(BaseMainGraph):
     for subgraph in self.onto_2_subgraph.values():
       subgraph.onto.abbreviate   = subgraph.abbreviate   = self.abbreviate
       subgraph.onto.unabbreviate = subgraph.unabbreviate = self.unabbreviate
+
+  def fix_base_iri(self, base_iri, c = None):
+    if base_iri.endswith("#") or base_iri.endswith("/"): return base_iri
+    
+    if c is None:
+      use_hash = self.execute("SELECT resources.iri FROM quads, resources WHERE resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (base_iri + "#%",)).fetchone()
+    else:
+      use_hash = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (c, base_iri + "#%")).fetchone()
+    if use_hash: return "%s#" % base_iri
+    else:
+      if c is None:
+        use_slash = self.execute("SELECT resources.iri FROM quads, resources WHERE resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (base_iri + "/%",)).fetchone()
+      else:
+        use_slash = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (c, base_iri + "/%")).fetchone()
+      if use_slash: return "%s/" % base_iri
+      else:         return "%s#" % base_iri
       
+    return "%s#" % base_iri
+    
   def sub_graph(self, onto):
     new_in_quadstore = False
     c = self.execute("SELECT c FROM ontologies WHERE iri=?", (onto.base_iri,)).fetchone()
@@ -325,7 +353,7 @@ class Graph(BaseMainGraph):
         conditions  .append("q%s.c = ?" % i)
         params      .append(c)
         
-      if   k == "iri":
+      if   k == " iri":
         if i > 1: conditions.append("q%s.s = q1.s" % i)
         tables    .append("resources")
         conditions.append("resources.storid = q%s.s" % i)
@@ -333,17 +361,17 @@ class Graph(BaseMainGraph):
         else:        conditions.append("resources.iri = ?")
         params.append(v)
         
-      elif k == "is_a":
+      elif k == " is_a":
         if i > 1: conditions.append("q%s.s = q1.s" % i)
         conditions.append("(q%s.p = '%s' OR q%s.p = '%s') AND q%s.o IN (%s)" % (i, rdf_type, i, rdfs_subclassof, i, ",".join("?" for i in v)))
         params    .extend(v)
         
-      elif k == "type":
+      elif k == " type":
         if i > 1: conditions.append("q%s.s = q1.s" % i)
         conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdf_type, i, ",".join("?" for i in v)))
         params    .extend(v)
         
-      elif k == "subclass_of":
+      elif k == " subclass_of":
         if i > 1: conditions.append("q%s.s = q1.s" % i)
         conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdfs_subclassof, i, ",".join("?" for i in v)))
         params    .extend(v)
@@ -368,17 +396,26 @@ class Graph(BaseMainGraph):
         
       else: # Prop without inverse
         if i > 1: conditions.append("q%s.s = q1.s" % i)
-        conditions.append("q%s.p = ?" % i)
-        params    .append(k)
-        if "*" in v:
-          if   v.startswith('"*"'):
-            conditions.append("q%s.o GLOB '*'" % i)
-          else:
-            conditions.append("q%s.o GLOB ?" % i)
-            params    .append(v)
-        else:
-          conditions.append("q%s.o = ?" % i)
+        #if k in self.prop_fts:
+        if isinstance(v, FTS):
+          fts = self.prop_fts[k]
+          tables    .append("fts_%s" % fts)
+          conditions.append("q%s.rowid = fts_%s.rowid" % (i, fts))
+          conditions.append("fts_%s MATCH ?" % fts)
+          #params    .append(v[1:-2]) # v is in the form '"keyword"*' => remove the final * and the "
           params    .append(v)
+        else:
+          conditions.append("q%s.p = ?" % i)
+          params    .append(k)
+          if "*" in v:
+            if   v.startswith('"*"'):
+              conditions.append("q%s.o GLOB '*'" % i)
+            else:
+              conditions.append("q%s.o GLOB ?" % i)
+              params    .append(v)
+          else:
+            conditions.append("q%s.o = ?" % i)
+            params    .append(v)
           
     req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions))
     
@@ -403,7 +440,7 @@ EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR ("
     #print(prop_vals)
     #print(req)
     #print(params)
-    
+
     return self.execute(req, params).fetchall()
   
   def _punned_entities(self):
@@ -412,6 +449,7 @@ EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR ("
     return [storid for (storid,) in cur.fetchall()]
   
     
+  def __bool__(self): return True # Reimplemented to avoid calling __len__ in this case
   def __len__(self):
     return self.execute("SELECT COUNT() FROM quads").fetchone()[0]
 
@@ -538,8 +576,48 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
       else:         cursor.execute("SELECT s,p,o FROM quads")
     return cursor
   
-        
   
+  def get_fts_prop_storid(self): return self.prop_fts.keys()
+  
+  def enable_full_text_search(self, prop_storid):
+    fts = 1
+    while True:
+      if not self.execute("""SELECT storid FROM prop_fts WHERE fts=?""", (str(fts),)).fetchall():
+        fts = str(fts)
+        break
+      fts += 1
+      
+    self.prop_fts[prop_storid] = fts # = str(len(self.prop_fts) + 1)
+    
+    self.execute("""INSERT INTO prop_fts VALUES (?, ?)""", (fts, prop_storid));
+    
+    self.execute("""CREATE VIRTUAL TABLE fts_%s USING fts5(o, content=quads, content_rowid=rowid)""" % fts)
+    self.execute("""INSERT INTO fts_%s(rowid, o) SELECT rowid, SUBSTR(o, 2, LENGTH(o) - 2) FROM quads WHERE p='%s'""" % (fts, prop_storid))
+    
+    self.db.cursor().executescript("""
+CREATE TRIGGER fts_%s_after_insert AFTER INSERT ON quads BEGIN
+  INSERT INTO fts_%s(rowid, o) VALUES (new.rowid, new.o);
+END;
+CREATE TRIGGER fts_%s_after_delete AFTER DELETE ON quads BEGIN
+  INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', old.rowid, old.o);
+END;
+CREATE TRIGGER fts_%s_after_update AFTER UPDATE ON quads BEGIN
+  INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', new.rowid, SUBSTR(new.o, 2, LENGTH(new.o) - 2));
+  INSERT INTO fts_%s(rowid, o) VALUES (new.rowid, new.o);
+END;""" % (fts, fts,   fts, fts, fts,   fts, fts, fts, fts))
+  
+  def disable_full_text_search(self, prop_storid):
+    if not isinstance(prop_storid, str): prop_storid = prop_storid.storid
+    fts = self.prop_fts[prop_storid]
+    del self.prop_fts[prop_storid]
+    
+    self.execute("""DELETE FROM prop_fts WHERE fts = ?""", (fts,));
+    self.execute("""DROP TABLE fts_%s""" % fts)
+    self.execute("""DROP TRIGGER fts_%s_after_insert""" % fts)
+    self.execute("""DROP TRIGGER fts_%s_after_delete""" % fts)
+    self.execute("""DROP TRIGGER fts_%s_after_update""" % fts)
+    
+    
 class SubGraph(BaseSubGraph):
   def __init__(self, parent, onto, c, db):
     BaseSubGraph.__init__(self, parent, onto)
@@ -641,12 +719,7 @@ class SubGraph(BaseSubGraph):
       if onto_base_iri.endswith("/"):
         cur.execute("UPDATE ontologies SET last_update=?,iri=? WHERE c=?", (date, onto_base_iri, self.c,))
       elif onto_base_iri:
-        use_hash = cur.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (self.c, onto_base_iri + "#%")).fetchone()
-        if use_hash: onto_base_iri = onto_base_iri + "#"
-        else:
-          use_slash = cur.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (self.c, onto_base_iri + "/%")).fetchone()
-          if use_slash: onto_base_iri = onto_base_iri + "/"
-          else:         onto_base_iri = onto_base_iri + "#"
+        onto_base_iri = self.parent.fix_base_iri(onto_base_iri, self.c)
         cur.execute("UPDATE ontologies SET last_update=?,iri=? WHERE c=?", (date, onto_base_iri, self.c,))
       else:
         cur.execute("UPDATE ontologies SET last_update=? WHERE c=?", (date, self.c,))

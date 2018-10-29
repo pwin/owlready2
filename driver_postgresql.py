@@ -125,6 +125,28 @@ UNION ALL SELECT quads.s FROM quads, transit WHERE quads.p=$1 AND quads.o=transi
 SELECT DISTINCT x FROM transit;""")
 
 
+  def fix_base_iri(self, base_iri, c = None):
+    if base_iri.endswith("#") or base_iri.endswith("/"): return base_iri
+    
+    if c is None:
+      self.execute("SELECT resources.iri FROM quads, resources WHERE resources.storid=quads.s AND resources.iri LIKE %s LIMIT 1", (base_iri + "#%",))
+      use_hash = self.fetchone()
+    else:
+      self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=%S AND resources.storid=quads.s AND resources.iri LIKE %s LIMIT 1", (c, base_iri + "#%"))
+      use_hash = self.fetchone()
+    if use_hash: return "%s#" % base_iri
+    else:
+      if c is None:
+        self.execute("SELECT resources.iri FROM quads, resources WHERE resources.storid=quads.s AND resources.iri LIKE %s LIMIT 1", (base_iri + "/%",))
+        use_slash = self.fetchone()
+      else:
+        self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=%s AND resources.storid=quads.s AND resources.iri LIKE %s LIMIT 1", (c, base_iri + "/%"))
+        use_slash = self.fetchone()
+      if use_slash: return "%s/" % base_iri
+      else:         return "%s#" % base_iri
+      
+    return "%s#" % base_iri
+    
    
   def sub_graph(self, onto):
     new_in_quadstore = False
@@ -209,15 +231,17 @@ SELECT DISTINCT x FROM transit;""")
     self.execute("UPDATE store SET current_blank=%s, current_resource=%s", (self.current_blank, self.current_resource))
     self.db.commit()
     
-    
-    
+  def get_fts_prop_storid(self): return []
+  
+  
+  
   def context_2_user_context(self, c): return self.c_2_onto[c]
 
   def new_blank_node(self):
     self.current_blank += 1
     return "_%s" % _int_base_62(self.current_blank)
   
-  def get_triples(self, s, p, o):
+  def get_triples(self, s, p, o, ignore_missing_datatype = False):
     if s is None:
       if p is None:
         if o is None: self.execute("SELECT s,p,o FROM quads")
@@ -690,8 +714,6 @@ class SubGraph(BaseSubGraph):
           
       if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
       
-      #print("PARSE", time.time() - t0, file = sys.stderr)
-
       new_abbrevs.sort(key = lambda x: x[1])
       values.sort(key = lambda x: x[0])
 
@@ -706,19 +728,13 @@ class SubGraph(BaseSubGraph):
         f = StringIO("\n".join("%s\t%s\t%s\t%s" % (self.c, vs[0], vs[1], vs[2].replace("\\", "\\\\").replace("\t", "\\t").replace('\n', '\\n')) for vs in values))
         cur.copy_from(f, "quads")
         
-      #print("INSERT", time.time() - t, file = sys.stderr)
-      
       t  = time.time()
       if reindex:
-        #cur.execute("""CREATE INDEX index_resources_iri ON resources(iri)""")
-        #cur.execute("""CREATE INDEX index_quads_s ON quads(s)""")
-        #cur.execute("""CREATE INDEX index_quads_o ON quads(o)""")
         with self.cursor() as cur:
           cur.execute("""
 CREATE UNIQUE INDEX index_resources_iri ON resources(iri);
 CREATE INDEX index_quads_s ON quads(s);
 CREATE INDEX index_quads_o ON quads(o);""")
-      #print("INDEX", time.time() - t, file = sys.stderr)
       t  = time.time()
       
       self.sql.execute("""set maintenance_work_mem = %s""", (DEFAULT_WORK_MEM,))
@@ -728,7 +744,7 @@ CREATE INDEX index_quads_o ON quads(o);""")
         onto_base_iri = cur.fetchone()
         if onto_base_iri: onto_base_iri = onto_base_iri[0]
         else:             onto_base_iri = ""
-       
+        
       if onto_base_iri and (not onto_base_iri.endswith("/")):
         onto_base_iri_hash = "%s#" % onto_base_iri
         for e in entities:
@@ -749,9 +765,7 @@ CREATE INDEX index_quads_o ON quads(o);""")
       else:
         with self.cursor() as cur:
           cur.execute("UPDATE ontologies SET last_update=%s WHERE c=%s", (date, self.c,))
-          
-      #print("FIN", time.time() - t, file = sys.stderr)
-      
+
       return onto_base_iri
       
     return on_prepare_triple, self.parent.new_blank_node, new_literal, abbreviate, on_finish

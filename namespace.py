@@ -127,11 +127,11 @@ class _GraphManager(object):
       first = self.get_triple_sp(bnode, rdf_first)
       if first != rdf_nil: yield first
       bnode = self.get_triple_sp(bnode, rdf_rest)
-  
-  def _to_python(self, o, default_to_none = False):
+      
+  def _to_python(self, o, main_type = None, main_onto = None, default_to_none = False):
     if   o.startswith("_"): return self._parse_bnode(o)
     elif o.startswith('"'): return from_literal(o)
-    else: return self.world._get_by_storid(o, default_to_none = default_to_none)
+    else: return self.world._get_by_storid(o, None, main_type, main_onto, None, default_to_none)
     raise ValueError
   
   def _to_rdf(self, o):
@@ -190,10 +190,10 @@ class _GraphManager(object):
       if not isinstance(v0, list): v0 = (v0,)
       for v in v0:
         if   k == "iri":
-          prop_vals.append(("iri", v))
+          prop_vals.append((" iri", v))
         elif (k == "is_a") or (k == "subclass_of") or (k == "type"):
           v2 = [child.storid for child in v.descendants()]
-          prop_vals.append((k, v2))
+          prop_vals.append((" %s" % k, v2))
         else:
           k2 = self.world._props.get(k)
           if k2 is None:
@@ -206,9 +206,11 @@ class _GraphManager(object):
           if v is None:
             v2 = None
           else:
-            v2 = self.world._to_rdf(v)
-            if _use_str_as_loc_str and v2.endswith('"Y'): # A string, which can be associated to a language in RDF
-              v2 = '%s*' % v2[:-1]
+            if isinstance(v, FTS): v2 = v
+            else:
+              v2 = self.world._to_rdf(v)
+              if _use_str_as_loc_str and v2.endswith('"Y'): # A string, which can be associated to a language in RDF
+                v2 = '%s*' % v2[:-1]
           prop_vals.append((k2, v2))
           
     r = self.graph.search(prop_vals)
@@ -251,6 +253,9 @@ class World(_GraphManager):
       #for method in self.graph.__class__.READ_METHODS: setattr(self, method, getattr(self.graph, method))
       
     #if self.graph:
+    #  self._full_text_search_properties = CallbackList([], self, World._full_text_search_changed)
+      
+    #if self.graph:
     #  for iri in self.graph.ontologies_iris():
     #    self.get_ontology(iri) # Create all possible ontologies
     
@@ -276,6 +281,7 @@ class World(_GraphManager):
     else:
       raise ValueError("Unsupported backend type '%s'!" % backend)
     for method in self.graph.__class__.READ_METHODS: setattr(self, method, getattr(self.graph, method))
+    
     self.filename = filename
     
     for ontology in self.ontologies.values():
@@ -285,7 +291,25 @@ class World(_GraphManager):
         
     for iri in self.graph.ontologies_iris():
       self.get_ontology(iri) # Create all possible ontologies if not yet done
-      
+
+    self._full_text_search_properties = CallbackList([self._get_by_storid(storid, default_to_none = True) or storid for storid in self.graph.get_fts_prop_storid()], self, World._full_text_search_changed)
+    
+  def close(self): self.graph.close()
+  
+  def get_full_text_search_properties(self): return self._full_text_search_properties
+  def set_full_text_search_properties(self, l):
+    old = self._full_text_search_properties
+    self._full_text_search_properties = CallbackList(l, self, World._full_text_search_changed)
+    self._full_text_search_changed(old)
+  full_text_search_properties = property(get_full_text_search_properties, set_full_text_search_properties)
+  def _full_text_search_changed(self, old):
+    old = set(old)
+    new = set(self._full_text_search_properties)
+    for Prop in old - new:
+      self.graph.disable_full_text_search(Prop.storid)
+    for Prop in new - old:
+      self.graph.enable_full_text_search(Prop.storid)
+  
   def new_blank_node(self): return self.graph.new_blank_node()
   
   def save(self, file = None, format = "rdfxml", **kargs):
@@ -314,12 +338,16 @@ class World(_GraphManager):
       
       
   def get_ontology(self, base_iri):
-    if (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
+    #if (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
+    if self.graph: base_iri = self.graph.fix_base_iri(base_iri)
+    elif (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
     if base_iri in self.ontologies: return self.ontologies[base_iri]
     return Ontology(self, base_iri)
   
   def get_namespace(self, base_iri, name = ""):
-    if (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
+    #if (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
+    if self.graph: base_iri = self.graph.fix_base_iri(base_iri)
+    elif (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
     r = self._namespaces.get(base_iri)
     if not r is None: return r
     return Namespace(self, base_iri, name or base_iri[:-1].rsplit("/", 1)[-1])
@@ -360,6 +388,10 @@ class World(_GraphManager):
             if isinstance(Class, EntityClass): types.append(Class)
             elif Class is None: raise ValueError("Cannot get '%s'!" % obj)
             
+      if main_type is None: # Try to guess it
+        if   self.has_triple(None, rdf_type, storid) or self.has_triple(None, rdfs_subclassof, storid): main_type = ThingClass
+        elif self.has_triple(storid, None, None): main_type = Thing
+
       if main_type and (not main_type is Thing):
         if not trace is None:
             if storid in trace:
@@ -375,6 +407,11 @@ class World(_GraphManager):
             obj = self._get_by_storid2(obj, None, main_type, main_onto, trace)
             if not obj is None: is_a_entities.append(obj)
             
+      if main_onto is None:
+        main_onto = self.get_ontology("http://anonymous/")
+        full_iri = full_iri or self.unabbreviate(storid)
+        if full_iri.startswith(owl.base_iri) or full_iri.startswith(rdfs.base_iri) or full_iri.startswith("http://www.w3.org/1999/02/22-rdf-syntax-ns#"): return None
+        
       if main_onto:
         full_iri = full_iri or self.unabbreviate(storid)
         splitted = full_iri.rsplit("#", 1)
@@ -415,7 +452,7 @@ class World(_GraphManager):
             print("* Owlready2 * WARNING: %s belongs to more than one entity types (e.g. Class, Property, Individual): %s; I'm trying to fix it..." % (full_iri, list(types) + is_a_entities), file = sys.stderr)
             is_a_entities = [t for t in is_a_entities if issubclass_python(t, DataProperty)]
             entity = DataPropertyClass(name, types or (DataProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
-        
+            
       elif main_type is AnnotationPropertyClass:
         types = tuple(t for t in types if t.iri != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")
         entity = AnnotationPropertyClass(name, types or (AnnotationProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
@@ -427,7 +464,10 @@ class World(_GraphManager):
         entity = Class(name, namespace = namespace)
         
       else:
-        if default_to_none: return None
+        if default_to_none:
+          #print("ttt", main_type, storid, name, full_iri, self.unabbreviate(storid))
+          #if storid == "nC": pkfpegpe
+          return None
         return full_iri or self.unabbreviate(storid)
 
       

@@ -250,6 +250,7 @@ version 2 - 0.10
 version 2 - 0.11
 ****************
 
+* Optimized Full-Text Search
 * Support Pellet reasoner in addition to HermiT
 * Support loading of huge OWL files (incremental load)
 * Use Class.property.indirect() for indirect Class property (instead of Class.property)

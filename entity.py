@@ -27,6 +27,7 @@ class _EquivalentToList(CallbackList):
   __slots__ = ["_indirect"]
   def __init__(self, l, obj, callback):
     CallbackList.__init__(self, l, obj, callback)
+    self._obj      = obj
     self._indirect = None
     
   def transitive_symmetric(self):
@@ -34,7 +35,7 @@ class _EquivalentToList(CallbackList):
       n = self._obj.namespace
       self._indirect = set()
       for o in n.world.get_transitive_sym(self._obj.storid, self._obj._owl_equivalent):
-        if o != self._obj.storid: self._indirect.add(n.ontology._to_python(o))
+        if o != self._obj.storid: self._indirect.add(n.ontology._to_python(o, main_type = self._obj.__class__))
     yield from self._indirect
     
   indirect = transitive_symmetric
@@ -152,7 +153,7 @@ class EntityClass(type):
   def get_equivalent_to(Class):
     if Class._equivalent_to is None:
       Class._equivalent_to = _EquivalentToList(
-          [Class.namespace.world._to_python(o, default_to_none = True)
+          [Class.namespace.world._to_python(o, main_type = Class.__class__, default_to_none = True)
            for o in Class.namespace.world.get_triples_sp(Class.storid, Class._owl_equivalent)
           ], Class, Class.__class__._class_equivalent_to_changed)
     return Class._equivalent_to
@@ -398,9 +399,6 @@ class ThingClass(EntityClass):
           if (r.type == VALUE) or (r.type == SOME): return r.value
         return None
       else:
-        #return RoleFilerList(
-        #  (r.value for r in _inherited_property_value_restrictions(Class, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
-        #  Class, Prop)
         return RoleFilerList(
           set(r.value for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()) for r in _property_value_restrictions(SuperClass, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
           Class, Prop)

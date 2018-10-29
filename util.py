@@ -24,6 +24,9 @@ def _int_base_62(i):
 class normstr(str):
   __slots__ = []
 
+class FTS(str):
+  __slots__ = []
+
 class locstr(str):
   __slots__ = ["lang"]
   def __new__(Class, s, lang = ""): return str.__new__(Class, s)

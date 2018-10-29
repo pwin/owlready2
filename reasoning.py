@@ -92,7 +92,9 @@ def _keep_most_specific(s, consider_equivalence = True):
 
 
 def sync_reasoner_hermit(x = None, debug = 1, keep_tmp_file = False):
-  world = x or owlready2.default_world
+  if   isinstance(x, World):    world = x
+  elif isinstance(x, Ontology): world = x.world
+  else:                         world = owlready2.default_world
   if   isinstance(x, Ontology): ontology = x
   elif CURRENT_NAMESPACES[-1]:  ontology = CURRENT_NAMESPACES[-1].ontology
   else:                         ontology = world.get_ontology(_INFERRENCES_ONTOLOGY)
@@ -163,7 +165,9 @@ sync_reasoner = sync_reasoner_hermit
 
 
 def sync_reasoner_pellet(x = None, debug = 1, keep_tmp_file = False):
-  world = x or owlready2.default_world
+  if   isinstance(x, World):    world = x
+  elif isinstance(x, Ontology): world = x.world
+  else:                         world = owlready2.default_world
   if   isinstance(x, Ontology): ontology = x
   elif CURRENT_NAMESPACES[-1]:  ontology = CURRENT_NAMESPACES[-1].ontology
   else:                         ontology = world.get_ontology(_INFERRENCES_ONTOLOGY)
