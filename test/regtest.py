@@ -3304,6 +3304,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     onto = world.get_ontology("http://test.org/test.owl")
     with onto:
       class O(Thing): pass
+      class q(O >> str): pass
       class p(O >> O): pass
       class i(O >> O):
         inverse = p
@@ -3337,6 +3338,17 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     o3.i = [o1]
     
     assert world.search(p = [o2, o3]) == [o1]
+    
+    o1 = O(q = ["x"])
+    o2 = O(q = ["x"])
+    o3 = O(q = ["y"])
+    o4 = O()
+
+    o1.p = [o2, o3]
+    o4.p = [o2]
+    
+    assert onto.search(q = "x", p = [o2, o3]) == [o1]
+    
 
     
   def test_rdflib_1(self):
