@@ -202,3 +202,24 @@ You can also create a subclass of an existing annotation class:
    
    >>> acetaminophen.pharmaceutical_comment = "A comment related to pharmacology of acetaminophen"
 
+
+Full-text search (FTS)
+----------------------
+
+Full-text search (FTS) can optimize search in textual properties and annotations.
+FTS uses Sqlite3 FTS5 implementation.
+
+First, FTS needs to be enabled on the desired properties, by adding them to default_world.full_text_search_properties,
+for example for label:
+
+::
+
+   >>> default_world.full_text_search_properties.append(label)
+
+Then, FTS can be used in search as follows:
+
+::
+
+   >>> default_world.search(label = FTS("keyword1 keyword2*"))
+
+Stars can be used as joker, but only at the END of the keyword.
