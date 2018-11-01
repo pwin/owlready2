@@ -661,7 +661,8 @@ class SubGraph(BaseSubGraph):
     
     cur = self.db.cursor()
     
-    if delete_existing_triples: cur.execute("DELETE FROM quads WHERE c=?", (self.c,))
+    if delete_existing_triples:
+      cur.execute("DELETE FROM quads WHERE c=?", (self.c,))
     
     if len(self.parent) < 100000:
       cur.execute("""DROP INDEX index_resources_iri""")

@@ -594,6 +594,9 @@ class Ontology(Namespace, _GraphManager):
         self.storid = self.world.abbreviate(new_base_iri)
       self.metadata = Metadata(self, self.storid) # Metadata depends on storid
       
+    elif not self.graph.has_triple(self.storid, rdf_type, owl_ontology): # Not always present (e.g. not in dbpedia)
+      self._add_triple(self.storid, rdf_type, owl_ontology)
+      
     # Search for property names
     self._load_properties()
     

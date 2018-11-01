@@ -200,9 +200,9 @@ class BaseSubGraph(BaseGraph):
         if len(self) == 0:
           self._add_triple(self.onto.storid, rdf_type, owl_ontology)
         raise OwlReadyOntologyParsingError("NTriples parsing error in file %s, line %s." % (getattr(f, "name", "???"), current_line)) from e
-
-      if not self.has_triple(self.onto.storid, rdf_type, owl_ontology): # Not always present (e.g. not in dbpedia)
-        self._add_triple(self.onto.storid, rdf_type, owl_ontology)
+      
+      #if not self.has_triple(self.onto.storid, rdf_type, owl_ontology): # Not always present (e.g. not in dbpedia)
+      #  self._add_triple(self.onto.storid, rdf_type, owl_ontology)
         
     elif format == "rdfxml":
       try:
