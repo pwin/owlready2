@@ -12,6 +12,7 @@ global-include *.svg
 graft doc
 graft test
 graft hermit
+graft pellet
 graft locale
 
 include ./LICENSE.txt
