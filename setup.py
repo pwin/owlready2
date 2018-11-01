@@ -66,7 +66,10 @@ setuptools.setup(
   
   package_dir  = {"owlready2" : "."},
   packages     = ["owlready2"],
-  package_data = {"owlready2" : ["owlready_ontology.owl", "hermit/*.*", "hermit/org/semanticweb/HermiT/cli/*"]},
+  package_data = {"owlready2" : ["owlready_ontology.owl",
+                                 "hermit/*.*", "hermit/org/semanticweb/HermiT/cli/*",
+                                 "pellet/*.*", "pellet/org/mindswap/pellet/taxonomy/printer/*",
+                                ]},
   
   ext_modules = extensions,
 )
