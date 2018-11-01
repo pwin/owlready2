@@ -256,6 +256,7 @@ version 2 - 0.11
 * Use Class.property.indirect() for indirect Class property (instead of Class.property)
 * Add reload and reload_if_newer parameters to Ontology.load()
 * search() is now much faster on properties that have inverse
+* Add shortcut for SOME ConstrainedDatatype: e.g. age >= 65
 * Bugfixes:
   - Fix creation of an individual that already exists in the quadstore
   - Fix missing import of EntityClass in class_construct.py
