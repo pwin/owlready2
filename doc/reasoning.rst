@@ -17,6 +17,7 @@ HermiT and Pellet are written in Java, and thus you need a Java Vitual Machine t
 
 HermiT is used by default.
 
+
 Configuration
 -------------
 
