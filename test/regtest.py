@@ -2040,6 +2040,38 @@ I took a placebo
       return
 
     assert False
+     
+  def test_reasoning_6(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test.owl#")
+    
+    with onto:
+      class Personne(Thing): pass
+      
+      class age   (Personne >> int  , FunctionalProperty): pass
+      class taille(Personne >> float, FunctionalProperty): pass
+      
+      class PersonneAgée(Personne):
+        equivalent_to = [
+          Personne & (age >= 65)
+        ]
+        
+      class PersonneGrande(Personne):
+        equivalent_to = [
+          Personne & taille.some(ConstrainedDatatype(float, min_inclusive = 1.8))
+        ]
+        
+      p1 = Personne(age = 25, taille = 2.0)
+      p2 = Personne(age = 39, taille = 1.7)
+      p3 = Personne(age = 65, taille = 1.6)
+      p4 = Personne(age = 71, taille = 1.9)
+      
+    sync_reasoner(world, debug = 0)
+
+    assert set(p1.is_a) == {PersonneGrande}
+    assert set(p2.is_a) == {Personne}
+    assert set(p3.is_a) == {PersonneAgée}
+    assert set(p4.is_a) == {PersonneAgée, PersonneGrande}
     
     
   def test_disjoint_1(self):

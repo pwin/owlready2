@@ -246,6 +246,7 @@ version 2 - 0.10
   - Fix reference to undeclared entities (they were replaced by None, now by their IRI)
   - Fix loading and saving ontologies whose base IRI ends with /
   - Fix RDF query using string
+  - Fix reasoning when asserting new parents with equivalent classes
     
 version 2 - 0.11
 ****************

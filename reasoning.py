@@ -288,7 +288,7 @@ def _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, en
       old = set(parent for parent in child.is_a if not isinstance(parent, ClassConstruct))
       new = set(parents)
       
-      new.update([parent_eq for parent in new for parent_eq in parent.equivalent_to.indirect() if not isinstance(parent, ClassConstruct)])
+      #new.update([parent_eq for parent in new for parent_eq in parent.equivalent_to.indirect() if not isinstance(parent, ClassConstruct)])
       
       new.update(old & _TYPES) # Types are not shown by HermiT
       if old == new: continue
