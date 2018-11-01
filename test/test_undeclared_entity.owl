@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://test.org/test_undeclared_entity.owl#"
+     xml:base="http://test.org/test_undeclared_entity.owl"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:oboRel="http://www.obofoundry.org/ro/ro.owl#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:oboInOwl="http://www.geneontology.org/formats/oboInOwl#">
+    <owl:Ontology rdf:about="http://test.org/test_undeclared_entity.owl">
+    </owl:Ontology>
+    
+<owl:AnnotationProperty rdf:about="http://www.geneontology.org/formats/oboInOwl#hasRelatedSynonym"/>
+
+
+<owl:Class rdf:about="http://test.org/test_undeclared_entity.owl#C">
+    <rdfs:label
+rdf:datatype="http://www.w3.org/2001/XMLSchema#string">trunk</rdfs:label>  
+    <oboInOwl:hasRelatedSynonym rdf:resource="http://test.org/test_undeclared_entity.owl#genid1217"/>
+</owl:Class>
+
+<owl:NamedIndividual rdf:about="http://test.org/test_undeclared_entity.owl#i">
+    <oboInOwl:hasRelatedSynonym rdf:resource="http://test.org/test_undeclared_entity.owl#genid1219"/>
+</owl:NamedIndividual>
+
+<rdf:Description rdf:about="http://test.org/test_undeclared_entity.owl#genid1217">
+    <rdfs:label
+rdf:datatype="http://www.w3.org/2001/XMLSchema#string">body</rdfs:label>  
+</rdf:Description>
+
+
+</rdf:RDF>
+
