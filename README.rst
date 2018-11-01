@@ -246,7 +246,6 @@ version 2 - 0.10
   - Fix reference to undeclared entities (they were replaced by None, now by their IRI)
   - Fix loading and saving ontologies whose base IRI ends with /
   - Fix RDF query using string
-  - Fix reasoning when asserting new parents with equivalent classes
     
 version 2 - 0.11
 ****************
@@ -264,6 +263,7 @@ version 2 - 0.11
   - Fix World.save() with RDF/XML format
   - Fix Thing.subclasses() and Thing.descendants()
   - Fix ontology's update time for ontologies created de novo in Python with Owlready
+  - Fix reasoning when asserting new parents with equivalent classes
     
 Links
 -----
