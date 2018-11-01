@@ -162,7 +162,7 @@ _universal_abbrev_datatype(datetime.time,
 
 
 def set_datatype_iri(datatype, iri):
-  unparser = _universal_datatype_2_abbrev_unparser[datatype][0]
+  unparser = _universal_datatype_2_abbrev_unparser[datatype][1]
   _universal_datatype_2_abbrev         [datatype] =  _universal_iri_2_abbrev[iri]
   _universal_datatype_2_abbrev_unparser[datatype] = (_universal_iri_2_abbrev[iri], unparser)
 

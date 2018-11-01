@@ -209,6 +209,10 @@ class PropertyClass(EntityClass):
   def min     (Prop, nb, value = None): return Restriction(Prop, MIN    , nb  , value)
   def max     (Prop, nb, value = None): return Restriction(Prop, MAX    , nb  , value)
   
+  def __lt__(prop, value): return prop.some(ConstrainedDatatype(type(value), max_exclusive = value))
+  def __le__(prop, value): return prop.some(ConstrainedDatatype(type(value), max_inclusive = value))
+  def __gt__(prop, value): return prop.some(ConstrainedDatatype(type(value), min_exclusive = value))
+  def __ge__(prop, value): return prop.some(ConstrainedDatatype(type(value), min_inclusive = value))
   
 _FUNCTIONAL_FOR_CACHE = weakref.WeakKeyDictionary()
 

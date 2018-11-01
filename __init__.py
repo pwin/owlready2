@@ -74,6 +74,7 @@ owlready2.entity.Inverse            = Inverse
 owlready2.entity._FUNCTIONAL_FOR_CACHE = _FUNCTIONAL_FOR_CACHE
 owlready2.disjoint.Or = Or
 owlready2.prop.Restriction             = Restriction
+owlready2.prop.ConstrainedDatatype     = ConstrainedDatatype
 owlready2.prop.ClassConstruct          = ClassConstruct
 owlready2.prop.AnnotationProperty      = AnnotationProperty
 owlready2.prop.Thing                   = Thing
