@@ -5,9 +5,17 @@ OWL reasoners can be used to check the *consistency* of an ontology, and to dedu
 typically be *reclassing* Individuals to new Classes, and Classes to new superclasses,
 depending on their relations.
 
-Several OWL reasoners exist; Owlready2 includes a modified version of the `HermiT reasoner <http://hermit-reasoner.com/>`_,
-developed by the department of Computer Science of the University of Oxford, and released under the LGPL licence.
-HermiT is written in Java, and thus you need a Java Vitual Machine to perform reasoning in Owlready2.
+Several OWL reasoners exist; Owlready2 includes:
+
+* a modified version of the `HermiT reasoner <http://hermit-reasoner.com/>`_,
+  developed by the department of Computer Science of the University of Oxford, and released under the LGPL licence.
+
+* a modified version of the `Pellet reasoner <https://github.com/stardog-union/pellet>`_,
+  released under the AGPL licence.
+  
+HermiT and Pellet are written in Java, and thus you need a Java Vitual Machine to perform reasoning in Owlready2.
+
+HermiT is used by default.
 
 Configuration
 -------------
@@ -75,7 +83,7 @@ Here is an example creating a 'reasoning-ready' ontology:
 Running the reasoner
 --------------------
 
-The reasoner is simply run by calling the sync_reasoner() global function:
+The reasoner (HermiT) is simply run by calling the sync_reasoner() global function:
 
 ::
 
@@ -93,6 +101,9 @@ For example, for placing all inferred facts in the 'onto' ontology:
 
 
 This allows saving the ontology with the inferred facts (using onto.save() as usual).
+
+To use Pellet instead of HermiT, just use the sync_reasoner_pellet() function instead.
+
 
 Results of the automatic classification
 ---------------------------------------
