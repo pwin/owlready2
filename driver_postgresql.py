@@ -127,25 +127,10 @@ SELECT DISTINCT x FROM transit;""")
 
   def fix_base_iri(self, base_iri, c = None):
     if base_iri.endswith("#") or base_iri.endswith("/"): return base_iri
+    use_slash = self.execute("SELECT resources.iri FROM resources WHERE SUBSTR(resources.iri, 1, %s)=%s LIMIT 1", (len(base_iri) + 1, base_iri + "/",)).fetchone()
+    if use_slash: return "%s/" % base_iri
+    else:         return "%s#" % base_iri
     
-    if c is None:
-      self.execute("SELECT resources.iri FROM quads, resources WHERE resources.storid=quads.s AND resources.iri LIKE %s LIMIT 1", (base_iri + "#%",))
-      use_hash = self.fetchone()
-    else:
-      self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=%S AND resources.storid=quads.s AND resources.iri LIKE %s LIMIT 1", (c, base_iri + "#%"))
-      use_hash = self.fetchone()
-    if use_hash: return "%s#" % base_iri
-    else:
-      if c is None:
-        self.execute("SELECT resources.iri FROM quads, resources WHERE resources.storid=quads.s AND resources.iri LIKE %s LIMIT 1", (base_iri + "/%",))
-        use_slash = self.fetchone()
-      else:
-        self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=%s AND resources.storid=quads.s AND resources.iri LIKE %s LIMIT 1", (c, base_iri + "/%"))
-        use_slash = self.fetchone()
-      if use_slash: return "%s/" % base_iri
-      else:         return "%s#" % base_iri
-      
-    return "%s#" % base_iri
     
    
   def sub_graph(self, onto):
@@ -245,17 +230,33 @@ SELECT DISTINCT x FROM transit;""")
     if s is None:
       if p is None:
         if o is None: self.execute("SELECT s,p,o FROM quads")
-        else:         self.execute("SELECT s,p,o FROM quads WHERE o=%s", (o,))
+        else:
+          if ignore_missing_datatype and o.endswith('"'):
+            self.execute("SELECT s,p,o FROM quads WHERE SUBSTR(o,1,%s)=%s", (len(o), o,))
+          else:
+            self.execute("SELECT s,p,o FROM quads WHERE o=%s", (o,))
       else:
         if o is None: self.execute("SELECT s,p,o FROM quads WHERE p=%s", (p,))
-        else:         self.execute("SELECT s,p,o FROM quads WHERE p=%s AND o=%s", (p, o,))
+        else:
+          if ignore_missing_datatype and o.endswith('"'):
+            self.execute("SELECT s,p,o FROM quads WHERE p=%s AND SUBSTR(o,1,%s)=%s", (p, len(o), o,))
+          else:
+            self.execute("SELECT s,p,o FROM quads WHERE p=%s AND o=%s", (p, o,))
     else:
       if p is None:
         if o is None: self.execute("SELECT s,p,o FROM quads WHERE s=%s", (s,))
-        else:         self.execute("SELECT s,p,o FROM quads WHERE s=%s AND o=%s", (s, o,))
+        else:
+          if ignore_missing_datatype and o.endswith('"'):
+            self.execute("SELECT s,p,o FROM quads WHERE s=%s AND SUBSTR(o,1,%s)=%s", (s, len(o), o,))
+          else:
+            self.execute("SELECT s,p,o FROM quads WHERE s=%s AND o=%s", (s, o,))
       else:
         if o is None: self.execute("SELECT s,p,o FROM quads WHERE s=%s AND p=%s", (s, p,))
-        else:         self.execute("SELECT s,p,o FROM quads WHERE s=%s AND p=%s AND o=%s", (s, p, o,))
+        else:
+          if ignore_missing_datatype and o.endswith('"'):
+            self.execute("SELECT s,p,o FROM quads WHERE s=%s AND p=%s AND SUBSTR(o,1,%s)=%s", (s, p, len(o), o,))
+          else:
+            self.execute("SELECT s,p,o FROM quads WHERE s=%s AND p=%s AND o=%s", (s, p, o,))
     return self.fetchall()
     
   def get_quads(self, s, p, o, c):
@@ -405,7 +406,7 @@ SELECT DISTINCT x FROM transit;""")
         conditions  .append("q%s.c = %%s" % i)
         params      .append(c)
         
-      if   k == "iri":
+      if   k == " iri":
         if i > 1: conditions.append("q%s.s = q1.s" % i)
         tables    .append("resources")
         conditions.append("resources.storid = q%s.s" % i)
@@ -416,17 +417,17 @@ SELECT DISTINCT x FROM transit;""")
           conditions.append("resources.iri = %s")
           params.append(v)
         
-      elif k == "is_a":
+      elif k == " is_a":
         if i > 1: conditions.append("q%s.s = q1.s" % i)
         conditions.append("(q%s.p = '%s' OR q%s.p = '%s') AND q%s.o IN (%s)" % (i, rdf_type, i, rdfs_subclassof, i, ",".join("%s" for i in v)))
         params    .extend(v)
         
-      elif k == "type":
+      elif k == " type":
         if i > 1: conditions.append("q%s.s = q1.s" % i)
         conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdf_type, i, ",".join("%s" for i in v)))
         params    .extend(v)
         
-      elif k == "subclass_of":
+      elif k == " subclass_of":
         if i > 1: conditions.append("q%s.s = q1.s" % i)
         conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdfs_subclassof, i, ",".join("%s" for i in v)))
         params    .extend(v)

@@ -39,10 +39,10 @@ if "--postgresql" in sys.argv:
 
 _QUADSTORE_ID = 0
 
-def remove_dbs():
-  for i in range(1, _QUADSTORE_ID + 1):
-    os.system("dropdb owlready2_quadstore_%s &" % i)
 if BACKEND == "postgresql":
+  def remove_dbs():
+    for i in range(1, _QUADSTORE_ID + 1):
+      os.system("dropdb owlready2_quadstore_%s &" % i)
   atexit.register(remove_dbs)
 
 class BaseTest(object):
@@ -3227,6 +3227,17 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     onto = world.get_ontology("http://test.org/test_slash")
     assert onto.C is not None
     world.close()
+    
+  def test_format_25(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/test.org#")
+    self.assert_triple(onto.storid, rdf_type, owl_ontology, world)
+    
+    s = """<http://test.org/test.org#A> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class>."""
+    onto.load(fileobj = BytesIO(s.encode("utf8")))
+    
+    self.assert_triple(onto.storid, rdf_type, owl_ontology, world)
+    assert len(world.graph) == 2
     
     
   def test_search_1(self):

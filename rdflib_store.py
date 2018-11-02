@@ -89,9 +89,8 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     #super().remove(xxx_todo_changeme, context, quoted)
     
   def triples(self, triple_pattern, context = None):
-    s,p,o = self._rdflib_2_owlready(triple_pattern)
-    
-    for s,p,o in context.triplelite.get_triples(s,p,o, True):
+    rs,rp,ro = self._rdflib_2_owlready(triple_pattern)
+    for s,p,o in context.triplelite.get_triples(rs,rp,ro, True):
       yield self._owlready_2_rdflib(s,p,o), context
       
   def __len__(self, context = None):

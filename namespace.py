@@ -338,18 +338,19 @@ class World(_GraphManager):
       
       
   def get_ontology(self, base_iri):
-    #if (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
-    if self.graph: base_iri = self.graph.fix_base_iri(base_iri)
-    elif (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
+    if (not base_iri.endswith("/")) and (not base_iri.endswith("#")):
+      if   ("%s#" % base_iri) in self.ontologies: base_iri = base_iri = "%s#" % base_iri
+      elif ("%s/" % base_iri) in self.ontologies: base_iri = base_iri = "%s/" % base_iri
+      else:                                       base_iri = base_iri = "%s#" % base_iri
     if base_iri in self.ontologies: return self.ontologies[base_iri]
     return Ontology(self, base_iri)
   
   def get_namespace(self, base_iri, name = ""):
-    #if (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
-    if self.graph: base_iri = self.graph.fix_base_iri(base_iri)
-    elif (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
-    r = self._namespaces.get(base_iri)
-    if not r is None: return r
+    if (not base_iri.endswith("/")) and (not base_iri.endswith("#")):
+      if   ("%s#" % base_iri) in self.ontologies: base_iri = base_iri = "%s#" % base_iri
+      elif ("%s/" % base_iri) in self.ontologies: base_iri = base_iri = "%s/" % base_iri
+      else:                                       base_iri = base_iri = "%s#" % base_iri
+    if base_iri in self._namespaces: return self._namespaces[base_iri]
     return Namespace(self, base_iri, name or base_iri[:-1].rsplit("/", 1)[-1])
     
   

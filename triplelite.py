@@ -117,24 +117,30 @@ class Graph(BaseMainGraph):
     for subgraph in self.onto_2_subgraph.values():
       subgraph.onto.abbreviate   = subgraph.abbreviate   = self.abbreviate
       subgraph.onto.unabbreviate = subgraph.unabbreviate = self.unabbreviate
-
+      
+  # def fix_base_iri(self, base_iri, c = None):
+  #   if base_iri.endswith("#") or base_iri.endswith("/"): return base_iri
+    
+  #   if c is None:
+  #     use_hash = self.execute("SELECT resources.iri FROM quads, resources WHERE resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (base_iri + "#%",)).fetchone()
+  #   else:
+  #     use_hash = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (c, base_iri + "#%")).fetchone()
+  #   if use_hash: return "%s#" % base_iri
+  #   else:
+  #     if c is None:
+  #       use_slash = self.execute("SELECT resources.iri FROM quads, resources WHERE resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (base_iri + "/%",)).fetchone()
+  #     else:
+  #       use_slash = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (c, base_iri + "/%")).fetchone()
+  #     if use_slash: return "%s/" % base_iri
+  #     else:         return "%s#" % base_iri
+      
+  #   return "%s#" % base_iri
+    
   def fix_base_iri(self, base_iri, c = None):
     if base_iri.endswith("#") or base_iri.endswith("/"): return base_iri
-    
-    if c is None:
-      use_hash = self.execute("SELECT resources.iri FROM quads, resources WHERE resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (base_iri + "#%",)).fetchone()
-    else:
-      use_hash = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (c, base_iri + "#%")).fetchone()
-    if use_hash: return "%s#" % base_iri
-    else:
-      if c is None:
-        use_slash = self.execute("SELECT resources.iri FROM quads, resources WHERE resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (base_iri + "/%",)).fetchone()
-      else:
-        use_slash = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (c, base_iri + "/%")).fetchone()
-      if use_slash: return "%s/" % base_iri
-      else:         return "%s#" % base_iri
-      
-    return "%s#" % base_iri
+    use_slash = self.execute("SELECT resources.iri FROM resources WHERE SUBSTR(resources.iri, 1, ?)=? LIMIT 1", (len(base_iri) + 1, base_iri + "/",)).fetchone()
+    if use_slash: return "%s/" % base_iri
+    else:         return "%s#" % base_iri
     
   def sub_graph(self, onto):
     new_in_quadstore = False
