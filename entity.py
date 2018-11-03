@@ -321,8 +321,28 @@ class EntityClass(type):
           for x in Class.namespace.world.get_triples_po(Class._rdfs_is_a, Class.storid)
           if not x.startswith("_")
         ]
+      
+  def constructs(Class, Prop = None):
+    def _top_bn(s):
+      try:
+        construct = onto._parse_bnode(s)
+        return construct
+      except:
+        for relation in [rdf_first, rdf_rest, owl_complementof, owl_unionof, owl_intersectionof, owl_onclass]:
+          s2 = Class.namespace.world.get_triple_po(relation, s)
+          if not s2 is None:
+            return _top_bn(s2)
+          
+    if Prop: Prop = Prop.storid
+    for s,p,o,c in Class.namespace.world.get_quads(None, Prop, Class.storid, None):
+      if s.startswith("_"):
+        
+        onto = Class.namespace.world.graph.context_2_user_context(c)
+        construct = _top_bn(s)
+        if not construct is None:
+          yield construct
 
-
+          
 def issubclass_owlready(Class, Parent_or_tuple):
   if issubclass_python(Class, Parent_or_tuple): return True
   if isinstance(Class, EntityClass):
@@ -402,26 +422,6 @@ class ThingClass(EntityClass):
         return RoleFilerList(
           set(r.value for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()) for r in _property_value_restrictions(SuperClass, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
           Class, Prop)
-      
-  def constructs(Class, Prop = None):
-    def _top_bn(s):
-      try:
-        construct = onto._parse_bnode(s)
-        return construct
-      except:
-        for relation in [rdf_first, rdf_rest, owl_complementof, owl_unionof, owl_intersectionof, owl_onclass]:
-          s2 = Class.namespace.world.get_triple_po(relation, s)
-          if not s2 is None:
-            return _top_bn(s2)
-          
-    if Prop: Prop = Prop.storid
-    for s,p,o,c in Class.namespace.world.get_quads(None, Prop, Class.storid, None):
-      if s.startswith("_"):
-        
-        onto = Class.namespace.world.graph.context_2_user_context(c)
-        construct = _top_bn(s)
-        if not construct is None:
-          yield construct
           
   # Role-fillers as class properties
   

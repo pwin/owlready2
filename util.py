@@ -20,6 +20,7 @@
 def _int_base_62(i):
   if i == 0: return ""
   return _int_base_62(i // 62) + "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"[i % 62]
+  #return _int_base_62(i // 62) + ".-[]{}@~&^abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"[i % 62]
 
 class normstr(str):
   __slots__ = []
