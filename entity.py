@@ -386,6 +386,11 @@ class ThingClass(EntityClass):
     #for s in Class.namespace.world.get_triples_po(rdf_type, Class.storid):
     #  if not s.startswith("_"): yield Class.namespace.world._get_by_storid(s, None, Thing, Class.namespace.ontology)
     
+  def get_class_properties(Class):
+    for construct in itertools.chain(Class.is_a, Class.equivalent_to.indirect()):
+      if isinstance(construct, Restriction) and construct.type == SOME:
+        yield construct.property
+        
   def __and__(a, b): return And([a, b])
   def __or__ (a, b): return Or ([a, b])
   def __invert__(a): return Not(a)
