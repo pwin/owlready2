@@ -124,6 +124,10 @@ AS (      SELECT s FROM quads WHERE p=$1 AND o=$2 AND c=$3
 UNION ALL SELECT quads.s FROM quads, transit WHERE quads.p=$1 AND quads.o=transit.x AND quads.c=$3)
 SELECT DISTINCT x FROM transit;""")
 
+  def acquire_write_lock(self): pass # Done by PostgresQL ?
+  def release_write_lock(self): pass
+  def has_write_lock    (self): return False
+  
 
   def fix_base_iri(self, base_iri, c = None):
     if base_iri.endswith("#") or base_iri.endswith("/"): return base_iri

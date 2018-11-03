@@ -265,6 +265,13 @@ version 2 - 0.11
   - Fix ontology's update time for ontologies created de novo in Python with Owlready
   - Fix reasoning when asserting new parents with equivalent classes
     
+version 2 - 0.12
+****************
+
+* Synchronization for multithreading support
+* Bugfixes:
+
+  
 Links
 -----
 

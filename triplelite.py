@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, os, os.path, sqlite3, time, re
+import sys, os, os.path, sqlite3, time, re, threading
 from collections import defaultdict
 
 import owlready2
@@ -51,6 +51,9 @@ class Graph(BaseMainGraph):
     self.last_numbered_iri = {}
     self.world             = world
     self.c                 = None
+    
+    self.lock              = threading.RLock()
+    self.lock_level        = 0
     
     if initialize_db:
       self.current_blank    = 0
@@ -95,7 +98,15 @@ class Graph(BaseMainGraph):
 
   def close(self):
     self.db.close()
-    
+
+  def acquire_write_lock(self):
+    self.lock.acquire()
+    self.lock_level += 1
+  def release_write_lock(self):
+    self.lock_level -= 1
+    self.lock.release()
+  def has_write_lock(self): return self.lock_level
+  
   def select_abbreviate_method(self):
     nb = self.execute("SELECT count(*) FROM resources").fetchone()[0]
     if nb < 100000:

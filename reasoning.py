@@ -95,6 +95,10 @@ def sync_reasoner_hermit(x = None, debug = 1, keep_tmp_file = False):
   if   isinstance(x, World):    world = x
   elif isinstance(x, Ontology): world = x.world
   else:                         world = owlready2.default_world
+  
+  locked = world.graph.has_write_lock()
+  if locked: world.graph.release_write_lock() # Not needed during reasoning
+  
   if   isinstance(x, Ontology): ontology = x
   elif CURRENT_NAMESPACES[-1]:  ontology = CURRENT_NAMESPACES[-1].ontology
   else:                         ontology = world.get_ontology(_INFERRENCES_ONTOLOGY)
@@ -154,12 +158,14 @@ def sync_reasoner_hermit(x = None, debug = 1, keep_tmp_file = False):
             new_equivs[concept_storid1].append(concept_storid2)
             entity_2_type[concept_storid1] = _OWL_2_TYPE[owl_relation]
             
-
+  
+  if not keep_tmp_file: os.unlink(tmp.name)
+  
+  if locked: world.graph.acquire_write_lock() # re-lock when applying results
+  
   _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, entity_2_type)
   
   if debug: print("* Owlready * (NB: only changes on entities loaded in Python are shown, other changes are done but not listed)", file = sys.stderr)
-  
-  if not keep_tmp_file: os.unlink(tmp.name)
 
 sync_reasoner = sync_reasoner_hermit
 

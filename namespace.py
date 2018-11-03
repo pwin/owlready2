@@ -57,10 +57,12 @@ class Namespace(object):
     
   def __enter__(self):
     if self.ontology is None: raise ValueError("Cannot assert facts in this namespace: it is not linked to an ontology! (it is probably a global namespace created by get_namespace(); please use your_ontology.get_namespace() instead)")
+    if self.world.graph: self.world.graph.acquire_write_lock()
     CURRENT_NAMESPACES.append(self)
     
   def __exit__(self, exc_type = None, exc_val = None, exc_tb = None):
     del CURRENT_NAMESPACES[-1]
+    if self.world.graph: self.world.graph.release_write_lock()
     
   def __repr__(self): return """%s.get_namespace("%s")""" % (self.ontology, self.base_iri)
   
@@ -514,11 +516,15 @@ class Ontology(Namespace, _GraphManager):
     
     if (not LOADING) and (not self.graph is None):
       if not self.has_triple(self.storid, rdf_type, owl_ontology):
+        if self.world.graph: self.world.graph.acquire_write_lock()
         self.add_triple(self.storid, rdf_type, owl_ontology)
+        if self.world.graph: self.world.graph.release_write_lock()
         
   def destroy(self):
+    self.world.graph.acquire_write_lock()
     del self.world.ontologies[self.base_iri]
     self.graph.destroy()
+    self.world.graph.release_write_lock()
     
   def get_imported_ontologies(self): return self._imported_ontologies
   def set_imported_ontologies(self, l):
@@ -555,7 +561,9 @@ class Ontology(Namespace, _GraphManager):
       f = fileobj or _get_onto_file(self.base_iri, self.name, "r", only_local)
     else:
       f = ""
-      
+
+    self.world.graph.acquire_write_lock()
+    
     new_base_iri = None
     if f.startswith("http:") or f.startswith("https:"):
       if  reload or (self.graph.get_last_update_time() == 0.0): # Never loaded
@@ -575,13 +583,6 @@ class Ontology(Namespace, _GraphManager):
         finally: fileobj.close()
       else:
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s (cached)..." % self.name, file = sys.stderr)
-      #if os.path.getmtime(f) <= self.graph.get_last_update_time():
-      #  if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s (cached)..." % self.name, file = sys.stderr)
-      #else:
-      #  fileobj = open(f, "rb")
-      #  if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
-      #  try:     new_base_iri = self.graph.parse(fileobj, default_base = self.base_iri, **args)
-      #  finally: fileobj.close()
         
     self.loaded = True
     
@@ -596,7 +597,11 @@ class Ontology(Namespace, _GraphManager):
       self.metadata = Metadata(self, self.storid) # Metadata depends on storid
       
     elif not self.graph.has_triple(self.storid, rdf_type, owl_ontology): # Not always present (e.g. not in dbpedia)
+      if self.world.graph: self.world.graph.acquire_write_lock()
       self._add_triple(self.storid, rdf_type, owl_ontology)
+      if self.world.graph: self.world.graph.release_write_lock()
+      
+    self.world.graph.release_write_lock()
       
     # Search for property names
     self._load_properties()

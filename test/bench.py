@@ -1,7 +1,7 @@
 # python ./owlready2/test/bench.py > /dev/null
 
-#Load time 9.964444398880005 s.
-#List class time 6.840817928314209 s.
+#Load time 9.22385859489441 s.
+#List class time 6.804917573928833 s.
 
 import sys, time#, cProfile
 
@@ -10,7 +10,7 @@ from owlready2 import *
 
 t = time.time()
 
-#default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite3", exclusive = True)
+default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite3", exclusive = True)
 #default_world.set_backend("postgresql", user = "jiba")
 #default_world.set_backend("mysql", user = "jiba")
 
