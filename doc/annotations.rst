@@ -46,12 +46,12 @@ as a pseudo-dictionary:
    
    >>> comment[acetaminophen, is_prescribed_for, pain] = "A comment on the acetaminophen-pain relation"
 
-Special pseudo-properties are provided for annotating is-a relations (owl_subclassof and rdf_type),
+Special pseudo-properties are provided for annotating is-a relations (rdfs_subclassof and rdf_type),
 domains (rdf_domain) and ranges (rdf_range).
 
 ::
 
-   >>> comment[Drug, owl_subclassof, Thing] = "A comment on an is-a relation"
+   >>> comment[Drug, rdfs_subclassof, Thing] = "A comment on an is-a relation"
 
 
 Annotation values are usually lists of values. However, in many cases, a single value is used.
@@ -75,7 +75,7 @@ Annotation values can be obtained using the dot notation, as if they were attrib
    >>> print(comment[acetaminophen, is_prescribed_for, pain])
    ['A comment on the acetaminophen-pain relation']
    
-   >>> print(comment[Drug, owl_subclassof, Thing])
+   >>> print(comment[Drug, rdfs_subclassof, Thing])
    ['A comment on an is-a relation']
 
 If you expect a single value, the .first() method of the list can be used. It returns the first value of
