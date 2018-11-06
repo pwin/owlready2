@@ -270,7 +270,9 @@ version 2 - 0.12
 
 * Synchronization for multithreading support
 * Bugfixes:
-
+  - Fix call to _get_by_storid2
+  - Fix rdfs_subclassof in doc
+  - Fix FTS triggers
   
 Links
 -----

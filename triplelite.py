@@ -637,16 +637,16 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
     self.execute("""INSERT INTO fts_%s(rowid, o) SELECT rowid, SUBSTR(o, 2, LENGTH(o) - 2) FROM quads WHERE p='%s'""" % (fts, prop_storid))
     
     self.db.cursor().executescript("""
-CREATE TRIGGER fts_%s_after_insert AFTER INSERT ON quads BEGIN
+CREATE TRIGGER fts_%s_after_insert AFTER INSERT ON quads WHEN new.p='%s' BEGIN
   INSERT INTO fts_%s(rowid, o) VALUES (new.rowid, new.o);
 END;
-CREATE TRIGGER fts_%s_after_delete AFTER DELETE ON quads BEGIN
+CREATE TRIGGER fts_%s_after_delete AFTER DELETE ON quads WHEN old.p='%s' BEGIN
   INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', old.rowid, old.o);
 END;
-CREATE TRIGGER fts_%s_after_update AFTER UPDATE ON quads BEGIN
+CREATE TRIGGER fts_%s_after_update AFTER UPDATE ON quads WHEN new.p='%s' BEGIN
   INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', new.rowid, SUBSTR(new.o, 2, LENGTH(new.o) - 2));
   INSERT INTO fts_%s(rowid, o) VALUES (new.rowid, new.o);
-END;""" % (fts, fts,   fts, fts, fts,   fts, fts, fts, fts))
+END;""" % (fts, prop_storid, fts,   fts, prop_storid, fts, fts,   fts, prop_storid, fts, fts, fts))
   
   def disable_full_text_search(self, prop_storid):
     if not isinstance(prop_storid, str): prop_storid = prop_storid.storid
