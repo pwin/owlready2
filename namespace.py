@@ -407,7 +407,7 @@ class World(_GraphManager):
         for obj, graph in self.get_quads_sp(storid, main_type._rdfs_is_a):
           if obj.startswith("_"): is_a_bnodes.append((self.graph.context_2_user_context(graph), obj))
           else:
-            obj = self._get_by_storid2(obj, None, main_type, main_onto, trace)
+            obj = self._get_by_storid2(obj, None, main_type, main_onto, default_to_none, trace)
             if not obj is None: is_a_entities.append(obj)
             
       if main_onto is None:
