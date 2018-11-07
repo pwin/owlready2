@@ -269,6 +269,7 @@ version 2 - 0.12
 ****************
 
 * Synchronization for multithreading support
+* Add Class.inverse_restrictions()
 * Bugfixes:
   - Fix call to _get_by_storid2
   - Fix rdfs_subclassof in doc

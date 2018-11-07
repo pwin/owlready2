@@ -428,6 +428,11 @@ class ThingClass(EntityClass):
           set(r.value for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()) for r in _property_value_restrictions(SuperClass, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
           Class, Prop)
           
+  def inverse_restrictions(Class, Prop = None):
+    for construct in Class.constructs():
+      if isinstance(construct, Restriction) and ((Prop is None) or (construct.property is Prop)):
+        yield from construct.subclasses()
+        
   # Role-fillers as class properties
   
   #def _get_prop_for_self(self, attr):
