@@ -4271,6 +4271,43 @@ t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [t.D] []
     assert set(world2.search(p = FTS("rein"))) == { world2["http://test.org/t.owl#c1"], world2["http://test.org/t.owl#c2"] }
     assert set(world2.search(label = FTS("insuffisance*"))) == { world2["http://test.org/t.owl#c3"], world2["http://test.org/t.owl#c4"] }
     
+  def test_fts_4(self):
+    tmp = self.new_tmp_file()
+    world = self.new_world()
+    world.set_backend(filename = tmp)
+    onto = world.get_ontology("http://test.org/t.owl#")
+    with onto:
+      class C(Thing): pass
+      class p(C >> str): pass
+      class q(C >> str): pass
+      
+    world.full_text_search_properties.append(p)
+    
+    c1 = C(p = ["Maladies du rein"])
+    c2 = C(q = ["Maladies du rein"])
+    
+    assert set(world.search(p = FTS("rein"))) == { c1 }
+    
+    destroy_entity(c1)
+    
+    assert set(world.search(p = FTS("rein"))) == set()
+    
+  def test_fts_5(self):
+    tmp = self.new_tmp_file()
+    world = self.new_world()
+    world.set_backend(filename = tmp)
+    onto = world.get_ontology("http://test.org/t.owl#")
+    with onto:
+      class C(Thing): pass
+      class p(C >> str, FunctionalProperty): pass
+      
+    world.full_text_search_properties.append(p)
+    
+    c1 = C(p = "Maladies du coeur")
+    c1.p = "Maladies du rein"
+    
+    assert set(world.search(p = FTS("rein"))) == { c1 }
+
     
 class Paper(BaseTest, unittest.TestCase):
   def test_reasoning_paper_ic2017(self):
