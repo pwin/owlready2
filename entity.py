@@ -243,7 +243,7 @@ class EntityClass(type):
     return s
   
   def descendants(Class, include_self = True, only_loaded = False, world = None):
-    if (Class is Thing) or (Class is Nothing):
+    if Class is Thing:
       if world is None:
         import owlready2
         world = owlready2.default_world
@@ -288,7 +288,7 @@ class EntityClass(type):
               equivalent._fill_descendants(s, True)
               
   def subclasses(Class, only_loaded = False, world = None):
-    if (Class is Thing) or (Class is Nothing):
+    if Class is Thing:
       if world is None:
         import owlready2
         world = owlready2.default_world
