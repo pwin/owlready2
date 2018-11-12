@@ -1,7 +1,7 @@
 # python ./owlready2/test/bench.py > /dev/null
 
-#Load time 9.22385859489441 s.
-#List class time 6.804917573928833 s.
+#Load time 8.811433792114258 s.
+#List class time 6.577288866043091 s.
 
 import sys, time#, cProfile
 
@@ -10,7 +10,7 @@ from owlready2 import *
 
 t = time.time()
 
-default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite3", exclusive = True)
+#default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite3", exclusive = True)
 #default_world.set_backend("postgresql", user = "jiba")
 #default_world.set_backend("mysql", user = "jiba")
 
@@ -21,6 +21,7 @@ onto_path.append("/home/jiba/telechargements/base_med/")
 #dron = get_ontology("http://purl.obolibrary.org/obo/dron.owl").load()
 #vto = get_ontology("http://purl.obolibrary.org/obo/vto.owl").load()
 go = get_ontology("http://purl.obolibrary.org/obo/go.owl").load()
+#go = get_ontology("/tmp/go.nt").load()
 default_world.save()
 
 t = time.time() - t

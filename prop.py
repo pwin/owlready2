@@ -86,18 +86,18 @@ class PropertyClass(EntityClass):
       
   def _add_is_a_triple(Prop, base):
     if   base in _CLASS_PROPS: pass
-    elif base in _TYPE_PROPS:  Prop.namespace.ontology.add_triple(Prop.storid, rdf_type       , base.storid)
-    else:                      Prop.namespace.ontology.add_triple(Prop.storid, Prop._rdfs_is_a, base.storid)
+    elif base in _TYPE_PROPS:  Prop.namespace.ontology.add_obj_spo(Prop.storid, rdf_type       , base.storid)
+    else:                      Prop.namespace.ontology.add_obj_spo(Prop.storid, Prop._rdfs_is_a, base.storid)
     
   def _del_is_a_triple(Prop, base):
     if   base in _CLASS_PROPS: pass
-    elif base in _TYPE_PROPS:  Prop.namespace.ontology.del_triple(Prop.storid, rdf_type       , base.storid)
-    else:                      Prop.namespace.ontology.del_triple(Prop.storid, Prop._rdfs_is_a, base.storid)
+    elif base in _TYPE_PROPS:  Prop.namespace.ontology.del_obj_spo(Prop.storid, rdf_type       , base.storid)
+    else:                      Prop.namespace.ontology.del_obj_spo(Prop.storid, Prop._rdfs_is_a, base.storid)
     
     
   def get_domain(Prop):
     if Prop._domain is None:
-      Prop._domain = CallbackList((Prop.namespace.world._to_python(o, default_to_none = True) for o in Prop.namespace.world.get_triples_sp(Prop.storid, rdf_domain)),
+      Prop._domain = CallbackList((Prop.namespace.world._to_python(o, default_to_none = True) for o in Prop.namespace.world.get_objs_sp_o(Prop.storid, rdf_domain)),
                                   Prop, PropertyClass._domain_changed)
     return Prop._domain
 
@@ -109,11 +109,11 @@ class PropertyClass(EntityClass):
     new = frozenset(Prop.domain)
     old = frozenset(old)
     for x in old - new:
-      Prop.namespace.ontology.del_triple(Prop.storid, rdf_domain, x.storid)
+      Prop.namespace.ontology.del_obj_spo(Prop.storid, rdf_domain, x.storid)
       if isinstance(x, ClassConstruct): x._set_ontology(None)
     for x in new - old:
       if isinstance(x, ClassConstruct): x._set_ontology(Prop.namespace.ontology)
-      Prop.namespace.ontology.add_triple(Prop.storid, rdf_domain, x.storid)
+      Prop.namespace.ontology.add_obj_spo(Prop.storid, rdf_domain, x.storid)
       
   def domains_indirect(Prop):
     yield from Prop.domain
@@ -125,7 +125,7 @@ class PropertyClass(EntityClass):
     if Prop._range is None:
       Prop._range = CallbackList(
         (_universal_abbrev_2_datatype.get(o) or Prop.namespace.world._to_python(o, default_to_none = True)
-         for o in Prop.namespace.world.get_triples_sp(Prop.storid, rdf_range)),
+         for o in Prop.namespace.world.get_objs_sp_o(Prop.storid, rdf_range)),
         Prop, PropertyClass._range_changed)
     return Prop._range
   
@@ -138,19 +138,19 @@ class PropertyClass(EntityClass):
     old = frozenset(old)
     for x in old - new:
       x2 = _universal_datatype_2_abbrev.get(x) or x.storid
-      Prop.namespace.ontology.del_triple(Prop.storid, rdf_range, x2)
+      Prop.namespace.ontology.del_obj_spo(Prop.storid, rdf_range, x2)
       if isinstance(x, ClassConstruct): x._set_ontology(None)
     for x in new - old:
       if isinstance(x, ClassConstruct): x._set_ontology(Prop.namespace.ontology)
       x2 = _universal_datatype_2_abbrev.get(x) or x.storid
-      Prop.namespace.ontology.add_triple(Prop.storid, rdf_range, x2)
+      Prop.namespace.ontology.add_obj_spo(Prop.storid, rdf_range, x2)
       
       
   def get_property_chain(Prop):
     if Prop._property_chain is None:
       Prop._property_chain = CallbackList(
         (PropertyChain(o, Prop.namespace.ontology)
-          for o in Prop.namespace.world.get_triples_sp(Prop.storid, owl_propertychain)),
+          for o in Prop.namespace.world.get_objs_sp_o(Prop.storid, owl_propertychain)),
         Prop, PropertyClass._property_chain_changed)
     return Prop._property_chain
   
@@ -162,11 +162,11 @@ class PropertyClass(EntityClass):
     new = frozenset(Prop._property_chain)
     old = frozenset(old)
     for x in old - new:
-      Prop.namespace.ontology.del_triple(Prop.storid, owl_propertychain, x.storid)
+      Prop.namespace.ontology.del_obj_spo(Prop.storid, owl_propertychain, x.storid)
       x._set_ontology(None)
     for x in new - old:
       x._set_ontology(Prop.namespace.ontology)
-      Prop.namespace.ontology.add_triple(Prop.storid, owl_propertychain, x.storid)
+      Prop.namespace.ontology.add_obj_spo(Prop.storid, owl_propertychain, x.storid)
     
     
   def __getattr__(Prop, attr):
@@ -177,7 +177,7 @@ class PropertyClass(EntityClass):
       raise AttributeError("Property can only have annotation property values!")
     
     return ValueList(
-      (Prop.namespace.ontology._to_python(o) for o in Prop.namespace.world.get_triples_sp(Prop.storid, Annot.storid)),
+      (Prop.namespace.ontology._to_python(o,d) for o,d in Prop.namespace.world.get_quads_sp_od(Prop.storid, Annot.storid)),
       Prop, Annot) # Do NOT cache in __dict__, to avoid inheriting annotations
   
   def __setattr__(Class, attr, value):
@@ -195,7 +195,7 @@ class PropertyClass(EntityClass):
   def get_python_name(Prop):
     return Prop._python_name
   def set_python_name(Prop, python_name):
-    if not LOADING: Prop.namespace.ontology.set_triple(Prop.storid, owlready_python_name, to_literal(python_name))
+    if not LOADING: Prop.namespace.ontology.set_data_spod(Prop.storid, owlready_python_name, *to_literal(python_name))
     del Prop.namespace.world._props[Prop._python_name]
     Prop.namespace.world._props[python_name] = Prop
     Prop._python_name = python_name
@@ -251,9 +251,9 @@ class Property(metaclass = PropertyClass):
 
   @classmethod
   def get_relations(Prop):
-    for s,p,o in Prop.namespace.world.get_triples(None, Prop.storid, None):
+    for s,p,o,d in Prop.namespace.world.get_quads_spod_spod(None, Prop.storid, None, ""):
       s = Prop.namespace.world._get_by_storid(s)
-      o = Prop.namespace.ontology._to_python(o)
+      o = Prop.namespace.ontology._to_python(o, d)
       yield s, o
         
         
@@ -283,13 +283,13 @@ class ObjectPropertyClass(ReasoningPropertyClass):
   
   def get_inverse_property(Prop):
     if Prop._inverse_property is False:
-      inverse_storid = Prop.namespace.world.get_triple_sp(Prop.storid, owl_inverse_property) or Prop.namespace.world.get_triple_po(owl_inverse_property, Prop.storid)
+      inverse_storid = Prop.namespace.world.get_obj_sp_o(Prop.storid, owl_inverse_property) or Prop.namespace.world.get_obj_po_s(owl_inverse_property, Prop.storid)
       if inverse_storid: Prop._inverse_property = Prop.namespace.world._get_by_storid(inverse_storid)
       else:              Prop._inverse_property = None
     return Prop._inverse_property
   
   def set_inverse_property(Prop, value):
-    Prop.namespace.ontology.set_triple(Prop.storid, owl_inverse_property, value and value.storid)
+    Prop.namespace.ontology.set_obj_spo(Prop.storid, owl_inverse_property, value and value.storid)
     Prop._inverse_property = value
     if value and not (value.inverse_property is Prop): value.inverse_property = Prop
     
@@ -375,9 +375,22 @@ class PropertyChain(object):
 def destroy_entity(e):
   if isinstance(e, PropertyClass):
     modified_entities = set()
-    for s,p,o in e.namespace.world.get_triples(None, e.storid, None):
-      modified_entities.add(s)
-    e.namespace.world.del_triple(None, e.storid, None)
+    if   e._owl_type == owl_object_property:
+      for s,p,o in e.namespace.world.get_objs_spo_spo(None, e.storid, None):
+        modified_entities.add(s)
+      e.namespace.world.del_obj_spo(None, e.storid, None)
+      # XXX inverse ?
+    elif e._owl_type == owl_data_property:
+      for s,p,o,d in e.namespace.world.get_datas_spod_spod(None, e.storid, None, None):
+        modified_entities.add(s)
+      e.namespace.world.del_data_spod(None, e.storid, None, None)
+      
+    else: #e._owl_type == owl_annotation_property:
+      for s,p,o,d in e.namespace.world.get_quads_spod_spod(None, e.storid, None, None):
+        modified_entities.add(s)
+      e.namespace.world.del_obj_spo  (None, e.storid, None)
+      e.namespace.world.del_data_spod(None, e.storid, None, None)
+      
     for s in modified_entities:
       s = e.namespace.world._entities.get(s)
       if s:
@@ -385,16 +398,16 @@ def destroy_entity(e):
         
     del e.namespace.world._props[e._python_name]
     del e.namespace.world._reasoning_props[e._python_name]
-        
+    
   def destroyer(bnode):
     if bnode == e.storid: return
-
+    
     class_construct = e.namespace.ontology._bnodes.pop(bnode, None)
     if class_construct:
       for subclass in class_construct.subclasses(True):
         if   isinstance(subclass, EntityClass) or isinstance(subclass, Thing):
           subclass.is_a.remove(class_construct)
-
+          
   def relation_updater(destroyed_storids, storid, relations):
     o = e.namespace.world._entities.get(storid)
     if o:
@@ -419,7 +432,7 @@ def destroy_entity(e):
           o._domain = None
         elif r == rdf_range:
           o._range = None
-
+          
         else:
           r = e.namespace.world._entities.get(r)
           

@@ -2,6 +2,9 @@
 javac -cp ./antibio_arcenciel/owlready_cas_dut_1/owlapi-3.4.3.jar ./owlready2/test/Bench.java
 java -cp ./antibio_arcenciel/owlready_cas_dut_1/owlapi-3.4.3.jar:./owlready2/test Bench > /dev/null
 
+Loading 10.361
+Listing 2.234
+
 */
 
 import java.io.*;

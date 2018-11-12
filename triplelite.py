@@ -19,6 +19,7 @@
 
 import sys, os, os.path, sqlite3, time, re, threading
 from collections import defaultdict
+from itertools import chain
 
 import owlready2
 from owlready2.base import *
@@ -34,6 +35,30 @@ def all_combinations(l):
   r = []
   for a in l[0]: r.extend((a,) + b for b in all_combinations(l[1:]))
   return r
+
+# def group_iters(quad_cursor, data_cursor):
+#   s = None
+  
+#   quad = next(quad_cursor, None)
+#   data = next(data_cursor, None)
+  
+#   while quad or data:
+#     if quad and data:
+#       if quad[0] < data[0]: s = quad[0]
+#       else:                 s = data[0]
+#     elif quad:              s = quad[0]
+#     else:                   s = data[0]
+    
+#     while quad:
+#       if quad[0] != s: break
+#       yield quad
+#       quad = next(quad_cursor, None)
+      
+#     while data:
+#       if data[0] != s: break
+#       yield data
+#       data = next(data_cursor, None)
+      
 
 class Graph(BaseMainGraph):
   _SUPPORT_CLONING = True
@@ -61,8 +86,10 @@ class Graph(BaseMainGraph):
       self.prop_fts         = {}
       
       self.execute("""CREATE TABLE store (version INTEGER, current_blank INTEGER, current_resource INTEGER)""")
-      self.execute("""INSERT INTO store VALUES (3, 0, 300)""")
-      self.execute("""CREATE TABLE quads (c INTEGER, s TEXT, p TEXT, o TEXT)""")
+      self.execute("""INSERT INTO store VALUES (4, 0, 300)""")
+      self.execute("""CREATE TABLE objs (c INTEGER, s TEXT, p TEXT, o TEXT)""")
+      self.execute("""CREATE TABLE datas (c INTEGER, s TEXT, p TEXT, o BLOB, d TEXT)""")
+      self.execute("""CREATE VIEW quads (c,s,p,o,d) AS SELECT c,s,p,o,NULL FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
       self.execute("""CREATE TABLE ontologies (c INTEGER PRIMARY KEY, iri TEXT, last_update DOUBLE)""")
       self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
       self.execute("""CREATE TABLE prop_fts (fts INTEGER PRIMARY KEY, storid TEXT)""")
@@ -72,8 +99,10 @@ class Graph(BaseMainGraph):
         self.execute("""CREATE TABLE resources (storid TEXT PRIMARY KEY, iri TEXT)""")
       self.db.executemany("INSERT INTO resources VALUES (?,?)", _universal_abbrev_2_iri.items())
       self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
-      self.execute("""CREATE INDEX index_quads_s ON quads(s)""")
-      self.execute("""CREATE INDEX index_quads_o ON quads(o)""")
+      self.execute("""CREATE INDEX index_objs_s ON objs(s)""")
+      self.execute("""CREATE INDEX index_objs_o ON objs(o)""")
+      self.execute("""CREATE INDEX index_datas_s ON datas(s)""")
+      self.execute("""CREATE INDEX index_datas_o ON datas(o)""")
       self.db.commit()
       
     else:
@@ -81,16 +110,49 @@ class Graph(BaseMainGraph):
         s = "\n".join(clone.db.iterdump())
         self.db.cursor().executescript(s)
         
-      
       version, self.current_blank, self.current_resource = self.execute("SELECT version, current_blank, current_resource FROM store").fetchone()
       if version == 1:
+        print("* Owlready2 * Converting quadstore to internal format 2...", file = sys.stderr)
         self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
         self.execute("""UPDATE store SET version=2""")
         self.db.commit()
+        
       if version == 2:
+        print("* Owlready2 * Converting quadstore to internal format 3...", file = sys.stderr)
         self.execute("""CREATE TABLE prop_fts (fts INTEGER PRIMARY KEY, storid TEXT)""")
         self.execute("""UPDATE store SET version=3""")
         self.db.commit()
+        
+      if version == 3:
+        print("* Owlready2 * Converting quadstore to internal format 4 (this can take a while)...", file = sys.stderr)
+        self.execute("""CREATE TABLE objs (c INTEGER, s TEXT, p TEXT, o TEXT)""")
+        self.execute("""CREATE TABLE datas (c INTEGER, s TEXT, p TEXT, o BLOB, d TEXT)""")
+
+        objs  = []
+        datas = []
+        for c,s,p,o in self.execute("""SELECT c,s,p,o FROM quads"""):
+          if o.endswith('"'):
+            o, d = o.rsplit('"', 1)
+            o = o[1:]
+            if   d in {'H', 'N', 'R', 'O', 'J', 'I', 'M', 'P', 'K', 'Q', 'S', 'L'}: o = int(o)
+            elif d in {'U', 'X', 'V', 'W'}: o = float(o)
+            datas.append((c,s,p,o,d))
+          else:
+            objs.append((c,s,p,o))
+        self.db.executemany("INSERT INTO objs VALUES (?,?,?,?)",    objs)
+        self.db.executemany("INSERT INTO datas VALUES (?,?,?,?,?)", datas)
+        
+        self.execute("""DROP TABLE quads""")
+        self.execute("""DROP INDEX IF EXISTS index_quads_s """)
+        self.execute("""DROP INDEX IF EXISTS index_quads_o""")
+        self.execute("""CREATE INDEX index_objs_s ON objs(s)""")
+        self.execute("""CREATE INDEX index_objs_o ON objs(o)""")
+        self.execute("""CREATE INDEX index_datas_s ON datas(s)""")
+        self.execute("""CREATE INDEX index_datas_o ON datas(o)""")
+        
+        self.execute("""UPDATE store SET version=4""")
+        self.db.commit()
+        
       self.prop_fts = { storid : fts for (fts, storid) in self.execute("""SELECT * FROM prop_fts;""") }
       
     self.current_changes = self.db.total_changes
@@ -129,24 +191,6 @@ class Graph(BaseMainGraph):
       subgraph.onto.abbreviate   = subgraph.abbreviate   = self.abbreviate
       subgraph.onto.unabbreviate = subgraph.unabbreviate = self.unabbreviate
       
-  # def fix_base_iri(self, base_iri, c = None):
-  #   if base_iri.endswith("#") or base_iri.endswith("/"): return base_iri
-    
-  #   if c is None:
-  #     use_hash = self.execute("SELECT resources.iri FROM quads, resources WHERE resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (base_iri + "#%",)).fetchone()
-  #   else:
-  #     use_hash = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (c, base_iri + "#%")).fetchone()
-  #   if use_hash: return "%s#" % base_iri
-  #   else:
-  #     if c is None:
-  #       use_slash = self.execute("SELECT resources.iri FROM quads, resources WHERE resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (base_iri + "/%",)).fetchone()
-  #     else:
-  #       use_slash = self.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND resources.storid=quads.s AND resources.iri LIKE ? LIMIT 1", (c, base_iri + "/%")).fetchone()
-  #     if use_slash: return "%s/" % base_iri
-  #     else:         return "%s#" % base_iri
-      
-  #   return "%s#" % base_iri
-    
   def fix_base_iri(self, base_iri, c = None):
     if base_iri.endswith("#") or base_iri.endswith("/"): return base_iri
     use_slash = self.execute("SELECT resources.iri FROM resources WHERE SUBSTR(resources.iri, 1, ?)=? LIMIT 1", (len(base_iri) + 1, base_iri + "/",)).fetchone()
@@ -215,7 +259,7 @@ class Graph(BaseMainGraph):
   
   def refactor_sql(self, storid, new_iri):
     self.execute("UPDATE resources SET iri=? WHERE storid=?", (new_iri, storid,))
-
+    
   def refactor_dict(self, storid, new_iri):
     self.execute("UPDATE resources SET iri=? WHERE storid=?", (new_iri, storid,))
     del self.abbreviate_d[self.unabbreviate_d[storid]]
@@ -228,140 +272,244 @@ class Graph(BaseMainGraph):
       self.execute("UPDATE store SET current_blank=?, current_resource=?", (self.current_blank, self.current_resource))
       self.db.commit()
 
-
-
   def context_2_user_context(self, c): return self.c_2_onto[c]
 
   def new_blank_node(self):
     self.current_blank += 1
     return "_%s" % _int_base_62(self.current_blank)
   
-  def get_triples(self, s, p, o, ignore_missing_datatype = False):
+  def get_objs_spo_spo(self, s, p, o):
     if s is None:
       if p is None:
-        if o is None: cur = self.execute("SELECT s,p,o FROM quads")
-        else:
-          if ignore_missing_datatype and o.endswith('"'):
-            cur = self.execute("SELECT s,p,o FROM quads WHERE SUBSTR(o,1,?)=?", (len(o), o,))
-          else:
-            cur = self.execute("SELECT s,p,o FROM quads WHERE o=?", (o,))
+        if o is None: cur = self.execute("SELECT s,p,o FROM objs")
+        else:         cur = self.execute("SELECT s,p,o FROM objs WHERE o=?", (o,))
       else:
-        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE p=?", (p,))
-        else:
-          if ignore_missing_datatype and o.endswith('"'):
-            cur = self.execute("SELECT s,p,o FROM quads WHERE p=? AND SUBSTR(o,1,?)=?", (p, len(o), o,))
-          else:
-            cur = self.execute("SELECT s,p,o FROM quads WHERE p=? AND o=?", (p, o,))
+        if o is None: cur = self.execute("SELECT s,p,o FROM objs WHERE p=?", (p,))
+        else:         cur = self.execute("SELECT s,p,o FROM objs WHERE p=? AND o=?", (p, o,))
     else:
       if p is None:
-        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE s=?", (s,))
-        else:
-          if ignore_missing_datatype and o.endswith('"'):
-            cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND SUBSTR(o,1,?)=?", (s, len(o), o,))
-          else:
-            cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND o=?", (s, o,))
+        if o is None: cur = self.execute("SELECT s,p,o FROM objs WHERE s=?", (s,))
+        else:         cur = self.execute("SELECT s,p,o FROM objs WHERE s=? AND o=?", (s, o,))
       else:
-        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND p=?", (s, p,))
+        if o is None: cur = self.execute("SELECT s,p,o FROM objs WHERE s=? AND p=?", (s, p,))
+        else:         cur = self.execute("SELECT s,p,o FROM objs WHERE s=? AND p=? AND o=?", (s, p, o,))
+    return cur.fetchall()
+  
+  def get_datas_spod_spod(self, s, p, o, d):
+    if s is None:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM datas")
         else:
-          if ignore_missing_datatype and o.endswith('"'):
-            cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND p=? AND SUBSTR(o,1,?)=?", (s, p, len(o), o))
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE o=?", (o,))
           else:
-            cur = self.execute("SELECT s,p,o FROM quads WHERE s=? AND p=? AND o=?", (s, p, o,))
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE o=? AND d=?", (o,d,))
+      else:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM datas WHERE p=?", (p,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE p=? AND o=?", (p, o,))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE p=? AND o=? AND d=?", (p, o, d,))
+    else:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=?", (s,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=? AND o=?", (s, o,))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=? AND o=? AND d=?", (s, o, d,))
+      else:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=? AND p=?", (s, p,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=? AND p=? AND o=?", (s, p, o))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=? AND p=? AND o=? AND d=?", (s, p, o, d,))
     return cur.fetchall()
     
-  def get_quads(self, s, p, o, c):
+  def get_quads_spod_spod(self, s, p, o, d):
+    if s is None:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM quads")
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE o=?", (o,))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE o=? AND d=?", (o,d,))
+      else:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM quads WHERE p=?", (p,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE p=? AND o=?", (p, o,))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE p=? AND o=? AND d=?", (p, o, d,))
+    else:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM quads WHERE s=?", (s,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE s=? AND o=?", (s, o,))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE s=? AND o=? AND d=?", (s, o, d,))
+      else:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM quads WHERE s=? AND p=?", (s, p,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE s=? AND p=? AND o=?", (s, p, o))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE s=? AND p=? AND o=? AND d=?", (s, p, o, d,))
+    return cur.fetchall()
+    
+  def get_objs_cspo_cspo(self, c, s, p, o):
     if c is None:
       if s is None:
         if p is None:
-          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads")
-          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE o=?", (o,))
+          if o is None: cur = self.execute("SELECT c,s,p,o FROM objs")
+          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE o=?", (o,))
         else:
-          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE p=?", (p,))
-          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE p=? AND o=?", (p, o,))
+          if o is None: cur = self.execute("SELECT c,s,p,o FROM objs WHERE p=?", (p,))
+          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE p=? AND o=?", (p, o,))
       else:
         if p is None:
-          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE s=?", (s,))
-          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE s=? AND o=?", (s, o,))
+          if o is None: cur = self.execute("SELECT c,s,p,o FROM objs WHERE s=?", (s,))
+          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE s=? AND o=?", (s, o,))
         else:
-          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE s=? AND p=?", (s, p,))
-          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE s=? AND p=? AND o=?", (s, p, o,))
+          if o is None: cur = self.execute("SELECT c,s,p,o FROM objs WHERE s=? AND p=?", (s, p,))
+          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE s=? AND p=? AND o=?", (s, p, o,))
     else:
       if s is None:
         if p is None:
-          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=?", (c,))
-          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND o=?", (c, o,))
+          if o is None: cur = self.execute("SELECT c,s,p,o FROM objs WHERE c=?", (c,))
+          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE c=? AND o=?", (c, o,))
         else:
-          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND p=?", (c, p,))
-          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND p=? AND o=?", (c, p, o,))
+          if o is None: cur = self.execute("SELECT c,s,p,o FROM objs WHERE c=? AND p=?", (c, p,))
+          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE c=? AND p=? AND o=?", (c, p, o,))
       else:
         if p is None:
-          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND s=?", (c, s,))
-          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND s=? AND o=?", (c, s, o,))
+          if o is None: cur = self.execute("SELECT c,s,p,o FROM objs WHERE c=? AND s=?", (c, s,))
+          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE c=? AND s=? AND o=?", (c, s, o,))
         else:
-          if o is None: cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND s=? AND p=?", (c, s, p,))
-          else:         cur = self.execute("SELECT s,p,o,c FROM quads WHERE c=? AND s=? AND p=? AND o=?", (c, s, p, o,))
+          if o is None: cur = self.execute("SELECT c,s,p,o FROM objs WHERE c=? AND s=? AND p=?", (c, s, p,))
+          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE c=? AND s=? AND p=? AND o=?", (c, s, p, o,))
     return cur.fetchall()
   
-  def get_quads_sp(self, s, p):
-    return self.execute("SELECT o,c FROM quads WHERE s=? AND p=?", (s, p)).fetchall()
   
-  def get_pred(self, s):
+  def get_objs_sp_co(self, s, p):
+    return self.execute("SELECT c,o FROM objs WHERE s=? AND p=?", (s, p)).fetchall()
+    
+  def get_quads_s_p(self, s):
     for (x,) in self.execute("SELECT DISTINCT p FROM quads WHERE s=?", (s,)).fetchall(): yield x
     
-  def get_triples_s(self, s):
-    return self.execute("SELECT p,o FROM quads WHERE s=?", (s,)).fetchall()
+  def get_objs_s_po(self, s):
+    return self.execute("SELECT p,o FROM objs WHERE s=?", (s,)).fetchall()
   
-  def get_triples_sp(self, s, p):
-    for (x,) in self.execute("SELECT o FROM quads WHERE s=? AND p=?", (s, p)).fetchall(): yield x
+  def get_objs_sp_o(self, s, p):
+    for (x,) in self.execute("SELECT o FROM objs WHERE s=? AND p=?", (s, p)).fetchall(): yield x
     
-  def get_triples_po(self, p, o):
-    for (x,) in self.execute("SELECT s FROM quads WHERE p=? AND o=?", (p, o)).fetchall(): yield x
+  def get_datas_sp_od(self, s, p):
+    return self.execute("SELECT o,d FROM datas WHERE s=? AND p=?", (s, p)).fetchall()
+
+  def get_quads_sp_od(self, s, p):
+    return self.execute("SELECT o,d FROM quads WHERE s=? AND p=?", (s, p)).fetchall()
     
-  def get_triple_sp(self, s = None, p = None):
-    r = self.execute("SELECT o FROM quads WHERE s=? AND p=? LIMIT 1", (s, p)).fetchone()
+  def get_datas_s_pod(self, s):
+    return self.execute("SELECT p,o,d FROM datas WHERE s=?", (s,)).fetchall()
+  
+  def get_quads_s_pod(self, s):
+    return self.execute("SELECT p,o,d FROM quads WHERE s=?", (s,)).fetchall()
+    
+  def get_objs_po_s(self, p, o):
+    for (x,) in self.execute("SELECT s FROM objs WHERE p=? AND o=?", (p, o)).fetchall(): yield x
+    
+  def get_obj_sp_o(self, s, p):
+    r = self.execute("SELECT o FROM objs WHERE s=? AND p=? LIMIT 1", (s, p)).fetchone()
     if r: return r[0]
     return None
-     
-  def get_triple_po(self, p = None, o = None):
-    r = self.execute("SELECT s FROM quads WHERE p=? AND o=? LIMIT 1", (p, o)).fetchone()
+  
+  def get_quad_sp_od(self, s, p):
+    return self.execute("SELECT o,d FROM quads WHERE s=? AND p=? LIMIT 1", (s, p)).fetchone()
+    
+  def get_data_sp_od(self, s, p):
+    return self.execute("SELECT o,d FROM datas WHERE s=? AND p=? LIMIT 1", (s, p)).fetchone()
+  
+  def get_obj_po_s(self, p, o):
+    r = self.execute("SELECT s FROM objs WHERE p=? AND o=? LIMIT 1", (p, o)).fetchone()
     if r: return r[0]
     return None
   
-  def has_triple(self, s = None, p = None, o = None):
+  def has_obj_spo(self, s = None, p = None, o = None):
     if s is None:
       if p is None:
-        if o is None: cur = self.execute("SELECT s FROM quads LIMIT 1")
-        else:         cur = self.execute("SELECT s FROM quads WHERE o=? LIMIT 1", (o,))
+        if o is None: cur = self.execute("SELECT s FROM objs LIMIT 1")
+        else:         cur = self.execute("SELECT s FROM objs WHERE o=? LIMIT 1", (o,))
       else:
-        if o is None: cur = self.execute("SELECT s FROM quads WHERE p=? LIMIT 1", (p,))
-        else:         cur = self.execute("SELECT s FROM quads WHERE p=? AND o=? LIMIT 1", (p, o))
+        if o is None: cur = self.execute("SELECT s FROM objs WHERE p=? LIMIT 1", (p,))
+        else:         cur = self.execute("SELECT s FROM objs WHERE p=? AND o=? LIMIT 1", (p, o))
     else:
       if p is None:
-        if o is None: cur = self.execute("SELECT s FROM quads WHERE s=? LIMIT 1", (s,))
-        else:         cur = self.execute("SELECT s FROM quads WHERE s=? AND o=? LIMIT 1", (s, o))
+        if o is None: cur = self.execute("SELECT s FROM objs WHERE s=? LIMIT 1", (s,))
+        else:         cur = self.execute("SELECT s FROM objs WHERE s=? AND o=? LIMIT 1", (s, o))
       else:
-        if o is None: cur = self.execute("SELECT s FROM quads WHERE s=? AND p=? LIMIT 1", (s, p))
-        else:         cur = self.execute("SELECT s FROM quads WHERE s=? AND p=? AND o=? LIMIT 1", (s, p, o))
+        if o is None: cur = self.execute("SELECT s FROM objs WHERE s=? AND p=? LIMIT 1", (s, p))
+        else:         cur = self.execute("SELECT s FROM objs WHERE s=? AND p=? AND o=? LIMIT 1", (s, p, o))
     return not cur.fetchone() is None
   
-  def _del_triple(self, s, p, o):
+  def has_data_spod(self, s = None, p = None, o = None, d = ""):
     if s is None:
       if p is None:
-        if o is None: self.execute("DELETE FROM quads")
-        else:         self.execute("DELETE FROM quads WHERE o=?", (o,))
+        if o is None: cur = self.execute("SELECT s FROM datas LIMIT 1")
+        else:         cur = self.execute("SELECT s FROM datas WHERE o=? AND d=? LIMIT 1", (o,d,))
       else:
-        if o is None: self.execute("DELETE FROM quads WHERE p=?", (p,))
-        else:         self.execute("DELETE FROM quads WHERE p=? AND o=?", (p, o,))
+        if o is None: cur = self.execute("SELECT s FROM datas WHERE p=? LIMIT 1", (p,))
+        else:         cur = self.execute("SELECT s FROM datas WHERE p=? AND o=? AND d=? LIMIT 1", (p, o, d))
     else:
       if p is None:
-        if o is None: self.execute("DELETE FROM quads WHERE s=?", (s,))
-        else:         self.execute("DELETE FROM quads WHERE s=? AND o=?", (s, o,))
+        if o is None: cur = self.execute("SELECT s FROM datas WHERE s=? LIMIT 1", (s,))
+        else:         cur = self.execute("SELECT s FROM datas WHERE s=? AND o=? AND d=? LIMIT 1", (s, o, d))
       else:
-        if o is None: self.execute("DELETE FROM quads WHERE s=? AND p=?", (s, p,))
-        else:         self.execute("DELETE FROM quads WHERE s=? AND p=? AND o=?", (s, p, o,))
+        if o is None: cur = self.execute("SELECT s FROM datas WHERE s=? AND p=? LIMIT 1", (s, p))
+        else:         cur = self.execute("SELECT s FROM datas WHERE s=? AND p=? AND o=? AND d=? LIMIT 1", (s, p, o, d))
+    return not cur.fetchone() is None
+  
+  def _del_obj_spo(self, s, p, o):
+    if s is None:
+      if p is None:
+        if o is None: self.execute("DELETE FROM objs")
+        else:         self.execute("DELETE FROM objs WHERE o=?", (o,))
+      else:
+        if o is None: self.execute("DELETE FROM objs WHERE p=?", (p,))
+        else:         self.execute("DELETE FROM objs WHERE p=? AND o=?", (p, o,))
+    else:
+      if p is None:
+        if o is None: self.execute("DELETE FROM objs WHERE s=?", (s,))
+        else:         self.execute("DELETE FROM objs WHERE s=? AND o=?", (s, o,))
+      else:
+        if o is None: self.execute("DELETE FROM objs WHERE s=? AND p=?", (s, p,))
+        else:         self.execute("DELETE FROM objs WHERE s=? AND p=? AND o=?", (s, p, o,))
+        
+  def _del_data_spod(self, s, p, o, d):
+    if s is None:
+      if p is None:
+        if o is None:   self.execute("DELETE FROM datas")
+        elif d is None: self.execute("DELETE FROM datas WHERE o=?", (o,))
+        else:           self.execute("DELETE FROM datas WHERE o=? AND d=?", (o, d,))
+      else:
+        if o is None:   self.execute("DELETE FROM datas WHERE p=?", (p,))
+        elif d is None: self.execute("DELETE FROM datas WHERE p=? AND o=?", (p, o,))
+        else:           self.execute("DELETE FROM datas WHERE p=? AND o=? AND d=?", (p, o, d,))
+    else:
+      if p is None:
+        if o is None:   self.execute("DELETE FROM datas WHERE s=?", (s,))
+        elif d is None: self.execute("DELETE FROM datas WHERE s=? AND o=?", (s, o,))
+        else:           self.execute("DELETE FROM datas WHERE s=? AND o=? AND d=?", (s, o, d,))
+      else:
+        if o is None:   self.execute("DELETE FROM datas WHERE s=? AND p=?", (s, p,))
+        elif d is None: self.execute("DELETE FROM datas WHERE s=? AND p=? AND o=?", (s, p, o,))
+        else:           self.execute("DELETE FROM datas WHERE s=? AND p=? AND o=? AND d=?", (s, p, o, d,))
         
         
-  def search(self, prop_vals, c = None):
+  def search(self, prop_vals, c = None, debug = False):
     tables       = []
     conditions   = []
     params       = []
@@ -369,13 +517,17 @@ class Graph(BaseMainGraph):
     excepts      = []
     i = 0
     
-    for k, v in prop_vals:
+    for k, v, d in prop_vals:
       if v is None:
         excepts.append(k)
         continue
       
       i += 1
-      tables.append("quads q%s" % i)
+      if d is None:
+        tables.append("objs q%s" % i)
+      else:
+        tables.append("datas q%s" % i)
+        
       if not c is None:
         conditions  .append("q%s.c = ?" % i)
         params      .append(c)
@@ -406,7 +558,7 @@ class Graph(BaseMainGraph):
       elif isinstance(k, tuple): # Prop with inverse
         if i == 1: # Does not work if it is the FIRST => add a dumb first.
           i += 1
-          tables.append("quads q%s" % i)
+          tables.append("objs q%s" % i)
           if not c is None:
             conditions  .append("q%s.c = ?" % i)
             params      .append(c)
@@ -431,10 +583,20 @@ class Graph(BaseMainGraph):
           conditions.append("q%s.rowid = fts_%s.rowid" % (i, fts))
           conditions.append("fts_%s MATCH ?" % fts)
           params    .append(v)
+          if v.lang != "":
+            conditions.append("fts_%s.d = ?" % (fts,))
+            params    .append("@%s" % v.lang)
+            
+        elif isinstance(v, NumS):
+          for operator, value in v.operators_and_values:
+            conditions.append("q%s.p = ?" % i)
+            params    .append(k)
+            conditions.append("q%s.o %s ?" % (i, operator))
+            params    .append(value)
         else:
           conditions.append("q%s.p = ?" % i)
           params    .append(k)
-          if "*" in v:
+          if isinstance(v, str) and ("*" in v):
             if   v.startswith('"*"'):
               conditions.append("q%s.o GLOB '*'" % i)
             else:
@@ -443,6 +605,10 @@ class Graph(BaseMainGraph):
           else:
             conditions.append("q%s.o = ?" % i)
             params    .append(v)
+            if d and (d != "*"):
+              conditions.append("q%s.d = ?" % i)
+              params    .append(d)
+              
             
     if alternatives:
       conditions0 = conditions
@@ -465,32 +631,37 @@ class Graph(BaseMainGraph):
       conditions = []
       for except_p in excepts:
         if isinstance(except_p, tuple): # Prop with inverse
-          conditions.append("quads.s = candidates.s AND quads.p = ?")
+          conditions.append("objs.s = candidates.s AND objs.p = ?")
           params    .append(except_p[0])
-          conditions.append("quads.o = candidates.s AND quads.p = ?")
+          conditions.append("objs.o = candidates.s AND objs.p = ?")
           params    .append(except_p[1])
+          req = """
+WITH candidates(s) AS (%s)
+SELECT s FROM candidates
+EXCEPT SELECT candidates.s FROM candidates, objs WHERE (%s)""" % (req, ") OR (".join(conditions))
+          
         else: # No inverse
           conditions.append("quads.s = candidates.s AND quads.p = ?")
           params    .append(except_p)
-          
-          
-      req = """
+          req = """
 WITH candidates(s) AS (%s)
 SELECT s FROM candidates
 EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR (".join(conditions))
+    
+    if debug:   
+      print("search debug:")
+      print("  prop_vals = ", prop_vals)
+      print("  req       = ", req)
+      print("  params    = ", params)
       
-    #print(prop_vals)
-    #print(req)
-    #print(params)
-
     return self.execute(req, params).fetchall()
   
   def _punned_entities(self):
     from owlready2.base import rdf_type, owl_class, owl_named_individual
-    cur = self.execute("SELECT q1.s FROM quads q1, quads q2 WHERE q1.s=q2.s AND q1.p=? AND q2.p=? AND q1.o=? AND q2.o=?", (rdf_type, rdf_type, owl_class, owl_named_individual))
+    cur = self.execute("SELECT q1.s FROM objs q1, objs q2 WHERE q1.s=q2.s AND q1.p=? AND q2.p=? AND q1.o=? AND q2.o=?", (rdf_type, rdf_type, owl_class, owl_named_individual))
     return [storid for (storid,) in cur.fetchall()]
   
-    
+  
   def __bool__(self): return True # Reimplemented to avoid calling __len__ in this case
   def __len__(self):
     return self.execute("SELECT COUNT() FROM quads").fetchone()[0]
@@ -500,16 +671,16 @@ EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR ("
   def get_transitive_sp(self, s, p):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
-AS (      SELECT o FROM quads WHERE s=? AND p=?
-UNION ALL SELECT quads.o FROM quads, transit WHERE quads.s=transit.x AND quads.p=?)
+AS (      SELECT o FROM objs WHERE s=? AND p=?
+UNION ALL SELECT objs.o FROM objs, transit WHERE objs.s=transit.x AND objs.p=?)
 SELECT DISTINCT x FROM transit""", (s, p, p)).fetchall(): yield x
 
   # Reimplemented using RECURSIVE SQL structure, for performance
   def get_transitive_po(self, p, o):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
-AS (      SELECT s FROM quads WHERE p=? AND o=?
-UNION ALL SELECT quads.s FROM quads, transit WHERE quads.p=? AND quads.o=transit.x)
+AS (      SELECT s FROM objs WHERE p=? AND o=?
+UNION ALL SELECT objs.s FROM objs, transit WHERE objs.p=? AND objs.o=transit.x)
 SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
 
 # Slower than Python implementation
@@ -517,8 +688,8 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
 #    r = { s }
 #    for (s, o) in self.execute("""
 #WITH RECURSIVE transit(s,o)
-#AS (  SELECT s,o from quads WHERE (s=? OR o=?) AND (p=?)
-#    UNION SELECT quads.s,quads.o FROM quads, transit WHERE (quads.s=transit.s OR quads.o=transit.o OR quads.s=transit.o OR quads.o=transit.s) AND quads.p=?)
+#AS (  SELECT s,o from objs WHERE (s=? OR o=?) AND (p=?)
+#    UNION SELECT objs.s,quads.o FROM objs, transit WHERE (quads.s=transit.s OR objs.o=transit.o OR objs.s=transit.o OR objs.o=transit.s) AND objs.p=?)
 #SELECT s, o FROM transit""", (s, s, p, p)):
 #      r.add(s)
 #      r.add(o)
@@ -544,7 +715,7 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
         destroyed_storids.add(blank_using)
         self._destroy_collect_storids(destroyed_storids, modified_relations, blank_using)
         
-    for (c, blank_using) in list(self.execute("""SELECT c, s FROM quads WHERE o=? AND p='%s' AND substr(s, 1, 1)='_'""" % (
+    for (c, blank_using) in list(self.execute("""SELECT c, s FROM objs WHERE o=? AND p='%s' AND substr(s, 1, 1)='_'""" % (
       rdf_first,
     ), (storid,))):
       list_user, root, previouss, nexts, length = self._rdf_list_analyze(blank_using)
@@ -559,24 +730,23 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
     previouss = []
     nexts     = []
     length    = 1
-    #b         = next_ = self.get_triple_sp(blank, rdf_rest)
-    b         = self.get_triple_sp(blank, rdf_rest)
+    b         = self.get_obj_sp_o(blank, rdf_rest)
     while b != rdf_nil:
       nexts.append(b)
       length += 1
-      b       = self.get_triple_sp(b, rdf_rest)
+      b       = self.get_obj_sp_o(b, rdf_rest)
       
-    b         = self.get_triple_po(rdf_rest, blank)
+    b         = self.get_obj_po_s(rdf_rest, blank)
     if b:
       while b:
         previouss.append(b)
         length += 1
         root    = b
-        b       = self.get_triple_po(rdf_rest, b)
+        b       = self.get_obj_po_s(rdf_rest, b)
     else:
       root = blank
       
-    list_user = self.execute("SELECT s FROM quads WHERE o=? LIMIT 1", (root,)).fetchone()
+    list_user = self.execute("SELECT s FROM objs WHERE o=? LIMIT 1", (root,)).fetchone()
     if list_user: list_user = list_user[0]
     return list_user, root, previouss, nexts, length
   
@@ -585,7 +755,7 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
     modified_relations  = defaultdict(set)
     self._destroy_collect_storids(destroyed_storids, modified_relations, storid)
     
-    for s,p in self.execute("SELECT DISTINCT s,p FROM quads WHERE o IN (%s)" % ",".join(["?" for i in destroyed_storids]), tuple(destroyed_storids)):
+    for s,p in self.execute("SELECT DISTINCT s,p FROM objs WHERE o IN (%s)" % ",".join(["?" for i in destroyed_storids]), tuple(destroyed_storids)):
       if not s in destroyed_storids:
         modified_relations[s].add(p)
         
@@ -595,7 +765,8 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
       
     for storid in destroyed_storids:
       #self.execute("SELECT s,p,o FROM quads WHERE s=? OR o=?", (self.c, storid, storid))
-      self.execute("DELETE FROM quads WHERE s=? OR o=?", (storid, storid))
+      self.execute("DELETE FROM objs  WHERE s=? OR o=?", (storid, storid))
+      self.execute("DELETE FROM datas WHERE s=?", (storid,))
       
     for s, ps in modified_relations.items():
       relation_updater(destroyed_storids, s, ps)
@@ -608,17 +779,39 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
     else:
       return self.execute("SELECT c, iri FROM ontologies").fetchall()
     
-  def _iter_triples(self, quads = False, sort_by_s = False):
-    cursor = self.db.cursor() # Use a new cursor => can iterate without laoding all data in a big list, while still being able to query the default cursor
+  # def _iter_triples(self, quads = False, sort_by_s = False, c = None):
+  #   quad_cursor = self.db.cursor() # Use a new cursor => can iterate without loading all data in a big list, while still being able to query the default cursor
+  #   data_cursor = self.db.cursor() # Use a new cursor => can iterate without loading all data in a big list, while still being able to query the default cursor
+  #   sql = ""
+  #   if c:         sql += " WHERE c=%s" % c
+  #   if sort_by_s: sql += " ORDER BY s"
+
+  #   if quads:
+  #     quad_cursor.execute("SELECT s,p,o,NULL,c FROM quads %s" % sql)
+  #     data_cursor.execute("SELECT s,p,o,d,c FROM datas %s" % sql)
+  #   else:
+  #     quad_cursor.execute("SELECT s,p,o,NULL FROM quads %s" % sql)
+  #     data_cursor.execute("SELECT s,p,o,d FROM datas %s" % sql)
+      
+  #   if sort_by_s:
+  #     yield from group_iters(quad_cursor, data_cursor)
+  #   else:
+  #     yield from quad_cursor
+  #     yield from data_cursor
+      
+  def _iter_triples(self, quads = False, sort_by_s = False, c = None):
+    cursor = self.db.cursor() # Use a new cursor => can iterate without loading all data in a big list, while still being able to query the default cursor
+    sql = ""
+    if c:         sql += " WHERE c=%s" % c
+    if sort_by_s: sql += " ORDER BY s"
+
     if quads:
-      if sort_by_s: cursor.execute("SELECT c,s,p,o FROM quads ORDER BY s")
-      else:         cursor.execute("SELECT c,s,p,o FROM quads")
+      cursor.execute("SELECT c,s,p,o,d FROM quads %s" % sql)
     else:
-      if sort_by_s: cursor.execute("SELECT s,p,o FROM quads ORDER BY s")
-      else:         cursor.execute("SELECT s,p,o FROM quads")
+      cursor.execute("SELECT s,p,o,d FROM quads %s" % sql)
+      
     return cursor
-  
-  
+      
   def get_fts_prop_storid(self): return self.prop_fts.keys()
   
   def enable_full_text_search(self, prop_storid):
@@ -629,22 +822,22 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
         break
       fts += 1
       
-    self.prop_fts[prop_storid] = fts # = str(len(self.prop_fts) + 1)
+    self.prop_fts[prop_storid] = fts
     
     self.execute("""INSERT INTO prop_fts VALUES (?, ?)""", (fts, prop_storid));
     
-    self.execute("""CREATE VIRTUAL TABLE fts_%s USING fts5(o, content=quads, content_rowid=rowid)""" % fts)
-    self.execute("""INSERT INTO fts_%s(rowid, o) SELECT rowid, SUBSTR(o, 2, LENGTH(o) - 2) FROM quads WHERE p='%s'""" % (fts, prop_storid))
+    self.execute("""CREATE VIRTUAL TABLE fts_%s USING fts5(o, d, content=datas, content_rowid=rowid)""" % fts)
+    self.execute("""INSERT INTO fts_%s(rowid, o) SELECT rowid, o FROM datas WHERE p='%s'""" % (fts, prop_storid))
     
     self.db.cursor().executescript("""
-CREATE TRIGGER fts_%s_after_insert AFTER INSERT ON quads WHEN new.p='%s' BEGIN
+CREATE TRIGGER fts_%s_after_insert AFTER INSERT ON datas WHEN new.p='%s' BEGIN
   INSERT INTO fts_%s(rowid, o) VALUES (new.rowid, new.o);
 END;
-CREATE TRIGGER fts_%s_after_delete AFTER DELETE ON quads WHEN old.p='%s' BEGIN
+CREATE TRIGGER fts_%s_after_delete AFTER DELETE ON datas WHEN old.p='%s' BEGIN
   INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', old.rowid, old.o);
 END;
-CREATE TRIGGER fts_%s_after_update AFTER UPDATE ON quads WHEN new.p='%s' BEGIN
-  INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', new.rowid, SUBSTR(new.o, 2, LENGTH(new.o) - 2));
+CREATE TRIGGER fts_%s_after_update AFTER UPDATE ON datas WHEN new.p='%s' BEGIN
+  INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', new.rowid, new.o);
   INSERT INTO fts_%s(rowid, o) VALUES (new.rowid, new.o);
 END;""" % (fts, prop_storid, fts,   fts, prop_storid, fts, fts,   fts, prop_storid, fts, fts, fts))
   
@@ -665,7 +858,7 @@ class SubGraph(BaseSubGraph):
     BaseSubGraph.__init__(self, parent, onto)
     self.c      = c
     self.db     = db
-    self.execute  = db.execute
+    self.execute          = db.execute
     self.abbreviate       = parent.abbreviate
     self.unabbreviate     = parent.unabbreviate
     self.new_numbered_iri = parent.new_numbered_iri
@@ -673,22 +866,27 @@ class SubGraph(BaseSubGraph):
     self.parent.onto_2_subgraph[onto] = self
     
   def create_parse_func(self, filename = None, delete_existing_triples = True, datatype_attr = "http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype"):
-    values       = []
+    objs         = []
+    datas        = []
     new_abbrevs  = []
     
     cur = self.db.cursor()
     
     if delete_existing_triples:
-      cur.execute("DELETE FROM quads WHERE c=?", (self.c,))
-    
-    if len(self.parent) < 100000:
+      cur.execute("DELETE FROM objs WHERE c=?", (self.c,))
+      cur.execute("DELETE FROM datas WHERE c=?", (self.c,))
+      
+    if cur.execute("""SELECT COUNT() FROM ontologies""").fetchone()[0] < 2:
       cur.execute("""DROP INDEX index_resources_iri""")
-      cur.execute("""DROP INDEX index_quads_s""")
-      cur.execute("""DROP INDEX index_quads_o""")
+      cur.execute("""DROP INDEX index_objs_s""")
+      cur.execute("""DROP INDEX index_objs_o""")
+      cur.execute("""DROP INDEX index_datas_s""")
+      cur.execute("""DROP INDEX index_datas_o""")
       reindex = True
     else:
       reindex = False
-      
+
+    # XXX
       
     # Re-implement abbreviate() for speed
     if self.parent.abbreviate_d is None:
@@ -717,45 +915,48 @@ class SubGraph(BaseSubGraph):
         abbrevs[iri] = storid
         return storid
       
-    def insert_triples():
-      nonlocal values, new_abbrevs
-      if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(values), self.onto.base_iri), file = sys.stderr)
+    def insert_objs():
+      nonlocal objs, new_abbrevs
+      if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(objs), self.onto.base_iri), file = sys.stderr)
       cur.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
-      cur.executemany("INSERT INTO quads VALUES (%s,?,?,?)" % self.c, values)
-      values      *= 0
-      new_abbrevs *= 0
+      cur.executemany("INSERT INTO objs VALUES (%s,?,?,?)" % self.c, objs)
+      objs        .clear()
+      new_abbrevs .clear()
       
-    try:
-      import rdfxml_2_ntriples_pyx
-      on_prepare_triple, new_literal = rdfxml_2_ntriples_pyx._create_triplelite_func(abbreviate, values, insert_triples, datatype_attr)
-    except:
-      def on_prepare_triple(s, p, o):
-        if not s.startswith("_"): s = abbreviate(s)
-        p = abbreviate(p)
-        if not (o.startswith("_") or o.startswith('"')): o = abbreviate(o)
-        values.append((s,p,o))
-        if len(values) > 1000000: insert_triples()
-        
-      def new_literal(value, attrs):
-        lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
-        if lang: return '"%s"@%s' % (value, lang)
-        datatype = attrs.get(datatype_attr)
-        if datatype: return '"%s"%s' % (value, abbreviate(datatype))
-        return '"%s"' % (value)
+    def insert_datas():
+      nonlocal datas, new_abbrevs
+      if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(datas), self.onto.base_iri), file = sys.stderr)
+      cur.executemany("INSERT INTO datas VALUES (%s,?,?,?,?)" % self.c, datas)
+      datas.clear()
+      
+    def on_prepare_obj(s, p, o):
+      if not s.startswith("_"): s = abbreviate(s)
+      if not o.startswith("_"): o = abbreviate(o)
+      objs.append((s, abbreviate(p), o))
+      if len(objs) > 1000000: insert_objs()
+      
+    def on_prepare_data(s, p, o, d):
+      if not s.startswith("_"): s = abbreviate(s)
+      if d and (not d.startswith("@")): d = abbreviate(d)
+      datas.append((s, abbreviate(p), o, d))
+      if len(datas) > 1000000: insert_datas()
       
       
     def on_finish():
       if filename: date = os.path.getmtime(filename)
       else:        date = time.time()
       
-      insert_triples()
+      insert_objs()
+      insert_datas()
       
       if reindex:
         cur.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
-        cur.execute("""CREATE INDEX index_quads_s ON quads(s)""")
-        cur.execute("""CREATE INDEX index_quads_o ON quads(o)""")
+        cur.execute("""CREATE INDEX index_objs_s ON objs(s)""")
+        cur.execute("""CREATE INDEX index_objs_o ON objs(o)""")
+        cur.execute("""CREATE INDEX index_datas_s ON datas(s)""")
+        cur.execute("""CREATE INDEX index_datas_o ON datas(o)""")
         
-      onto_base_iri = cur.execute("SELECT resources.iri FROM quads, resources WHERE quads.c=? AND quads.o=? AND resources.storid=quads.s LIMIT 1", (self.c, owl_ontology)).fetchone()
+      onto_base_iri = cur.execute("SELECT resources.iri FROM objs, resources WHERE objs.c=? AND objs.o=? AND resources.storid=objs.s LIMIT 1", (self.c, owl_ontology)).fetchone()
       if onto_base_iri: onto_base_iri = onto_base_iri[0]
       else:             onto_base_iri = ""
       
@@ -772,7 +973,7 @@ class SubGraph(BaseSubGraph):
       return onto_base_iri
     
     
-    return on_prepare_triple, self.parent.new_blank_node, new_literal, abbreviate, on_finish
+    return objs, datas, on_prepare_obj, on_prepare_data, insert_objs, insert_datas, self.parent.new_blank_node, abbreviate, on_finish
 
 
   def context_2_user_context(self, c): return self.parent.c_2_onto[c]
@@ -787,99 +988,236 @@ class SubGraph(BaseSubGraph):
     self.execute("UPDATE ontologies SET last_update=? WHERE c=?", (t, self.c))
   
   def destroy(self):
-    self.execute("DELETE FROM quads WHERE c=?",      (self.c,))
+    self.execute("DELETE FROM objs WHERE c=?",      (self.c,))
+    self.execute("DELETE FROM datas WHERE c=?",      (self.c,))
     self.execute("DELETE FROM ontologies WHERE c=?", (self.c,))
     
-  def _set_triple(self, s, p, o):
+  def _set_obj_spo(self, s, p, o):
     if (s is None) or (p is None) or (o is None): raise ValueError
-    self.execute("DELETE FROM quads WHERE c=? AND s=? AND p=?", (self.c, s, p,))
-    self.execute("INSERT INTO quads VALUES (?, ?, ?, ?)", (self.c, s, p, o))
+    self.execute("DELETE FROM objs WHERE c=? AND s=? AND p=?", (self.c, s, p,))
+    self.execute("INSERT INTO objs VALUES (?, ?, ?, ?)", (self.c, s, p, o))
     
-  def _add_triple(self, s, p, o):
+  def _add_obj_spo(self, s, p, o):
     if (s is None) or (p is None) or (o is None): raise ValueError
-    self.execute("INSERT INTO quads VALUES (?, ?, ?, ?)", (self.c, s, p, o))
+    self.execute("INSERT INTO objs VALUES (?, ?, ?, ?)", (self.c, s, p, o))
     
-  def _del_triple(self, s, p, o):
+  def _del_obj_spo(self, s = None, p = None, o = None):
     if s is None:
       if p is None:
-        if o is None: self.execute("DELETE FROM quads WHERE c=?", (self.c,))
-        else:         self.execute("DELETE FROM quads WHERE c=? AND o=?", (self.c, o,))
+        if o is None: self.execute("DELETE FROM objs WHERE c=?", (self.c,))
+        else:         self.execute("DELETE FROM objs WHERE c=? AND o=?", (self.c, o,))
       else:
-        if o is None: self.execute("DELETE FROM quads WHERE c=? AND p=?", (self.c, p,))
-        else:         self.execute("DELETE FROM quads WHERE c=? AND p=? AND o=?", (self.c, p, o,))
+        if o is None: self.execute("DELETE FROM objs WHERE c=? AND p=?", (self.c, p,))
+        else:         self.execute("DELETE FROM objs WHERE c=? AND p=? AND o=?", (self.c, p, o,))
     else:
       if p is None:
-        if o is None: self.execute("DELETE FROM quads WHERE c=? AND s=?", (self.c, s,))
-        else:         self.execute("DELETE FROM quads WHERE c=? AND s=? AND o=?", (self.c, s, o,))
+        if o is None: self.execute("DELETE FROM objs WHERE c=? AND s=?", (self.c, s,))
+        else:         self.execute("DELETE FROM objs WHERE c=? AND s=? AND o=?", (self.c, s, o,))
       else:
-        if o is None: self.execute("DELETE FROM quads WHERE c=? AND s=? AND p=?", (self.c, s, p,))
-        else:         self.execute("DELETE FROM quads WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
+        if o is None: self.execute("DELETE FROM objs WHERE c=? AND s=? AND p=?", (self.c, s, p,))
+        else:         self.execute("DELETE FROM objs WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
         
-  def get_triples(self, s, p, o):
+  def _set_data_spod(self, s, p, o, d):
+    if (s is None) or (p is None) or (o is None) or (d is None): raise ValueError
+    self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=?", (self.c, s, p,))
+    self.execute("INSERT INTO datas VALUES (?, ?, ?, ?, ?)", (self.c, s, p, o, d))
+    
+  def _add_data_spod(self, s, p, o, d):
+    if (s is None) or (p is None) or (o is None) or (d is None): raise ValueError
+    self.execute("INSERT INTO datas VALUES (?, ?, ?, ?, ?)", (self.c, s, p, o, d))
+    
+
+  def _del_data_spod(self, s, p, o, d):
     if s is None:
       if p is None:
-        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE c=?", (self.c,))
-        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND o=?", (self.c, o,))
+        if o is None:   self.execute("DELETE FROM datas WHERE c=?", (self.c,))
+        elif d is None: self.execute("DELETE FROM datas WHERE c=? AND o=?", (self.c, o,))
+        else:           self.execute("DELETE FROM datas WHERE c=? AND o=? AND d=?", (self.c, o, d,))
       else:
-        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND p=?", (self.c, p,))
-        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND p=? AND o=?", (self.c, p, o,))
+        if o is None:   self.execute("DELETE FROM datas WHERE c=? AND p=?", (self.c, p,))
+        elif d is None: self.execute("DELETE FROM datas WHERE c=? AND p=? AND o=?", (self.c, p, o,))
+        else:           self.execute("DELETE FROM datas WHERE c=? AND p=? AND o=? AND d=?", (self.c, p, o, d,))
     else:
       if p is None:
-        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND s=?", (self.c, s,))
-        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND s=? AND o=?", (self.c, s, o,))
+        if o is None:   self.execute("DELETE FROM datas WHERE c=? AND s=?", (self.c, s,))
+        elif d is None: self.execute("DELETE FROM datas WHERE c=? AND s=? AND o=?", (self.c, s, o,))
+        else:           self.execute("DELETE FROM datas WHERE c=? AND s=? AND o=? AND d=?", (self.c, s, o, d,))
       else:
-        if o is None: cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND s=? AND p=?", (self.c, s, p,))
-        else:         cur = self.execute("SELECT s,p,o FROM quads WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
+        if o is None:   self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=?", (self.c, s, p,))
+        elif d is None: self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
+        else:           self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=? AND o=? AND d=?", (self.c, s, p, o, d,))
+
+  def has_obj_spo(self, s = None, p = None, o = None):
+    if s is None:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s FROM objs WHERE c=? LIMIT 1", (self.c,))
+        else:         cur = self.execute("SELECT s FROM objs WHERE c=? AND o=? LIMIT 1", (self.c, o))
+      else:
+        if o is None: cur = self.execute("SELECT s FROM objs WHERE c=? AND p=? LIMIT 1", (self.c, p,))
+        else:         cur = self.execute("SELECT s FROM objs WHERE c=? AND p=? AND o=? LIMIT 1", (self.c, p, o))
+    else:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s FROM objs WHERE c=? AND s=? LIMIT 1", (self.c, s,))
+        else:         cur = self.execute("SELECT s FROM objs WHERE c=? AND s=? AND o=? LIMIT 1", (self.c, s, o))
+      else:
+        if o is None: cur = self.execute("SELECT s FROM objs WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,))
+        else:         cur = self.execute("SELECT s FROM objs WHERE c=? AND s=? AND p=? AND o=? LIMIT 1", (self.c, s, p, o))
+    return not cur.fetchone() is None
+       
+  def has_data_spod(self, s = None, p = None, o = None, d = ""):
+    if s is None:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s FROM datas WHERE c=? LIMIT 1", (self.c,))
+        else:         cur = self.execute("SELECT s FROM datas WHERE c=? AND o=? AND d=? LIMIT 1", (self.c, o, d))
+      else:
+        if o is None: cur = self.execute("SELECT s FROM datas WHERE c=? AND p=? LIMIT 1", (self.c, p,))
+        else:         cur = self.execute("SELECT s FROM datas WHERE c=? AND p=? AND o=? AND d=? LIMIT 1", (self.c, p, o, d))
+    else:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? LIMIT 1", (self.c, s,))
+        else:         cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND o=? AND d=? LIMIT 1", (self.c, s, o, d))
+      else:
+        if o is None: cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,))
+        else:         cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND p=? AND o=? AND d=? LIMIT 1", (self.c, s, p, o, d))
+    return not cur.fetchone() is None
+    
+        
+  def get_objs_spo_spo(self, s = None, p = None, o = None):
+    if s is None:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s,p,o FROM objs WHERE c=?", (self.c,))
+        else:         cur = self.execute("SELECT s,p,o FROM objs WHERE c=? AND o=?", (self.c, o,))
+      else:
+        if o is None: cur = self.execute("SELECT s,p,o FROM objs WHERE c=? AND p=?", (self.c, p,))
+        else:         cur = self.execute("SELECT s,p,o FROM objs WHERE c=? AND p=? AND o=?", (self.c, p, o,))
+    else:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s,p,o FROM objs WHERE c=? AND s=?", (self.c, s,))
+        else:         cur = self.execute("SELECT s,p,o FROM objs WHERE c=? AND s=? AND o=?", (self.c, s, o,))
+      else:
+        if o is None: cur = self.execute("SELECT s,p,o FROM objs WHERE c=? AND s=? AND p=?", (self.c, s, p,))
+        else:         cur = self.execute("SELECT s,p,o FROM objs WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
     return cur.fetchall()
+
+  def get_datas_spod_spod(self, s, p, o, d = ""):
+    if s is None:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=?", (self.c,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND o=?", (self.c, o,))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND o=? AND d=?", (self.c, o,d,))
+      else:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND p=?", (self.c, p,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND p=? AND o=?", (self.c, p, o,))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND p=? AND o=? AND d=?", (self.c, p, o, d,))
+    else:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=?", (self.c, s,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=? AND o=?", (self.c, s, o,))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=? AND o=? AND d=?", (self.c, s, o, d,))
+      else:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=? AND p=?", (self.c, s, p,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=? AND p=? AND o=? AND d=?", (self.c, s, p, o, d,))
+    return cur.fetchall()
+
+  def get_quads_spod_spod(self, s, p, o, d = ""):
+    if s is None:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=?", (self.c,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=? AND o=?", (self.c, o,))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=? AND o=? AND d=?", (self.c, o,d,))
+      else:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=? AND p=?", (self.c, p,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=? AND p=? AND o=?", (self.c, p, o,))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=? AND p=? AND o=? AND d=?", (self.c, p, o, d,))
+    else:
+      if p is None:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=? AND s=?", (self.c, s,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=? AND s=? AND o=?", (self.c, s, o,))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=? AND s=? AND o=? AND d=?", (self.c, s, o, d,))
+      else:
+        if o is None: cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=? AND s=? AND p=?", (self.c, s, p,))
+        else:
+          if d is None:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o))
+          else:
+            cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=? AND s=? AND p=? AND o=? AND d=?", (self.c, s, p, o, d,))
+    return cur.fetchall()
+
   
-  def get_triples_s(self, s):
-    return self.execute("SELECT p,o FROM quads WHERE c=? AND s=?", (self.c, s,)).fetchall()
+  def get_objs_s_po(self, s):
+    return self.execute("SELECT p,o FROM objs WHERE c=? AND s=?", (self.c, s,)).fetchall()
   
-  def get_triples_sp(self, s, p):
-    for (x,) in self.execute("SELECT o FROM quads WHERE c=? AND s=? AND p=?", (self.c, s, p,)).fetchall(): yield x
+  def get_objs_sp_o(self, s, p):
+    for (x,) in self.execute("SELECT o FROM objs WHERE c=? AND s=? AND p=?", (self.c, s, p,)).fetchall(): yield x
     
-  def get_triples_po(self, p, o):
-    for (x,) in self.execute("SELECT s FROM quads WHERE c=? AND p=? AND o=?", (self.c, p, o,)).fetchall(): yield x
+  def get_objs_sp_co(self, s, p):
+    return self.execute("SELECT c,o FROM objs WHERE c=? AND s=? AND p=?", (self.c, s, p,)).fetchall()
     
-  def get_triple_sp(self, s, p):
-    r = self.execute("SELECT o FROM quads WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,)).fetchone()
+  def get_quads_sp_od(self, s, p):
+    return self.execute("SELECT o,d FROM quads WHERE c=? AND s=? AND p=?", (self.c, s, p)).fetchall()
+    
+  def get_datas_sp_od(self, s, p):
+    return self.execute("SELECT o,d FROM datas WHERE c=? AND s=? AND p=?", (self.c, s, p,)).fetchall()
+
+  def get_datas_s_pod(self, s):
+    return self.execute("SELECT p,o,d FROM datas WHERE c=? AND s=?", (self.c, s,)).fetchall()
+    
+  def get_quads_s_pod(self, s):
+    return self.execute("SELECT p,o,d FROM quads WHERE c=? AND s=?", (self.c, s,)).fetchall()
+    
+  def get_objs_po_s(self, p, o):
+    for (x,) in self.execute("SELECT s FROM objs WHERE c=? AND p=? AND o=?", (self.c, p, o,)).fetchall(): yield x
+    
+  def get_obj_sp_o(self, s, p):
+    r = self.execute("SELECT o FROM objs WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,)).fetchone()
     if r: return r[0]
     return None
   
-  def get_triple_po(self, p, o):
-    r = self.execute("SELECT s FROM quads WHERE c=? AND p=? AND o=? LIMIT 1", (self.c, p, o,)).fetchone()
+  def get_quad_sp_od(self, s, p):
+    return self.execute("SELECT o,d FROM quads WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p)).fetchone()
+    
+  def get_data_sp_od(self, s, p):
+    return self.execute("SELECT o,d FROM datas WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,)).fetchone()
+  
+  def get_obj_po_s(self, p, o):
+    r = self.execute("SELECT s FROM objs WHERE c=? AND p=? AND o=? LIMIT 1", (self.c, p, o,)).fetchone()
     if r: return r[0]
     return None
   
-  def get_pred(self, s):
+  def get_quads_s_p(self, s):
     for (x,) in self.execute("SELECT DISTINCT p FROM quads WHERE c=? AND s=?", (self.c, s,)).fetchall(): yield x
     
-  def has_triple(self, s = None, p = None, o = None):
-    if s is None:
-      if p is None:
-        if o is None: cur = self.execute("SELECT s FROM quads WHERE c=? LIMIT 1", (self.c,))
-        else:         cur = self.execute("SELECT s FROM quads WHERE c=? AND o=? LIMIT 1", (self.c, o,))
-      else:
-        if o is None: cur = self.execute("SELECT s FROM quads WHERE c=? AND p=? LIMIT 1", (self.c, p,))
-        else:         cur = self.execute("SELECT s FROM quads WHERE c=? AND p=? AND o=? LIMIT 1", (self.c, p, o,))
-    else:
-      if p is None:
-        if o is None: cur = self.execute("SELECT s FROM quads WHERE c=? AND s=? LIMIT 1", (self.c, s,))
-        else:         cur = self.execute("SELECT s FROM quads WHERE c=? AND s=? AND o=? LIMIT 1", (self.c, s, o,))
-      else:
-        if o is None: cur = self.execute("SELECT s FROM quads WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,))
-        else:         cur = self.execute("SELECT s FROM quads WHERE c=? AND s=? AND p=? AND o=? LIMIT 1", (self.c, s, p, o,))
-    return not cur.fetchone() is None
+  def get_objs_cspo_cspo(self, c, s, p, o):
+    return [(self.c, s, p, o) for (s, p, o) in self.get_objs_spo_spo(s, p, o)]
   
-  def get_quads(self, s, p, o, c):
-    return [(s, p, o, self.c) for (s, p, o) in self.get_triples(s, p, o)]
-  
-  def search(self, prop_vals, c = None): return self.parent.search(prop_vals, self.c)
+  def search(self, prop_vals, c = None, debug = False): return self.parent.search(prop_vals, self.c, debug)
   
   def __len__(self):
     return self.execute("SELECT COUNT() FROM quads WHERE c=?", (self.c,)).fetchone()[0]
-
-
+  
+  
   def _iter_ontology_iri(self, c = None):
     if c:
       return self.execute("SELECT iri FROM ontologies WHERE c=?", (c,)).fetchone()[0]
@@ -887,39 +1225,33 @@ class SubGraph(BaseSubGraph):
       return self.execute("SELECT c, iri FROM ontologies").fetchall()
     
   def _iter_triples(self, quads = False, sort_by_s = False):
-    cursor = self.db.cursor() # Use a new cursor => can iterate without laoding all data in a big list, while still being able to query the default cursor
-    if quads:
-      if sort_by_s: cursor.execute("SELECT c,s,p,o FROM quads WHERE c=? ORDER BY s", (self.c,))
-      else:         cursor.execute("SELECT c,s,p,o FROM quads WHERE c=?", (self.c,))
-    else:
-      if sort_by_s: cursor.execute("SELECT s,p,o FROM quads WHERE c=? ORDER BY s", (self.c,))
-      else:         cursor.execute("SELECT s,p,o FROM quads WHERE c=?", (self.c,))
-    return cursor
-
+    return self.parent._iter_triples(quads, sort_by_s, self.c)
+  
+  def refactor(self, storid, new_iri): return self.parent.refactor(storid, new_iri)
   
   
   # Reimplemented using RECURSIVE SQL structure, for performance
   def get_transitive_sp(self, s, p):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
-AS (      SELECT o FROM quads WHERE c=? AND s=? AND p=?
-UNION ALL SELECT quads.o FROM quads, transit WHERE quads.c=? AND quads.s=transit.x AND quads.p=?)
+AS (      SELECT o FROM objs WHERE c=? AND s=? AND p=?
+UNION ALL SELECT objs.o FROM objs, transit WHERE objs.c=? AND objs.s=transit.x AND objs.p=?)
 SELECT DISTINCT x FROM transit""", (self.c, s, p, self.c, p)).fetchall(): yield x
   
   # Reimplemented using RECURSIVE SQL structure, for performance
   def get_transitive_po(self, p, o):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
-AS (      SELECT s FROM quads WHERE c=? AND p=? AND o=?
-UNION ALL SELECT quads.s FROM quads, transit WHERE quads.c=? AND quads.p=? AND quads.o=transit.x)
+AS (      SELECT s FROM objs WHERE c=? AND p=? AND o=?
+UNION ALL SELECT objs.s FROM objs, transit WHERE objs.c=? AND objs.p=? AND objs.o=transit.x)
 SELECT DISTINCT x FROM transit""", (self.c, p, o, self.c, p)).fetchall(): yield x
 
 #  def get_transitive_sym(self, s, p):
 #    r = { s }
 #    for (s, o) in self.execute("""
 #WITH RECURSIVE transit(s,o)
-#AS (  SELECT s,o from quads WHERE (s=? OR o=?) AND p=? AND c=?
-#    UNION SELECT quads.s,quads.o FROM quads, transit WHERE (quads.s=transit.s OR quads.o=transit.o OR quads.s=transit.o OR quads.o=transit.s) AND quads.p=? AND quads.c=?)
+#AS (  SELECT s,o from objs WHERE (s=? OR o=?) AND p=? AND c=?
+#    UNION SELECT objs.s,quads.o FROM objs, transit WHERE (quads.s=transit.s OR objs.o=transit.o OR objs.s=transit.o OR objs.o=transit.s) AND objs.p=? AND objs.c=?)
 #SELECT s, o FROM transit""", (s, s, p, self.c, p, self.c)):
 #      r.add(s)
 #      r.add(o)

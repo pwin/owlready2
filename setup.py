@@ -30,10 +30,9 @@ version = open(os.path.join(HERE, "__init__.py")).read().split('VERSION = "', 1)
 try:
   import Cython.Build
   extensions = [
-    setuptools.Extension("rdfxml_2_ntriples_pyx", ["rdfxml_2_ntriples_pyx.pyx"]),
-    setuptools.Extension("owlxml_2_ntriples_pyx", ["owlxml_2_ntriples_pyx.pyx"]),
+    setuptools.Extension("owlready2_optimized", ["owlready2_optimized.pyx"]),
   ]
-  extensions = Cython.Build.cythonize(extensions)
+  extensions = Cython.Build.cythonize(extensions, compiler_directives = { "language_level" : 3 })
 except:
   extensions = []
 

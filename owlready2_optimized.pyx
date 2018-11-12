@@ -26,25 +26,22 @@ from owlready2.base import OwlReadyOntologyParsingError
 INT_DATATYPES   = { "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#byte", "http://www.w3.org/2001/XMLSchema#short", "http://www.w3.org/2001/XMLSchema#int", "http://www.w3.org/2001/XMLSchema#long", "http://www.w3.org/2001/XMLSchema#unsignedByte", "http://www.w3.org/2001/XMLSchema#unsignedShort", "http://www.w3.org/2001/XMLSchema#unsignedInt", "http://www.w3.org/2001/XMLSchema#unsignedLong", "http://www.w3.org/2001/XMLSchema#negativeInteger", "http://www.w3.org/2001/XMLSchema#nonNegativeInteger", "http://www.w3.org/2001/XMLSchema#positiveInteger" }
 FLOAT_DATATYPES = { "http://www.w3.org/2001/XMLSchema#decimal", "http://www.w3.org/2001/XMLSchema#double", "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2002/07/owl#real" }
 
-cdef void on_prepare_obj(str s, str p, str o, list objs, object abbreviate, object insert_objs):
+cdef void on_prepare_obj(str s, str p, str o, list objs, object abbreviate):
   if not s.startswith("_"): s = abbreviate(s)
   if not o.startswith("_"): o = abbreviate(o)
-  
   objs.append((s, abbreviate(p), o))
-  if len(objs) > 100000: insert_objs()
   
-cdef void on_prepare_data(str s, str p, object o, str d, list datas, object abbreviate, object insert_datas):
+cdef void on_prepare_data(str s, str p, object o, str d, list datas, object abbreviate):
   if not s.startswith("_"): s = abbreviate(s)
   if (d != "") and (not d.startswith("@")): d = abbreviate(d)
   datas.append((s, abbreviate(p), o, d))
-  if len(datas) > 1000000: insert_datas()
+  
+cdef void on_prepare_triple(str s, str p, object o, list objs, list datas, object abbreviate):
+  if isinstance(o, tuple): on_prepare_data(s, p, o[0], o[1], datas, abbreviate)
+  else:                    on_prepare_obj (s, p, o,          objs,  abbreviate)
 
-cdef void on_prepare_triple(str s, str p, object o, list objs, list datas, object abbreviate, object insert_objs, object insert_datas):
-  if isinstance(o, tuple): on_prepare_data(s, p, o[0], o[1], datas, abbreviate, insert_datas)
-  else:                    on_prepare_obj (s, p, o,          objs,  abbreviate, insert_objs)
 
-
-cdef str new_list(list l, list objs, object insert_objs, object abbreviate, object new_blank):
+cdef str new_list(list l, list objs, object abbreviate, object new_blank):
   cdef str bn
   cdef str bn0
   cdef str bn_next
@@ -54,20 +51,20 @@ cdef str new_list(list l, list objs, object insert_objs, object abbreviate, obje
   
   if l:
     for i in range(len(l) - 1):
-      on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[i], objs, abbreviate, insert_objs)
+      on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[i], objs, abbreviate)
       bn_next = new_blank()
-      on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", bn_next, objs, abbreviate, insert_objs)
+      on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", bn_next, objs, abbreviate)
       bn = bn_next
-    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[-1], objs, abbreviate, insert_objs)
-    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", objs, abbreviate, insert_objs)
+    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[-1], objs, abbreviate)
+    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", objs, abbreviate)
       
   else:
-    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", objs, abbreviate, insert_objs)
-    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",  "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", objs, abbreviate, insert_objs)
+    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", objs, abbreviate)
+    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",  "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", objs, abbreviate)
     
   return bn0
 
-cdef str new_data_list(list l, list objs, list datas, object insert_objs, object insert_datas, object abbreviate, object new_blank):
+cdef str new_data_list(list l, list objs, list datas, object abbreviate, object new_blank):
   cdef str bn
   cdef str bn0
   cdef str bn_next
@@ -77,21 +74,64 @@ cdef str new_data_list(list l, list objs, list datas, object insert_objs, object
   
   if l:
     for i in range(len(l) - 1):
-      on_prepare_data(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[i][0], l[i][1], datas, abbreviate, insert_datas)
+      on_prepare_data(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[i][0], l[i][1], datas, abbreviate)
       bn_next = new_blank()
-      on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", bn_next, objs, abbreviate, insert_objs)
+      on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", bn_next, objs, abbreviate)
       bn = bn_next
-    on_prepare_data(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[-1][0], l[-1][1], datas, abbreviate, insert_datas)
-    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", objs, abbreviate, insert_objs)
+    on_prepare_data(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[-1][0], l[-1][1], datas, abbreviate)
+    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", objs, abbreviate)
       
   else:
-    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", objs, abbreviate, insert_objs)
-    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",  "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", objs, abbreviate, insert_objs)
+    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", objs, abbreviate)
+    on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",  "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil", objs, abbreviate)
     
   return bn0
 
 
-cdef void add_to_bn(object bns, set known_nodes, str bn, str type, str rel, value, d = None):
+def parse_ntriples(object f, list objs, list datas, object insert_objs, object insert_datas, object abbreviate, object new_blank, str default_base = ""):
+  import re
+  cdef object splitter = re.compile("\s")
+  cdef dict bn_src_2_sql = {}
+  
+  cdef str line = f.readline().decode("utf8")
+  cdef str s,p,o
+  cdef object oo
+  
+  while line:
+    if (not line.startswith("#")) and (not line.startswith("\n")):
+      s,p,o = splitter.split(line[:-3], 2)
+      
+      if   s.startswith("<"): s = s[1:-1]
+      elif s.startswith("_"):
+        bn = bn_src_2_sql.get(s)
+        if bn is None: bn = bn_src_2_sql[s] = new_blank()
+        s = bn
+        
+      p = p[1:-1]
+      
+      if   o.startswith("<"):
+        on_prepare_obj(s, p, o[1:-1], objs, abbreviate)
+        if len(objs ) > 800000: insert_objs()
+      elif o.startswith("_"):
+        bn = bn_src_2_sql.get(o)
+        if bn is None: bn = bn_src_2_sql[o] = new_blank()
+        on_prepare_obj(s, p, bn, objs, abbreviate)
+      elif o.startswith('"'):
+        o, d = o.rsplit('"', 1)
+        if d.startswith("^"):
+          d = d[3:-1]
+          if   d in INT_DATATYPES:   oo = int  (o[1:])
+          elif d in FLOAT_DATATYPES: oo = float(o[1:])
+          else:                      oo = o[1:].encode("raw-unicode-escape").decode("unicode-escape")
+        else:
+          oo = o[1:].encode("raw-unicode-escape").decode("unicode-escape")
+        on_prepare_data(s, p, oo, d, datas, abbreviate)
+        if len(datas) > 800000: insert_datas()
+        
+    line = f.readline().decode("utf8")
+
+
+cdef void add_to_bn(object bns, set known_nodes, str bn, str type, str rel, object value, str d = None):
     if type == "COL":
       value = tuple(frozenset(bns[v])
                     if v.startswith("_") and (not v in known_nodes)
@@ -226,7 +266,7 @@ def parse_rdfxml(object f, list objs, list datas, object insert_objs, object ins
           
       if tag != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Description":
         if not iri.startswith("_ "):
-          on_prepare_obj(iri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag, objs, abbreviate, insert_objs)
+          on_prepare_obj(iri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag, objs, abbreviate)
         if iri.startswith("_"):
           add_to_bn(bns, known_nodes,  iri, "REL", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
           
@@ -276,7 +316,7 @@ def parse_rdfxml(object f, list objs, list datas, object insert_objs, object ins
       
       if   parse_type == "Resource":
         if not iri.startswith("_ "):
-          on_prepare_obj(iri, tag, value, objs, abbreviate, insert_objs)
+          on_prepare_obj(iri, tag, value, objs, abbreviate)
           
         if iri.startswith("_"):
           add_to_bn(bns, known_nodes,  iri, "REL", tag, value)
@@ -298,18 +338,21 @@ def parse_rdfxml(object f, list objs, list datas, object insert_objs, object ins
           #o = o.replace('"', '\\"').replace("\n", "\\n")
           
         if not iri.startswith("_ "):
-          on_prepare_data(iri, tag, o, d, datas, abbreviate, insert_datas)
+          on_prepare_data(iri, tag, o, d, datas, abbreviate)
         if iri.startswith("_"):
           add_to_bn(bns, known_nodes,  iri, "DAT", tag, o, d)
           
       elif parse_type == "Collection":
         if not iri.startswith("_ "):
-          on_prepare_obj(iri, tag, new_list(value, objs, insert_objs, abbreviate, new_blank), objs, abbreviate, insert_objs)
+          on_prepare_obj(iri, tag, new_list(value, objs, abbreviate, new_blank), objs, abbreviate)
         if iri.startswith("_"):
           add_to_bn(bns, known_nodes,  iri, "COL", tag, value)
           
           
     tag_is_predicate = not tag_is_predicate
+    
+    if len(objs ) > 800000: insert_objs()
+    if len(datas) > 800000: insert_datas()
     
     
   def characters(str content):
@@ -356,19 +399,19 @@ def parse_rdfxml(object f, list objs, list datas, object insert_objs, object ins
         if   i[0] == "REL":
           drop, p, o = i
           if not isinstance(o, str): o = rebuild_bn(o)
-          on_prepare_obj(bn, p, o, objs, abbreviate, insert_objs)
+          on_prepare_obj(bn, p, o, objs, abbreviate)
         elif i[0] == "DAT":
           drop, p, o, d = i
           if not isinstance(o, str): o = rebuild_bn(o)
-          on_prepare_data(bn, p, o, d, datas, abbreviate, insert_datas)
+          on_prepare_data(bn, p, o, d, datas, abbreviate)
         elif i[0] == "INV":
           drop, p, o = i
           if not isinstance(o, str): o = rebuild_bn(o)
-          on_prepare_obj(o, p, bn, objs, abbreviate, insert_objs)
+          on_prepare_obj(o, p, bn, objs, abbreviate)
         elif i[0] == "COL":
           drop, p, *l = i
           l = [(isinstance(x, str) and x) or rebuild_bn(x) for x in l]
-          on_prepare_obj(bn, p, new_list(l, objs, insert_objs, abbreviate, new_blank), objs, abbreviate, insert_objs)
+          on_prepare_obj(bn, p, new_list(l, objs, abbreviate, new_blank), objs, abbreviate)
         else:
           print(i)
           raise ValueError
@@ -393,7 +436,7 @@ def parse_rdfxml(object f, list objs, list datas, object insert_objs, object ins
           if candidates_bn: o = candidates_bn[-1]
           else:
             o = rebuild_bn(content)
-          on_prepare_obj(axiom_iri,p,o, objs, abbreviate, insert_objs)
+          on_prepare_obj(axiom_iri,p,o, objs, abbreviate)
         except Exception as e:
           raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), line, column)) from e
         
@@ -541,7 +584,7 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
       
     elif (tag in types):
       iri = get_IRI(attrs)
-      if in_declaration: on_prepare_obj(iri, rdf_type, types[tag], objs, abbreviate, insert_objs)
+      if in_declaration: on_prepare_obj(iri, rdf_type, types[tag], objs, abbreviate)
       stack.append(iri)
       
     elif (tag == "http://www.w3.org/2002/07/owl#Datatype"):           stack.append(get_IRI(attrs))
@@ -573,10 +616,10 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
     
     elif (tag == "http://www.w3.org/2002/07/owl#Ontology"):
       ontology_iri = attrs["ontologyIRI"]
-      on_prepare_obj(ontology_iri, rdf_type, "http://www.w3.org/2002/07/owl#Ontology", objs, abbreviate, insert_objs)
+      on_prepare_obj(ontology_iri, rdf_type, "http://www.w3.org/2002/07/owl#Ontology", objs, abbreviate)
       version_iri = attrs.get("versionIRI")
       if version_iri:
-        on_prepare_obj(ontology_iri, "http://www.w3.org/2002/07/owl#versionIRI", version_iri, objs, abbreviate, insert_objs)
+        on_prepare_obj(ontology_iri, "http://www.w3.org/2002/07/owl#versionIRI", version_iri, objs, abbreviate)
       
     elif (tag == "RDF") or (tag == "rdf:RDF"): raise ValueError("Not an OWL/XML file! (It seems to be an OWL/RDF file)")
     
@@ -605,43 +648,43 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
         parent, child = child, parent
       else:
         relation = sub_ofs[tag]
-      on_prepare_obj(child, relation, parent, objs, abbreviate, insert_objs)
+      on_prepare_obj(child, relation, parent, objs, abbreviate)
       if annots: purge_annotations((child, relation, parent))
       
     elif (tag == "http://www.w3.org/2002/07/owl#ClassAssertion"):
       child  = stack.pop() # Order is reversed compared to SubClassOf!
       parent = stack.pop()
-      on_prepare_obj(child, rdf_type, parent, objs, abbreviate, insert_objs)
+      on_prepare_obj(child, rdf_type, parent, objs, abbreviate)
       if annots: purge_annotations((child, rdf_type, parent))
       
     elif (tag == "http://www.w3.org/2002/07/owl#EquivalentClasses") or (tag == "http://www.w3.org/2002/07/owl#EquivalentObjectProperties") or (tag == "http://www.w3.org/2002/07/owl#EquivalentDataProperties"):
       o1 = stack.pop()
       o2 = stack.pop()
       if o1.startswith("_"): o1, o2 = o2, o1 # Swap in order to have blank node at third position -- rapper seems to do that
-      on_prepare_obj(o1, equivs[tag], o2, objs, abbreviate, insert_objs)
+      on_prepare_obj(o1, equivs[tag], o2, objs, abbreviate)
       if annots: purge_annotations((o1, equivs[tag], o2))
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectPropertyDomain") or (tag == "http://www.w3.org/2002/07/owl#DataPropertyDomain") or (tag == "http://www.w3.org/2002/07/owl#AnnotationPropertyDomain"):
       val = stack.pop(); obj = stack.pop();
-      on_prepare_obj(obj, "http://www.w3.org/2000/01/rdf-schema#domain", val, objs, abbreviate, insert_objs)
+      on_prepare_obj(obj, "http://www.w3.org/2000/01/rdf-schema#domain", val, objs, abbreviate)
       if annots: purge_annotations((obj, "http://www.w3.org/2000/01/rdf-schema#domain", val))
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectPropertyRange") or (tag == "http://www.w3.org/2002/07/owl#DataPropertyRange") or (tag == "http://www.w3.org/2002/07/owl#AnnotationPropertyRange"):
       val = stack.pop(); obj = stack.pop();
-      on_prepare_obj(obj, "http://www.w3.org/2000/01/rdf-schema#range", val, objs, abbreviate, insert_objs)
+      on_prepare_obj(obj, "http://www.w3.org/2000/01/rdf-schema#range", val, objs, abbreviate)
       if annots: purge_annotations((obj, "http://www.w3.org/2000/01/rdf-schema#range", val))
       
     elif (tag in prop_types):
       obj = stack.pop()
-      on_prepare_obj(obj, rdf_type, prop_types[tag], objs, abbreviate, insert_objs)
+      on_prepare_obj(obj, rdf_type, prop_types[tag], objs, abbreviate)
       
     elif (tag == "http://www.w3.org/2002/07/owl#InverseObjectProperties") or (tag == "http://www.w3.org/2002/07/owl#InverseDataProperties"):
       a, b = stack.pop(), stack.pop()
-      on_prepare_obj(b, "http://www.w3.org/2002/07/owl#inverseOf", a, objs, abbreviate, insert_objs)
+      on_prepare_obj(b, "http://www.w3.org/2002/07/owl#inverseOf", a, objs, abbreviate)
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectPropertyChain"):
       start    = _rindex(stack)
-      list_iri = new_list(stack[start + 1 : ], objs, insert_objs, abbreviate, new_blank)
+      list_iri = new_list(stack[start + 1 : ], objs, abbreviate, new_blank)
       in_prop_chain = True
       stack[start :] = [list_iri]
       
@@ -650,95 +693,95 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
       list_obj = stack[start + 1 : ]
       tag, rel, member = disjoints[tag]
       if rel and (len(list_obj) == 2):
-        on_prepare_obj(list_obj[0], rel, list_obj[1], objs, abbreviate, insert_objs)
+        on_prepare_obj(list_obj[0], rel, list_obj[1], objs, abbreviate)
         if annots: purge_annotations((list_obj[0], rel, list_obj[1]))
         
       else:
-        list_iri = new_list(list_obj, objs, insert_objs, abbreviate, new_blank)
+        list_iri = new_list(list_obj, objs, abbreviate, new_blank)
         iri = new_blank()
-        on_prepare_obj(iri, rdf_type, tag, objs, abbreviate, insert_objs)
-        on_prepare_obj(iri, member, list_iri, objs, abbreviate, insert_objs)
+        on_prepare_obj(iri, rdf_type, tag, objs, abbreviate)
+        on_prepare_obj(iri, member, list_iri, objs, abbreviate)
         if annots: purge_annotations((iri, rdf_type, tag))
         
       del stack[start :]
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectPropertyAssertion"):
       p,s,o = stack[-3 :]
-      on_prepare_obj(s, p, o, objs, abbreviate, insert_objs)
+      on_prepare_obj(s, p, o, objs, abbreviate)
       if annots: purge_annotations((s,p,o))
       del stack[-3 :]
       
     elif (tag == "http://www.w3.org/2002/07/owl#DataPropertyAssertion"):
       p,s,o = stack[-3 :]
-      on_prepare_data(s, p, o[0], o[1], datas, abbreviate, insert_datas)
+      on_prepare_data(s, p, o[0], o[1], datas, abbreviate)
       if annots: purge_annotations((s,p,o))
       del stack[-3 :]
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectComplementOf") or (tag == "http://www.w3.org/2002/07/owl#DataComplementOf"):
       iri = new_blank()
-      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class", objs, abbreviate, insert_objs)
-      on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#complementOf", stack[-1], objs, abbreviate, insert_objs)
+      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class", objs, abbreviate)
+      on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#complementOf", stack[-1], objs, abbreviate)
       stack[-1] = iri
     
     elif (tag in restrs):
       iri = new_blank()
-      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Restriction", objs, abbreviate, insert_objs)
-      on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onProperty", stack.pop(-2), objs, abbreviate, insert_objs)
-      on_prepare_triple(iri, restrs[tag], stack[-1], objs, datas, abbreviate, insert_objs, insert_datas)
+      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Restriction", objs, abbreviate)
+      on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onProperty", stack.pop(-2), objs, abbreviate)
+      on_prepare_triple(iri, restrs[tag], stack[-1], objs, datas, abbreviate)
       stack[-1] = iri
       
     elif (tag in card_restrs):
       iri = new_blank()
-      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Restriction", objs, abbreviate, insert_objs)
+      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Restriction", objs, abbreviate)
       start = _rindex(stack)
       values = stack[start + 1 : ]
       del stack[start :]
       
       if len(values) == 2: # Qualified
         tag = qual_card_restrs[tag]
-        on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onProperty", values[-2], objs, abbreviate, insert_objs)
+        on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onProperty", values[-2], objs, abbreviate)
         if stack[-1].startswith("http://www.w3.org/2001/XMLSchema"):
-          on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onDataRange", values[-1], objs, abbreviate, insert_objs)
+          on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onDataRange", values[-1], objs, abbreviate)
         else:
-          on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onClass", values[-1], objs, abbreviate, insert_objs)
+          on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onClass", values[-1], objs, abbreviate)
       else: # Non qualified
         tag = card_restrs[tag]
-        on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onProperty", values[-1], objs, abbreviate, insert_objs)
-      on_prepare_data(iri, tag, last_cardinality, "http://www.w3.org/2001/XMLSchema#nonNegativeInteger", datas, abbreviate, insert_datas)
+        on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onProperty", values[-1], objs, abbreviate)
+      on_prepare_data(iri, tag, last_cardinality, "http://www.w3.org/2001/XMLSchema#nonNegativeInteger", datas, abbreviate)
       stack.append(iri)
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectOneOf"):
       start    = _rindex(stack)
-      list_iri = new_list(stack[start + 1 : ], objs, insert_objs, abbreviate, new_blank)
+      list_iri = new_list(stack[start + 1 : ], objs, abbreviate, new_blank)
       iri      = new_blank()
-      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class", objs, abbreviate, insert_objs)
-      on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#oneOf", list_iri, objs, abbreviate, insert_objs)
+      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class", objs, abbreviate)
+      on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#oneOf", list_iri, objs, abbreviate)
       stack[start :] = [iri]
       
     elif (tag == "http://www.w3.org/2002/07/owl#DataOneOf"):
       start    = _rindex(stack)
-      list_iri = new_data_list(stack[start + 1 : ], objs, datas, insert_objs, insert_datas, abbreviate, new_blank)
+      list_iri = new_data_list(stack[start + 1 : ], objs, datas, abbreviate, new_blank)
       iri      = new_blank()
-      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2000/01/rdf-schema#Datatype", objs, abbreviate, insert_objs)
-      on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#oneOf", list_iri, objs, abbreviate, insert_objs)
+      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2000/01/rdf-schema#Datatype", objs, abbreviate)
+      on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#oneOf", list_iri, objs, abbreviate)
       stack[start :] = [iri]
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectIntersectionOf") or (tag == "http://www.w3.org/2002/07/owl#ObjectUnionOf") or (tag == "http://www.w3.org/2002/07/owl#DataIntersectionOf") or (tag == "http://www.w3.org/2002/07/owl#DataUnionOf"):
       start    = _rindex(stack)
-      list_iri = new_list(stack[start + 1 : ], objs, insert_objs, abbreviate, new_blank)
+      list_iri = new_list(stack[start + 1 : ], objs, abbreviate, new_blank)
       iri      = new_blank()
       if stack[start + 1 : ][0].startswith("http://www.w3.org/2001/XMLSchema"):
-        on_prepare_obj(iri, rdf_type, "http://www.w3.org/2000/01/rdf-schema#Datatype", objs, abbreviate, insert_objs)
+        on_prepare_obj(iri, rdf_type, "http://www.w3.org/2000/01/rdf-schema#Datatype", objs, abbreviate)
       else:
-        on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class", objs, abbreviate, insert_objs)
+        on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class", objs, abbreviate)
       if (tag == "http://www.w3.org/2002/07/owl#ObjectIntersectionOf") or (tag == "http://www.w3.org/2002/07/owl#DataIntersectionOf"):
-        on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#intersectionOf", list_iri, objs, abbreviate, insert_objs)
+        on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#intersectionOf", list_iri, objs, abbreviate)
       else:
-        on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#unionOf", list_iri, objs, abbreviate, insert_objs)
+        on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#unionOf", list_iri, objs, abbreviate)
       stack[start :] = [iri]
       
     elif (tag == "http://www.w3.org/2002/07/owl#Import"):
-      on_prepare_data(ontology_iri, "http://www.w3.org/2002/07/owl#imports", current_content, "", datas, abbreviate, insert_datas)
+      on_prepare_data(ontology_iri, "http://www.w3.org/2002/07/owl#imports", current_content, "", datas, abbreviate)
       
     elif (tag == "http://www.w3.org/2002/07/owl#IRI"):
       iri = current_content
@@ -752,12 +795,12 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
       stack.append(iri)
       
     elif (tag == "http://www.w3.org/2002/07/owl#AnnotationAssertion"):
-      on_prepare_triple(stack[-2], stack[-3], stack[-1], objs, datas, abbreviate, insert_objs, insert_datas)
+      on_prepare_triple(stack[-2], stack[-3], stack[-1], objs, datas, abbreviate)
       if annots: purge_annotations((stack[-2], stack[-3], stack[-1]))
       
     elif (tag == "http://www.w3.org/2002/07/owl#Annotation"):
       if before_declaration: # On ontology
-        on_prepare_triple(ontology_iri, stack[-2], stack[-1], objs, datas, abbreviate, insert_objs, insert_datas)
+        on_prepare_triple(ontology_iri, stack[-2], stack[-1], objs, datas, abbreviate)
       else:
         annots.append((stack[-2], stack[-1]))
       del stack[-2:]
@@ -765,25 +808,27 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
     elif (tag == "http://www.w3.org/2002/07/owl#DatatypeRestriction"):
       start               = _rindex(stack)
       datatype, *list_bns = stack[start + 1 : ]
-      list_bns            = new_list(list_bns, objs, insert_objs, abbreviate, new_blank)
+      list_bns            = new_list(list_bns, objs, abbreviate, new_blank)
       bn                  = new_blank()
       stack[start :]  = [bn]
-      on_prepare_obj(bn, rdf_type, "http://www.w3.org/2000/01/rdf-schema#Datatype", objs, abbreviate, insert_objs)
-      on_prepare_obj(bn, "http://www.w3.org/2002/07/owl#onDatatype", datatype, objs, abbreviate, insert_objs)
-      on_prepare_obj(bn, "http://www.w3.org/2002/07/owl#withRestrictions", list_bns, objs, abbreviate, insert_objs)
+      on_prepare_obj(bn, rdf_type, "http://www.w3.org/2000/01/rdf-schema#Datatype", objs, abbreviate)
+      on_prepare_obj(bn, "http://www.w3.org/2002/07/owl#onDatatype", datatype, objs, abbreviate)
+      on_prepare_obj(bn, "http://www.w3.org/2002/07/owl#withRestrictions", list_bns, objs, abbreviate)
       
     elif (tag == "http://www.w3.org/2002/07/owl#FacetRestriction"):
       facet, literal = stack[-2:]
       bn = new_blank()
-      on_prepare_triple(bn, facet, literal, objs, datas, abbreviate, insert_objs, insert_datas)
+      on_prepare_triple(bn, facet, literal, objs, datas, abbreviate)
       stack[-2:] = [bn]
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectInverseOf") or (tag == "http://www.w3.org/2002/07/owl#DataInverseOf") or (tag == "http://www.w3.org/2002/07/owl#inverseOf"):
       bn, prop = stack[-2:]
-      on_prepare_obj(bn, "http://www.w3.org/2002/07/owl#inverseOf", prop, objs, abbreviate, insert_objs)
+      on_prepare_obj(bn, "http://www.w3.org/2002/07/owl#inverseOf", prop, objs, abbreviate)
       
       stack[-2:] = [bn]
     
+    if len(objs ) > 800000: insert_objs()
+    if len(datas) > 800000: insert_datas()
       
   def characters(str content):
     nonlocal current_content
@@ -797,13 +842,13 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
     if isinstance(on_iri, tuple):
       s,p,o  = on_iri
       on_iri = new_blank()
-      on_prepare_obj(on_iri, rdf_type, "http://www.w3.org/2002/07/owl#Axiom", objs, abbreviate, insert_objs)
-      on_prepare_obj(on_iri, "http://www.w3.org/2002/07/owl#annotatedSource", s, objs, abbreviate, insert_objs)
-      on_prepare_obj(on_iri, "http://www.w3.org/2002/07/owl#annotatedProperty", p, objs, abbreviate, insert_objs)
-      on_prepare_triple(on_iri, "http://www.w3.org/2002/07/owl#annotatedTarget", o, objs, datas, abbreviate, insert_objs, insert_datas)
+      on_prepare_obj(on_iri, rdf_type, "http://www.w3.org/2002/07/owl#Axiom", objs, abbreviate)
+      on_prepare_obj(on_iri, "http://www.w3.org/2002/07/owl#annotatedSource", s, objs, abbreviate)
+      on_prepare_obj(on_iri, "http://www.w3.org/2002/07/owl#annotatedProperty", p, objs, abbreviate)
+      on_prepare_triple(on_iri, "http://www.w3.org/2002/07/owl#annotatedTarget", o, objs, datas, abbreviate)
 
     for prop_iri, value in annots:
-      on_prepare_triple(on_iri, prop_iri, value, objs, datas, abbreviate, insert_objs, insert_datas)
+      on_prepare_triple(on_iri, prop_iri, value, objs, datas, abbreviate)
     annots = []
 
 

@@ -268,6 +268,8 @@ version 2 - 0.11
 version 2 - 0.12
 ****************
 
+* New quadstore
+* Numerical search (NumS, e.g. all patients with age > 65)
 * Synchronization for multithreading support
 * Add Class.inverse_restrictions()
 * Bugfixes:

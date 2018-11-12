@@ -51,48 +51,65 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     if   isinstance(s, rdflib.term.URIRef ): s = self.triplelite.abbreviate(str(s))
     elif isinstance(s, rdflib.term.BNode  ): s = str(s)
     if   isinstance(p, rdflib.term.URIRef ): p = self.triplelite.abbreviate(str(p))
-    if   isinstance(o, rdflib.term.URIRef ): o = self.triplelite.abbreviate(str(o))
-    elif isinstance(o, rdflib.term.BNode  ): o = str(o)
+    if   isinstance(o, rdflib.term.URIRef ): o = self.triplelite.abbreviate(str(o)); d = None
+    elif isinstance(o, rdflib.term.BNode  ): o = str(o); d = None
     elif isinstance(o, rdflib.term.Literal):
       if o.language is None:
         if o.datatype:
-          o = '"%s"%s' % (o.value, self.triplelite.abbreviate(str(o.datatype)))
+          d = self.triplelite.abbreviate(str(o.datatype))
+          o = o.value
         else:
-          o = '"%s"' % o.value
+          d = ""
+          o = str(o)
       else:
-        o = '"%s"@%s' % (o.value, o.language)
-        
-    return s,p,o
+        d = "@%s" % o.language
+        o = str(o)
+    else:
+      d = None
+    return s,p,o,d
   
-  def _owlready_2_rdflib(self, s,p,o):
+  def _owlready_2_rdflib(self, s,p,o,d = None):
     if   s.startswith("_"): s = BNode(s)
     else:                   s = URIRef(self.triplelite.unabbreviate(s))
     p = URIRef(self.triplelite.unabbreviate(p))
-    if   o.startswith("_"): o = BNode(o)
-    elif o.startswith('"'):
-      v, l = o.rsplit('"', 1)
-      if   l.startswith("@"): o = Literal(v[1:], lang = l[1:])
-      elif l == "":           o = Literal(v[1:])
-      else:                   o = Literal(v[1:], datatype = URIRef(self.triplelite.unabbreviate(l)))
-    else: o = URIRef(self.triplelite.unabbreviate(o))
+    if d is None:
+      if o.startswith("_"): o = BNode(o)
+      else:                 o = URIRef(self.triplelite.unabbreviate(o))
+    else:
+      if   d.startswith("@"): o = Literal(o, lang = d[1:])
+      elif d == "":           o = Literal(o)
+      else:                   o = Literal(o, datatype = URIRef(self.triplelite.unabbreviate(d)))
     return s,p,o
   
   def add(self, xxx_todo_changeme, context, quoted = False):
-    s,p,o = self._rdflib_2_owlready(xxx_todo_changeme)
+    s,p,o,d = self._rdflib_2_owlready(xxx_todo_changeme)
 
-    context.triplelite._add_triple(s,p,o)
+    if d is None:
+      context.triplelite._add_obj_spo(s,p,o)
+    else:
+      context.triplelite._add_data_spod(s,p,o,d)
     #super().add(xxx_todo_changeme, context, quoted)
     
   def remove(self, xxx_todo_changeme, context = None):
-    s,p,o = self._rdflib_2_owlready(xxx_todo_changeme)
-    context.triplelite._del_triple(s,p,o)
+    s,p,o,d = self._rdflib_2_owlready(xxx_todo_changeme)
+    if d is None:
+      context.triplelite._del_obj_spo(s,p,o)
+    else:
+      context.triplelite._del_data_spod(s,p,o,d)
     #super().remove(xxx_todo_changeme, context, quoted)
     
   def triples(self, triple_pattern, context = None):
-    rs,rp,ro = self._rdflib_2_owlready(triple_pattern)
-    for s,p,o in context.triplelite.get_triples(rs,rp,ro, True):
-      yield self._owlready_2_rdflib(s,p,o), context
-      
+    rs,rp,ro,rd = self._rdflib_2_owlready(triple_pattern)
+    if   rd is None:
+      for s,p,o,d in context.triplelite.get_quads_spod_spod(rs,rp,ro, None):
+        yield self._owlready_2_rdflib(s,p,o,d), context
+    elif rd is None:
+      for s,p,o in context.triplelite.get_objs_spo_spo(rs,rp,ro):
+        yield self._owlready_2_rdflib(s,p,o,None), context
+    else:
+      for s,p,o,d in context.triplelite.get_datas_spod_spod(rs,rp,ro, None):
+        yield self._owlready_2_rdflib(s,p,o,d), context
+        
   def __len__(self, context = None):
     return len(context.triplelite)
   
@@ -118,10 +135,13 @@ class TripleLiteRDFlibGraph(rdflib.Graph):
     elif isinstance(o, rdflib.term.Literal):
       if o.language is None:
         if o.datatype:
-          o = '"%s"%s' % (o.value, self.triplelite.abbreviate(str(o.datatype)))
+          d = self.triplelite.abbreviate(str(o.datatype))
+          o = o.value
         else:
-          o = '"%s"' % o.value
+          d = ""
+          o = str(o)
       else:
-        o = '"%s"@%s' % (o.value, o.language)
-      o = from_literal(o)
+        d = "@%s" % o.language
+        o = str(o)
+      o = from_literal(o, d)
     return o

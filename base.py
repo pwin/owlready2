@@ -44,19 +44,19 @@ class OwlReadyInconsistentOntologyError(OwlReadyError): pass
 
 
 def to_literal(o):
-  if isinstance(o, locstr) and o.lang: return '"%s"@%s' % (o, o.lang)
+  if isinstance(o, locstr) and o.lang: return o, "@%s" % o.lang
   datatype, unparser = _universal_datatype_2_abbrev_unparser.get(o.__class__) or (None, None)
   if datatype is None: raise ValueError("Cannot store literal '%s' of type '%s'!" % (o, type(o)))
-  return '"%s"%s' % (unparser(o), datatype)
+  return unparser(o), datatype
   
-def from_literal(l):
-  v, l = l.rsplit('"', 1)
-  if l.startswith("@"): return locstr(v[1:], lang = l[1:])
-  if l != "":
-    datatype, parser = _universal_abbrev_2_datatype_parser.get(l) or (None, None)
-    if datatype is None: raise ValueError("Cannot read literal of datatype '%s'!" % l[1:])
-    return parser(v[1:])
-  return v[1:]
+def from_literal(o, d):
+  #from owlready2 import default_world
+  #print(repr(o), repr(d), default_world.unabbreviate(d))
+  if d.startswith("@"): return locstr(o, lang = d[1:])
+  if d == "": return o
+  datatype, parser = _universal_abbrev_2_datatype_parser.get(d) or (None, None)
+  if d is None: raise ValueError("Cannot read literal of datatype '%s'!" % d)
+  return parser(o)
 
 _universal_abbrev_2_iri = {}
 _universal_iri_2_abbrev = {}
@@ -143,10 +143,12 @@ def bool_parser(s):
 def bool_unparser(b):
   if b: return "true"
   return "false"
+def number_unparser(x):
+  return x
 
-_universal_abbrev_datatype(int, None, None, "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#byte", "http://www.w3.org/2001/XMLSchema#short", "http://www.w3.org/2001/XMLSchema#int", "http://www.w3.org/2001/XMLSchema#long", "http://www.w3.org/2001/XMLSchema#unsignedByte", "http://www.w3.org/2001/XMLSchema#unsignedShort", "http://www.w3.org/2001/XMLSchema#unsignedInt", "http://www.w3.org/2001/XMLSchema#unsignedLong", "http://www.w3.org/2001/XMLSchema#negativeInteger", "http://www.w3.org/2001/XMLSchema#nonNegativeInteger", "http://www.w3.org/2001/XMLSchema#positiveInteger")
+_universal_abbrev_datatype(int, None, number_unparser, "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#byte", "http://www.w3.org/2001/XMLSchema#short", "http://www.w3.org/2001/XMLSchema#int", "http://www.w3.org/2001/XMLSchema#long", "http://www.w3.org/2001/XMLSchema#unsignedByte", "http://www.w3.org/2001/XMLSchema#unsignedShort", "http://www.w3.org/2001/XMLSchema#unsignedInt", "http://www.w3.org/2001/XMLSchema#unsignedLong", "http://www.w3.org/2001/XMLSchema#negativeInteger", "http://www.w3.org/2001/XMLSchema#nonNegativeInteger", "http://www.w3.org/2001/XMLSchema#positiveInteger")
 _universal_abbrev_datatype(bool, bool_parser, bool_unparser, "http://www.w3.org/2001/XMLSchema#boolean")
-_universal_abbrev_datatype(float, None, None, "http://www.w3.org/2001/XMLSchema#decimal", "http://www.w3.org/2001/XMLSchema#double", "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2002/07/owl#real")
+_universal_abbrev_datatype(float, None, number_unparser, "http://www.w3.org/2001/XMLSchema#decimal", "http://www.w3.org/2001/XMLSchema#double", "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2002/07/owl#real")
 _universal_abbrev_datatype(str, None, None, "http://www.w3.org/2001/XMLSchema#string")
 _universal_abbrev_datatype(normstr, None, None, "http://www.w3.org/2001/XMLSchema#normalizedString", "http://www.w3.org/2001/XMLSchema#anyURI", "http://www.w3.org/2001/XMLSchema#Name")
 _universal_abbrev_datatype(locstr, None, None, "http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral")

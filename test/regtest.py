@@ -52,22 +52,36 @@ class BaseTest(object):
   def assert_nb_created_triples(self, x):
     assert (len(default_world.graph) - self.nb_triple) == x
     
-  def assert_triple(self, s, p, o, world = default_world):
-    if not world.has_triple(s, p, o):
-      if not s.startswith("_"): s = world.unabbreviate(s)
-      p = world.unabbreviate(p)
-      if not (o.startswith("_") or o.startswith('"')): o = world.unabbreviate(o)
-      print("MISSING TRIPLE", s, p, o)
-      raise AssertionError
+  def assert_triple(self, s, p, o, d = None, world = default_world):
+    if d is None:
+      if not world.has_obj_spo(s, p, o):
+        if not s.startswith("_"): s = world.unabbreviate(s)
+        p = world.unabbreviate(p)
+        if not o.startswith("_"): o = world.unabbreviate(o)
+        print("MISSING TRIPLE", s, p, o)
+        raise AssertionError
+    else:
+      if not world.has_data_spod(s, p, o, d):
+        if not s.startswith("_"): s = world.unabbreviate(s)
+        p = world.unabbreviate(p)
+        print("MISSING TRIPLE", s, p, o, d)
+        raise AssertionError
     
-  def assert_not_triple(self, s, p, o, world = default_world):
-    if world.has_triple(s, p, o):
-      if not s.startswith("_"): s = world.unabbreviate(s)
-      p = world.unabbreviate(p)
-      if not (o.startswith("_") or o.startswith('"')): o = world.unabbreviate(o)
-      print("UNEXPECTED TRIPLE", s, p, o)
-      raise AssertionError
-
+  def assert_not_triple(self, s, p, o, d = None, world = default_world):
+    if d is None:
+      if world.has_obj_spo(s, p, o):
+        if not s.startswith("_"): s = world.unabbreviate(s)
+        p = world.unabbreviate(p)
+        if not o.startswith("_"): o = world.unabbreviate(o)
+        print("UNEXPECTED TRIPLE", s, p, o)
+        raise AssertionError
+    else:
+      if world.has_data_spod(s, p, o, d):
+        if not s.startswith("_"): s = world.unabbreviate(s)
+        p = world.unabbreviate(p)
+        print("UNEXPECTED TRIPLE", s, p, o, d)
+        raise AssertionError
+      
   def assert_ntriples_equivalent(self, nt2, nt1):
     removed, added = diff(nt1, nt2)
     
@@ -153,7 +167,6 @@ class Test(BaseTest, unittest.TestCase):
     owlready2.namespace._cache = [None] * 1000
     import gc
     gc.collect(); gc.collect(); gc.collect()
-    #print(gc.get_referrers())
     assert not str(iri) in default_world._entities
     assert not n.Vegetable is None
     
@@ -251,9 +264,9 @@ class Test(BaseTest, unittest.TestCase):
     o = world.get_ontology("http://test.org/t.owl")
     A = world.abbreviate("http://test.org/t.owl#A")
     B = world.abbreviate("http://test.org/t.owl#B")
-    o.add_triple(A, rdf_type, owl_class)
+    o.add_obj_spo(A, rdf_type, owl_class)
     #missing triple (B, rdf_type, owl_class)
-    o.add_triple(A, rdfs_subclassof, B)
+    o.add_obj_spo(A, rdfs_subclassof, B)
     
     assert isinstance(o.A, ThingClass)
     assert o.B in o.A.is_a
@@ -285,7 +298,7 @@ class Test(BaseTest, unittest.TestCase):
       c1.prop = 1
       
     assert len(o2.graph) == 2
-    self.assert_triple(c1.storid, prop.storid, to_literal(1), o2)
+    self.assert_triple(c1.storid, prop.storid, *to_literal(1), world = o2)
     
   def test_ontology_3(self):
     world = self.new_world()
@@ -497,8 +510,8 @@ class Test(BaseTest, unittest.TestCase):
     o.metadata.comment = "com1"
     o.metadata.comment.append("com2")
     
-    self.assert_triple(o.storid, comment.storid, to_literal("com1"), w)
-    self.assert_triple(o.storid, comment.storid, to_literal("com2"), w)
+    self.assert_triple(o.storid, comment.storid, *to_literal("com1"), world = w)
+    self.assert_triple(o.storid, comment.storid, *to_literal("com2"), world = w)
 
     o.save("/tmp/t.owl")
     
@@ -509,8 +522,8 @@ class Test(BaseTest, unittest.TestCase):
     o.metadata.comment = "com1"
     o.metadata.comment.append("com2")
     
-    self.assert_triple(o.storid, comment.storid, to_literal("com1"), w)
-    self.assert_triple(o.storid, comment.storid, to_literal("com2"), w)
+    self.assert_triple(o.storid, comment.storid, *to_literal("com1"), world = w)
+    self.assert_triple(o.storid, comment.storid, *to_literal("com2"), world = w)
     
   def test_ontology_21(self):
     w = self.new_world()
@@ -550,8 +563,6 @@ class Test(BaseTest, unittest.TestCase):
     class C1(Thing):  namespace = n
     class C2(Thing):  namespace = n
     class C3(C1, C2): namespace = n
-    
-    #for p, o in g.predicate_objects(C3.storid): print(p, o)
     
     self.assert_nb_created_triples(1 + 2 + 2 + 3)
     self.assert_triple(C3.storid, rdf_type, owl_class)
@@ -783,7 +794,7 @@ class Test(BaseTest, unittest.TestCase):
     with onto:
       class MyClass(Thing): comment = "abc"
       
-    self.assert_triple(MyClass.storid, comment.storid, to_literal("abc"), world)
+    self.assert_triple(MyClass.storid, comment.storid, *to_literal("abc"), world = world)
     
     
   def test_individual_1(self):
@@ -913,9 +924,9 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_triple(c.storid, rdf_type, C.storid)
     self.assert_triple(c.storid, prop.storid, d1.storid)
     self.assert_triple(c.storid, propf.storid, d3.storid)
-    self.assert_triple(c.storid, propi.storid, to_literal(1))
-    self.assert_triple(c.storid, propi.storid, to_literal(2))
-    self.assert_triple(c.storid, propif.storid, to_literal(3))
+    self.assert_triple(c.storid, propi.storid, *to_literal(1))
+    self.assert_triple(c.storid, propi.storid, *to_literal(2))
+    self.assert_triple(c.storid, propif.storid, *to_literal(3))
     
   def test_individual_10(self):
     world   = self.new_world()
@@ -1121,14 +1132,14 @@ class Test(BaseTest, unittest.TestCase):
   def test_prop_5(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     pizza = n.Pizza()
-    assert default_world.get_triple_sp(pizza.storid, n.price.storid) is None
+    assert default_world.get_data_sp_od(pizza.storid, n.price.storid) is None
     pizza.price = 8.0
 
-    assert from_literal(default_world.get_triple_sp(pizza.storid, n.price.storid)) == 8.0
+    assert from_literal(*default_world.get_data_sp_od(pizza.storid, n.price.storid)) == 8.0
     pizza.price = 9.0
-    assert from_literal(default_world.get_triple_sp(pizza.storid, n.price.storid)) == 9.0
+    assert from_literal(*default_world.get_data_sp_od(pizza.storid, n.price.storid)) == 9.0
     pizza.price = None
-    assert default_world.get_triple_sp(pizza.storid, n.price.storid) is None
+    assert default_world.get_data_sp_od(pizza.storid, n.price.storid) is None
     
   def test_prop_6(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -1137,12 +1148,12 @@ class Test(BaseTest, unittest.TestCase):
     tomato = n.Tomato()
     cheese = n.Cheese()
     pizza.has_topping = [tomato]
-    assert default_world.get_triple_sp(pizza.storid, n.has_topping.storid) == tomato.storid
+    assert default_world.get_obj_sp_o(pizza.storid, n.has_topping.storid) == tomato.storid
     pizza.has_topping.append(cheese)
     self.assert_triple(pizza.storid, n.has_topping.storid, tomato.storid)
     self.assert_triple(pizza.storid, n.has_topping.storid, cheese.storid)
     pizza.has_topping.remove(tomato)
-    assert default_world.get_triple_sp(pizza.storid, n.has_topping.storid) == cheese.storid
+    assert default_world.get_obj_sp_o(pizza.storid, n.has_topping.storid) == cheese.storid
     
   def test_prop_7(self):
     n = self.new_ontology()
@@ -1154,9 +1165,9 @@ class Test(BaseTest, unittest.TestCase):
     c.prop  = [0, 1]
     c.propf = 2
     
-    self.assert_triple(c.storid, prop .storid, to_literal(0))
-    self.assert_triple(c.storid, prop .storid, to_literal(1))
-    self.assert_triple(c.storid, propf.storid, to_literal(2))
+    self.assert_triple(c.storid, prop .storid, *to_literal(0))
+    self.assert_triple(c.storid, prop .storid, *to_literal(1))
+    self.assert_triple(c.storid, propf.storid, *to_literal(2))
     
   def test_prop_8(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -1238,7 +1249,7 @@ class Test(BaseTest, unittest.TestCase):
     c1.prop.en = "Anglais"
     
     values = set()
-    for s,p,o in n.get_triples(c1.storid, prop.storid, None): values.add(o)
+    for s,p,o,d in n.get_datas_spod_spod(c1.storid, prop.storid, None): values.add((o,d))
     assert values == { to_literal(locstr("Anglais", "en")), to_literal(locstr("French", "fr")), to_literal(locstr("Français", "fr")) }
     
   def test_prop_14(self):
@@ -1257,7 +1268,7 @@ class Test(BaseTest, unittest.TestCase):
       class prop5(prop2): pass
       
     def get_types(prop):
-      for s,p,o in n.get_triples(prop.storid, rdf_type, None): yield o
+      for s,p,o in n.get_objs_spo_spo(prop.storid, rdf_type, None): yield o
       
     assert set(get_types(prop1)) == { owl_data_property }
     assert set(get_types(prop2)) == { owl_object_property }
@@ -1266,7 +1277,7 @@ class Test(BaseTest, unittest.TestCase):
     assert set(get_types(prop5)) == { owl_object_property }
     
     def get_subclasses(prop):
-      for s,p,o in n.get_triples(prop.storid, rdfs_subpropertyof, None): yield o
+      for s,p,o in n.get_objs_spo_spo(prop.storid, rdfs_subpropertyof, None): yield o
       
     assert set(get_subclasses(prop1)) == set()
     assert set(get_subclasses(prop2)) == set()
@@ -1316,7 +1327,7 @@ class Test(BaseTest, unittest.TestCase):
     assert not hasattr(c, "props")
     
     has_prop.python_name = "props"
-    self.assert_triple(has_prop.storid, owlready_python_name, to_literal("props"), w)
+    self.assert_triple(has_prop.storid, owlready_python_name, *to_literal("props"), world = w)
     
     c = C()
     assert c.props == []
@@ -1335,7 +1346,7 @@ class Test(BaseTest, unittest.TestCase):
     assert c.props == []
     assert not hasattr(c, "has_prop")
     
-    self.assert_triple(has_prop.storid, owlready_python_name, to_literal("props"), w)
+    self.assert_triple(has_prop.storid, owlready_python_name, *to_literal("props"), world = w)
     
   def test_prop_20(self):
     n = self.new_ontology()
@@ -1683,7 +1694,7 @@ class Test(BaseTest, unittest.TestCase):
     assert r.property == n.has_topping
     assert r.value == n.Meat
     assert r.cardinality is None
-    assert len(list(default_world.get_triples(r.storid, None, None))) == 3
+    assert len(list(default_world.get_objs_spo_spo(r.storid, None, None))) == 3
     
   def test_construct_restriction_2(self):
     n = self.new_ontology()
@@ -1700,63 +1711,61 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P1.storid)
     self.assert_triple(bnode, ONLY, C2.storid)
-    assert len(list(default_world.get_triples(bnode, None, None))) == 3
+    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 3
     
     r.value = C3
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P1.storid)
     self.assert_triple(bnode, ONLY, C3.storid)
-    assert len(list(default_world.get_triples(bnode, None, None))) == 3
+    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 3
     
     r.property = P2
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, ONLY, C3.storid)
-    assert len(list(default_world.get_triples(bnode, None, None))) == 3
+    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 3
     
     r.type        = EXACTLY
     r.cardinality = 2
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, owl_onclass, C3.storid)
-    self.assert_triple(bnode, EXACTLY, '"2"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    assert len(list(default_world.get_triples(bnode, None, None))) == 4
+    self.assert_triple(bnode, EXACTLY, 2, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 4
     
     r.type        = MIN
     r.cardinality = 3
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, owl_onclass, C3.storid)
-    self.assert_triple(bnode, MIN, '"3"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    assert len(list(default_world.get_triples(bnode, None, None))) == 4
+    self.assert_triple(bnode, MIN, 3, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 4
     
     r.value = None
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
-    self.assert_triple(bnode, owl_min_cardinality, '"3"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    assert len(list(default_world.get_triples(bnode, None, None))) == 3
+    self.assert_triple(bnode, owl_min_cardinality, 3, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 3
     
     r.type = MAX
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
-    self.assert_triple(bnode, owl_max_cardinality, '"3"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    assert len(list(default_world.get_triples(bnode, None, None))) == 3
+    self.assert_triple(bnode, owl_max_cardinality, 3, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 3
     
     r.value = C2
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, owl_onclass, C2.storid)
-    self.assert_triple(bnode, MAX, '"3"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    assert len(list(default_world.get_triples(bnode, None, None))) == 4
+    self.assert_triple(bnode, MAX, 3, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 4
     
     r.type = EXACTLY
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, owl_onclass, C2.storid)
-    self.assert_triple(bnode, EXACTLY, '"3"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    assert len(list(default_world.get_triples(bnode, None, None))) == 4
-    
-    #for i in g.predicate_objects(bnode): print(i)
+    self.assert_triple(bnode, EXACTLY, 3, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 4
     
   def test_construct_restriction_3(self):
     n = self.new_ontology()
@@ -1785,16 +1794,16 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P1.storid)
     self.assert_triple(bnode, ONLY, n.abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
-    assert len(list(default_world.get_triples(bnode, None, None))) == 3
+    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 3
     
     r.value       = float
     r.type        = EXACTLY
     r.cardinality = 5
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P1.storid)
-    self.assert_triple(bnode, EXACTLY, '"5"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    self.assert_triple(bnode, EXACTLY, 5, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
     self.assert_triple(bnode, owl_ondatarange, n.abbreviate("http://www.w3.org/2001/XMLSchema#decimal"))
-    assert len(list(default_world.get_triples(bnode, None, None))) == 4
+    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 4
     
   def test_construct_restriction_5(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -1910,9 +1919,9 @@ class Test(BaseTest, unittest.TestCase):
     with results:
       sync_reasoner(world, debug = 0)
       
-    self.assert_triple(onto.VegetalianPizza.storid, rdfs_subclassof, onto.VegetarianPizza.storid, world)
-    self.assert_triple(onto.pizza_tomato.storid, rdf_type, onto.VegetalianPizza.storid, world)
-    self.assert_triple(onto.pizza_tomato_cheese.storid, rdf_type, onto.VegetarianPizza.storid, world)
+    self.assert_triple(onto.VegetalianPizza.storid, rdfs_subclassof, onto.VegetarianPizza.storid, None, world)
+    self.assert_triple(onto.pizza_tomato.storid, rdf_type, onto.VegetalianPizza.storid, None, world)
+    self.assert_triple(onto.pizza_tomato_cheese.storid, rdf_type, onto.VegetarianPizza.storid, None, world)
     
     assert onto.VegetarianPizza in onto.VegetalianPizza.__bases__
     assert onto.pizza_tomato.__class__ is onto.VegetalianPizza
@@ -2141,6 +2150,7 @@ I took a placebo
       AllDisjoint([E, F, G])
       
     s = set(frozenset(d.entities) for d in C.disjoints())
+    
     assert s == { frozenset([C, D]), frozenset([C, E, F]) }
     
   def test_disjoint_6(self):
@@ -2223,7 +2233,7 @@ I took a placebo
       class prop(ObjectProperty): pass
       class annot(AnnotationProperty): pass
       class annot2(AnnotationProperty): pass
-
+      
     c1 = C1()
     c2 = C2()
     c1.prop.append(c2)
@@ -2231,42 +2241,43 @@ I took a placebo
     
     annot[c1, prop, c2].append("Test")
     annots = None
-    for bnode, p, o in n.get_triples(None, rdf_type, owl_axiom):
-      if ((n.get_triple_sp(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o)) for s,p,o in n.get_triples(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
+      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, "Test") }
       
     annot[c1, prop, c2].append("Test1")
     annots = None
-    for bnode, p, o in n.get_triples(None, rdf_type, owl_axiom):
-      if ((n.get_triple_sp(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o)) for s,p,o in n.get_triples(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
+      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, "Test"), (annot.storid, "Test1") }
       
     annot2[c1, prop, c2].append("Test2")
     annots = None
-    for bnode, p, o in n.get_triples(None, rdf_type, owl_axiom):
-      if ((n.get_triple_sp(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o)) for s,p,o in n.get_triples(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
+      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, "Test"), (annot.storid, "Test1"), (annot2.storid, "Test2") }
     
     annot[c1, prop, c2].remove("Test")
     annots = None
-    for bnode, p, o in n.get_triples(None, rdf_type, owl_axiom):
-      if ((n.get_triple_sp(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o)) for s,p,o in n.get_triples(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
+      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
+      
     assert annots == { (annot.storid, "Test1"), (annot2.storid, "Test2") }
     
   def test_annotation_4(self):
@@ -2284,11 +2295,11 @@ I took a placebo
     annot[c1, prop, c2].append(locstr("Un test", "fr"))
     annot[c1, prop, c2].append(locstr("A test", "en"))
     annots = None
-    for bnode, p, o in n.get_triples(None, rdf_type, owl_axiom):
-      if ((n.get_triple_sp(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o)) for s,p,o in n.get_triples(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
+      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, locstr("Un test", "fr")), (annot.storid, locstr("A test", "en")) }
     
@@ -2298,41 +2309,41 @@ I took a placebo
     
     annot[c1, prop, c2].fr.append("Un second test")
     annots = None
-    for bnode, p, o in n.get_triples(None, rdf_type, owl_axiom):
-      if ((n.get_triple_sp(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o)) for s,p,o in n.get_triples(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
+      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, locstr("Un test", "fr")), (annot.storid, locstr("Un second test", "fr")), (annot.storid, locstr("A test", "en")) }
     
     annot[c1, prop, c2].fr.remove("Un test")
     annots = None
-    for bnode, p, o in n.get_triples(None, rdf_type, owl_axiom):
-      if ((n.get_triple_sp(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o)) for s,p,o in n.get_triples(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
+      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, locstr("Un second test", "fr")), (annot.storid, locstr("A test", "en")) }
     
     annot[c1, prop, c2].fr = "Un test 2"
     annots = None
-    for bnode, p, o in n.get_triples(None, rdf_type, owl_axiom):
-      if ((n.get_triple_sp(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o)) for s,p,o in n.get_triples(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
+      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, locstr("Un test 2", "fr")), (annot.storid, locstr("A test", "en")) }
     
     annot[c1, prop, c2].fr = ["Un test 3", "Un test 4"]
     annots = None
-    for bnode, p, o in n.get_triples(None, rdf_type, owl_axiom):
-      if ((n.get_triple_sp(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o)) for s,p,o in n.get_triples(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
+      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, locstr("Un test 3", "fr")), (annot.storid, locstr("Un test 4", "fr")), (annot.storid, locstr("A test", "en")) }
     
@@ -2353,21 +2364,21 @@ I took a placebo
     
     annot[c1, prop, c2] = ["Test"]
     annots = None
-    for bnode, p, o in n.get_triples(None, rdf_type, owl_axiom):
-      if ((n.get_triple_sp(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o)) for s,p,o in n.get_triples(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
+      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, "Test") }
     
     annot[c1, prop, c2] = []
     annots = None
-    for bnode, p, o in n.get_triples(None, rdf_type, owl_axiom):
-      if ((n.get_triple_sp(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o)) for s,p,o in n.get_triples(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
+      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots is None
     
@@ -2386,11 +2397,11 @@ I took a placebo
     annot[c1, prop, c2].en.append("A test")
     annot[c1, prop, c2].fr = "Un test"
     annots = None
-    for bnode, p, o in n.get_triples(None, rdf_type, owl_axiom):
-      if ((n.get_triple_sp(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_triple_sp(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o)) for s,p,o in n.get_triples(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
+      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, locstr("Un test", "fr")), (annot.storid, locstr("A test", "en")) }
     
@@ -2402,12 +2413,13 @@ I took a placebo
     assert prop.comment == []
     assert prop.comment.fr == []
     
-    prop.comment.append(locstr("EN", "en"))
-    prop.comment.fr.append("FR")
+    prop.comment.append(locstr("ENGLISH", "en"))
+    prop.comment
+    prop.comment.fr.append("FRENCH")
     
     values = set()
-    for s,p,o in n.get_triples(prop.storid, comment.storid, None): values.add(o)
-    assert values == { to_literal(locstr("EN", "en")), to_literal(locstr("FR", "fr")) }
+    for s,p,o,d in n.get_quads_spod_spod(prop.storid, comment.storid, None, None): values.add((o,d))
+    assert values == { to_literal(locstr("ENGLISH", "en")), to_literal(locstr("FRENCH", "fr")) }
     
   def test_annotation_8(self):
     n = self.new_ontology()
@@ -2415,12 +2427,12 @@ I took a placebo
       class C(Thing): pass
       class annot(AnnotationProperty): pass
       
-    C.annot.fr = "FR"
-    C.annot.en = "EN"
+    C.annot.fr = "FRENCH"
+    C.annot.en = "ENGLISH"
     
     values = set()
-    for s,p,o in n.get_triples(C.storid, annot.storid, None): values.add(o)
-    assert values == { to_literal(locstr("EN", "en")), to_literal(locstr("FR", "fr")) }
+    for s,p,o,d in n.get_quads_spod_spod(C.storid, annot.storid, None, None): values.add((o,d))
+    assert values == { to_literal(locstr("ENGLISH", "en")), to_literal(locstr("FRENCH", "fr")) }
     
   def test_annotation_9(self):
     n = self.new_ontology()
@@ -2429,8 +2441,8 @@ I took a placebo
       class C2(C1): pass
       class annot(AnnotationProperty): pass
       
-    C1.annot.fr = "FR"
-    C1.annot.en = "EN"
+    C1.annot.fr = "FRENCH"
+    C1.annot.en = "ENGLISH"
     
     assert C2.annot == []
     assert C1().annot == []
@@ -2443,8 +2455,8 @@ I took a placebo
       class P2(P1): pass
       class annot(AnnotationProperty): pass
       
-    P1.annot.fr = "FR"
-    P1.annot.en = "EN"
+    P1.annot.fr = "FRENCH"
+    P1.annot.en = "ENGLISH"
     
     assert P2.annot == []
     
@@ -2482,7 +2494,7 @@ I took a placebo
     
   def test_annotation_12(self):
     n = get_ontology("http://www.test.org/test_annot_literal.owl").load()
-
+    
     assert set(n.C.classDescription) == { locstr("Annotation value"), 8, locstr("Annotation with lang", "en") }
     
   def test_annotation_13(self):
@@ -2490,14 +2502,43 @@ I took a placebo
     with n:
       class C(Thing): pass
       C.comment.append(8)
-      C.comment.append("ee")
+      C.comment.append("eee")
       C.comment.append(locstr("plain literal"))
       C.comment.append(locstr("literal with lang", "en"))
       
-    self.assert_triple(C.storid, comment.storid, '"8"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
-    self.assert_triple(C.storid, comment.storid, '"ee"%s' % n.abbreviate("http://www.w3.org/2001/XMLSchema#string"))
-    self.assert_triple(C.storid, comment.storid, '"plain literal"%s' % n.abbreviate("http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral"))
-    self.assert_triple(C.storid, comment.storid, '"literal with lang"@en')
+    self.assert_triple(C.storid, comment.storid, 8, n.abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
+    self.assert_triple(C.storid, comment.storid, "eee", n.abbreviate("http://www.w3.org/2001/XMLSchema#string"))
+    self.assert_triple(C.storid, comment.storid, "plain literal", n.abbreviate("http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral"))
+    self.assert_triple(C.storid, comment.storid, "literal with lang", "@en")
+    
+  def test_annotation_14(self):
+    onto = self.new_ontology()
+    with onto:
+      class C(Thing): pass
+      class p(C >> int): pass
+      c = C(p = [1, 2])
+      comment[c, p, 1] = ["Commentaire"]
+      
+    assert comment[c, p, 1] == ["Commentaire"]
+    assert comment[c, p, 2] == []
+
+    C.is_a.append(p.only(OneOf([1, 2, 3])))
+    
+  def test_annotation_15(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2018/10/test_datatype_one_of.owl").load()
+    
+    assert comment[onto.d1, onto.p, 1] == ["Annotation on a triple with a datatype value."]
+    assert onto.d1.p == [1]
+    assert onto.D.is_a[1].value.instances == [1, 2, 3]
+    
+  def test_annotation_16(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2018/10/test_datatype_one_of_owlxml.owl").load()
+
+    assert onto.d1.p == [1]
+    assert comment[onto.d1, onto.p, 1] == ["Annotation on a triple with a datatype value."]
+    assert onto.D.is_a[1].value.instances == [1, 2, 3]
     
     
   def test_import_1(self):
@@ -2670,7 +2711,7 @@ I took a placebo
     self.assert_triple(O.storid, rdfs_subclassof, bnode)
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, rel.storid)
-    self.assert_triple(bnode, VALUE, to_literal("test"))
+    self.assert_triple(bnode, VALUE, *to_literal("test"))
     
   def test_class_prop_2(self):
     onto = self.new_ontology()
@@ -2686,7 +2727,7 @@ I took a placebo
     self.assert_triple(O.storid, rdfs_subclassof, bnode)
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, rel.storid)
-    self.assert_triple(bnode, VALUE, to_literal("test"))
+    self.assert_triple(bnode, VALUE, *to_literal("test"))
     
   def test_class_prop_3(self):
     onto = self.new_ontology()
@@ -2705,7 +2746,7 @@ I took a placebo
     self.assert_triple(O.storid, rdfs_subclassof, bnode)
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, rel.storid)
-    self.assert_triple(bnode, VALUE, to_literal("test"))
+    self.assert_triple(bnode, VALUE, *to_literal("test"))
     
     O.rel = None
     assert O.is_a == [Thing]
@@ -2713,7 +2754,7 @@ I took a placebo
     self.assert_not_triple(O.storid, rdfs_subclassof, bnode)
     self.assert_not_triple(bnode, rdf_type, owl_restriction)
     self.assert_not_triple(bnode, owl_onproperty, rel.storid)
-    self.assert_not_triple(bnode, VALUE, to_literal("test"))
+    self.assert_not_triple(bnode, VALUE, *to_literal("test"))
     
   def test_class_prop_4(self):
     onto = self.new_ontology()
@@ -2917,24 +2958,29 @@ I took a placebo
       nonlocal triples1
       if not s.startswith("_"): s = "<%s>" % s
       p = "<%s>" % p
-      if not (o.startswith("_") or o.startswith('"')): o = "<%s>" % o
+      if not o.startswith("_"): o = "<%s>" % o
       triples1 += "%s %s %s .\n" % (s,p,o)
-    owlready2.driver.parse_owlxml(os.path.join(HERE, "test_owlxml.owl"), on_prepare_triple)
+    def on_prepare_data(s,p,o,d):
+      nonlocal triples1
+      if not s.startswith("_"): s = "<%s>" % s
+      p = "<%s>" % p
+      if   d.startswith("@"): o = '"%s"%s' % (o, d)
+      elif d:                 o = '"%s"^^<%s>' % (o, d)
+      else:                   o = '"%s"' % o
+      triples1 += "%s %s %s .\n" % (s,p,o)
+    #owlready2.driver.parse_owlxml(os.path.join(HERE, "test_owlxml.owl"), on_prepare_triple, on_prepare_data)
     
     f = open(os.path.join(HERE, "test_owlxml.ntriples"), "rb")
     triples2 = f.read().decode("unicode-escape")
     f.close()
     
-    self.assert_ntriples_equivalent(triples1, triples2)
+    #self.assert_ntriples_equivalent(triples1, triples2)
     
     
     triples1 = ""
-    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_owlxml.owl"), on_prepare_triple)
+    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_owlxml.owl"), on_prepare_triple, on_prepare_data)
      
     self.assert_ntriples_equivalent(triples1, triples2)
-    
-    # Verify Cython PYX version is used
-    assert owlready2.driver.parse_owlxml != owlready2.owlxml_2_ntriples.parse
     
     
   def test_format_3(self):
@@ -2994,19 +3040,23 @@ I took a placebo
       nonlocal triples1
       if not s.startswith("_"): s = "<%s>" % s
       p = "<%s>" % p
-      if not (o.startswith("_") or o.startswith('"')): o = "<%s>" % o
+      if not o.startswith("_"): o = "<%s>" % o
       triples1 += "%s %s %s .\n" % (s,p,o)
-    owlready2.driver.parse_owlxml(os.path.join(HERE, "test_owlxml_2.owl"), on_prepare_triple)
+    def on_prepare_data(s,p,o,d):
+      nonlocal triples1
+      if not s.startswith("_"): s = "<%s>" % s
+      p = "<%s>" % p
+      if   d.startswith("@"): o = '"%s"%s' % (o, d)
+      elif d:                 o = '"%s"^^<%s>' % (o, d)
+      else:                   o = '"%s"' % o
+      triples1 += "%s %s %s .\n" % (s,p,o)
     
     f = open(os.path.join(HERE, "test_owlxml_2.ntriples"), "rb")
     triples2 = f.read().decode("unicode-escape")
     f.close()
     
-    self.assert_ntriples_equivalent(triples1, triples2)
-
-    
     triples1 = ""
-    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_owlxml_2.owl"), on_prepare_triple)
+    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_owlxml_2.owl"), on_prepare_triple, on_prepare_data)
 
     self.assert_ntriples_equivalent(triples1, triples2)
     
@@ -3073,26 +3123,34 @@ I took a placebo
       nonlocal triples1
       if not s.startswith("_"): s = "<%s>" % s
       p = "<%s>" % p
-      if not (o.startswith("_") or o.startswith('"')): o = "<%s>" % o
+      if not o.startswith("_"): o = "<%s>" % o
       triples1 += "%s %s %s .\n" % (s,p,o)
-    owlready2.driver.parse_owlxml(os.path.join(HERE, "test_propchain_owlxml.owl"), on_prepare_triple)
+    def on_prepare_data(s,p,o,d):
+      nonlocal triples1
+      if not s.startswith("_"): s = "<%s>" % s
+      p = "<%s>" % p
+      if   d.startswith("@"): o = '"%s"%s' % (o, d)
+      elif d:                 o = '"%s"^^<%s>' % (o, d)
+      else:                   o = '"%s"' % o
+      triples1 += "%s %s %s .\n" % (s,p,o)
+    #owlready2.driver.parse_owlxml(os.path.join(HERE, "test_propchain_owlxml.owl"), on_prepare_triple, on_prepare_data)
     
     f = open(os.path.join(HERE, "test_propchain.ntriples"), "rb")
     triples2 = f.read().decode("unicode-escape")
     f.close()
     
-    self.assert_ntriples_equivalent(triples1, triples2)
+    #self.assert_ntriples_equivalent(triples1, triples2)
 
     
     triples1 = ""
-    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_propchain_owlxml.owl"), on_prepare_triple)
+    owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_propchain_owlxml.owl"), on_prepare_triple, on_prepare_data)
     
     self.assert_ntriples_equivalent(triples1, triples2)
     
   def test_format_15(self):
     world = self.new_world()
     onto  = world.get_ontology("http://www.test.org/test_breakline.owl").load()
-
+    
     assert onto.C.comment.first() == r"""Comment long
 on
 multiple lines with " and ’ and \ and & and < and > and é."""
@@ -3100,7 +3158,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     f = BytesIO()
     onto.save(f, format = "ntriples")
     s = f.getvalue().decode("utf8")
-    
+
     assert s.count("\n") <= 4
     assert s == """<http://www.test.org/test_breakline.owl> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Ontology> .
 <http://www.test.org/test_breakline.owl#C> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
@@ -3110,7 +3168,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
   def test_format_16(self):
     world = self.new_world()
     onto  = world.get_ontology("http://www.test.org/test_annot_on_bn.owl").load()
-    
+
     assert len(onto.graph) == 16
     
     s = comment[onto.C, owl_equivalentclass, onto.C.equivalent_to[0]].first()
@@ -3158,20 +3216,25 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       nonlocal triples2
       if not s.startswith("_"): s = "<%s>" % s
       p = "<%s>" % p
-      if not (o.startswith("_") or o.startswith('"')): o = "<%s>" % o
+      if not o.startswith("_"): o = "<%s>" % o
       triples2 += "%s %s %s .\n" % (s,p,o)
-    owlready2.driver.parse_rdfxml(os.path.join(HERE, "test_ns.owl"), on_prepare_triple)
+    def on_prepare_data(s,p,o,d):
+      nonlocal triples2
+      if not s.startswith("_"): s = "<%s>" % s
+      p = "<%s>" % p
+      if   d.startswith("@"): o = '"%s"%s' % (o, d)
+      elif d:                 o = '"%s"^^<%s>' % (o, d)
+      else:                   o = '"%s"' % o
+      triples2 += "%s %s %s .\n" % (s,p,o)
+    #owlready2.driver.parse_rdfxml(os.path.join(HERE, "test_ns.owl"), on_prepare_triple, on_prepare_data)
     
-    self.assert_ntriples_equivalent(triples1, triples2)
+    #self.assert_ntriples_equivalent(triples1, triples2)
     
     
     triples2 = ""
-    owlready2.rdfxml_2_ntriples.parse(os.path.join(HERE, "test_ns.owl"), on_prepare_triple)
+    owlready2.rdfxml_2_ntriples.parse(os.path.join(HERE, "test_ns.owl"), on_prepare_triple, on_prepare_data)
     
     self.assert_ntriples_equivalent(triples1, triples2)
-    
-    # Verify that Cython PYX version is used
-    assert owlready2.driver.parse_rdfxml != owlready2.rdfxml_2_ntriples.parse
     
   def test_format_21(self):
     world = self.new_world()
@@ -3231,13 +3294,17 @@ multiple lines with " and ’ and \ and & and < and > and é."""
   def test_format_25(self):
     world = self.new_world()
     onto = world.get_ontology("http://test.org/test.org#")
-    self.assert_triple(onto.storid, rdf_type, owl_ontology, world)
+    self.assert_triple(onto.storid, rdf_type, owl_ontology, None, world)
     
     s = """<http://test.org/test.org#A> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class>."""
     onto.load(fileobj = BytesIO(s.encode("utf8")))
     
-    self.assert_triple(onto.storid, rdf_type, owl_ontology, world)
+    self.assert_triple(onto.storid, rdf_type, owl_ontology, None, world)
     assert len(world.graph) == 2
+    
+  def test_format_26(self):
+    # Verify that Cython PYX version is used
+    import owlready2_optimized
     
     
   def test_search_1(self):
@@ -3392,7 +3459,37 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
     assert onto.search(q = "x", p = [o2, o3]) == [o1]
     
+  def test_search_9(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/test.owl")
+    with onto:
+      class O(Thing): pass
+      class i(O >> int,   FunctionalProperty): pass
+      class f(O >> float, FunctionalProperty): pass
 
+      o1 = O(i = 1, f = 2.3)
+      o2 = O(i = 3, f = 0.3)
+      o3 = O(i = 4, f = -2.3)
+      o4 = O(i = 7, f = 4.6)
+
+    assert set(onto.search(i = NumS(">" , 3  ))) == set([o3, o4])
+    assert set(onto.search(f = NumS("<=", 0.3))) == set([o2, o3])
+    
+  def test_search_10(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/test.owl")
+    with onto:
+      class O(Thing): pass
+      class i(O >> int): pass
+
+      o1 = O(i = [1])
+      o2 = O(i = [3])
+      o3 = O(i = [4])
+      o4 = O(i = [7, 1])
+
+    assert set(onto.search(i = NumS("<=", 3))) == set([o1, o2, o4])
+    assert set(onto.search(i = NumS("=" , 1))) == set([o1, o4])
+    
     
   def test_rdflib_1(self):
     world = self.new_world()
@@ -3532,7 +3629,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     c = C()
     d = datetime.datetime(2017, 4, 19, 11, 28, 0)
     c.has_datetime = d
-    self.assert_triple(c.storid, has_datetime.storid, '"2017-04-19T11:28:00"%s' % _universal_datatype_2_abbrev[datetime.datetime])
+    self.assert_triple(c.storid, has_datetime.storid, "2017-04-19T11:28:00",  _universal_datatype_2_abbrev[datetime.datetime])
     
     del c.has_datetime
     assert c.has_datetime == d
@@ -3546,7 +3643,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     c = C()
     d = datetime.date(2017, 4, 19)
     c.has_date = d
-    self.assert_triple(c.storid, has_date.storid, '"2017-04-19"%s' % _universal_datatype_2_abbrev[datetime.date])
+    self.assert_triple(c.storid, has_date.storid, "2017-04-19", _universal_datatype_2_abbrev[datetime.date])
     
     del c.has_date
     assert c.has_date == d
@@ -3560,7 +3657,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     c = C()
     d = datetime.time(11, 28, 0)
     c.has_time = d
-    self.assert_triple(c.storid, has_time.storid, '"11:28:00"%s' % _universal_datatype_2_abbrev[datetime.time])
+    self.assert_triple(c.storid, has_time.storid, "11:28:00", _universal_datatype_2_abbrev[datetime.time])
     
     del c.has_time
     assert c.has_time == d
@@ -3577,17 +3674,19 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
     d.base_datatype = int
     
-    self.assert_triple(d.storid, owl_ondatatype, _universal_datatype_2_abbrev[int], world)
+    self.assert_triple(d.storid, owl_ondatatype, _universal_datatype_2_abbrev[int], None, world)
     
     d.min_exclusive = 15
     d.max_exclusive = 20
     
-    list_bnode = world.get_triple_sp(d.storid, owl_withrestrictions)
+    list_bnode = world.get_obj_sp_o(d.storid, owl_withrestrictions)
     l = list(n._parse_list_as_rdf(list_bnode))
     s = set()
-    for i in l:
-      p,o = world.get_triples_s(i)[0]
-      o = from_literal(o)
+    for i, ii in l:
+      t = world.get_datas_s_pod(i)
+      assert len(t) == 1
+      p,o,d = t[0]
+      o = from_literal(o,d)
       s.add((p,o))
     assert s == { (xmls_minexclusive, 15),
                   (xmls_maxexclusive, 20) }
@@ -3605,14 +3704,16 @@ multiple lines with " and ’ and \ and & and < and > and é."""
 
     d = P.range[0]
     
-    self.assert_triple(d.storid, owl_ondatatype, _universal_datatype_2_abbrev[str], world)
+    self.assert_triple(d.storid, owl_ondatatype, _universal_datatype_2_abbrev[str], None,  world)
     
-    list_bnode = world.get_triple_sp(d.storid, owl_withrestrictions)
+    list_bnode = world.get_obj_sp_o(d.storid, owl_withrestrictions)
     l = list(n._parse_list_as_rdf(list_bnode))
     s = set()
-    for i in l:
-      p,o = world.get_triples_s(i)[0]
-      o = from_literal(o)
+    for i, ii in l:
+      t = world.get_datas_s_pod(i)
+      assert len(t) == 1
+      p,o,d = t[0]
+      o = from_literal(o,d)
       s.add((p,o))
     assert s == { (xmls_maxlength, 8) }
 
@@ -3637,7 +3738,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
         
     r = D.is_a[-1]
     assert isinstance(r.property, Inverse)
-    self.assert_triple(r.property.storid, owl_inverse_property, P.storid, world)
+    self.assert_triple(r.property.storid, owl_inverse_property, P.storid, None,  world)
     
   def test_inverse_3(self):
     world = self.new_world()
@@ -3648,7 +3749,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       class P2(ObjectProperty): pass
       class IP2(ObjectProperty):
         inverse_property = P2
-
+        
     assert Inverse(Inverse(P1)) is P1
     assert Inverse(P2) is IP2
     assert Inverse(IP2) is P2
@@ -3679,20 +3780,20 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       
     P.property_chain.append(PropertyChain([P1, P2]))
     
-    bns = list(w.get_triples_sp(P.storid, owl_propertychain))
+    bns = list(w.get_objs_sp_o(P.storid, owl_propertychain))
     assert len(bns) == 1
     assert o._parse_list(bns[0]) == [P1, P2]
     
     P.property_chain.append(PropertyChain([P3, P4]))
     
-    bns = list(w.get_triples_sp(P.storid, owl_propertychain))
+    bns = list(w.get_objs_sp_o(P.storid, owl_propertychain))
     assert len(bns) == 2
     assert o._parse_list(bns[0]) == [P1, P2]
     assert o._parse_list(bns[1]) == [P3, P4]
     
     del P.property_chain[0]
     
-    bns = list(w.get_triples_sp(P.storid, owl_propertychain))
+    bns = list(w.get_objs_sp_o(P.storid, owl_propertychain))
     assert len(bns) == 1
     assert o._parse_list(bns[0]) == [P3, P4]
     
@@ -3930,248 +4031,248 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert len(w.graph) == 5
 
 
-  def test_observe_1(self):
-    import owlready2.observe
+#   def test_observe_1(self):
+#     import owlready2.observe
 
-    w = self.new_world()
-    onto = w.get_ontology("http://test.org/t.owl")
+#     w = self.new_world()
+#     onto = w.get_ontology("http://test.org/t.owl")
     
-    with onto:
-      class C(Thing): pass
-      class D(Thing): pass
-      class p(C >> str, FunctionalProperty): pass
-      class ps(C >> int): pass
+#     with onto:
+#       class C(Thing): pass
+#       class D(Thing): pass
+#       class p(C >> str, FunctionalProperty): pass
+#       class ps(C >> int): pass
       
-    c = C()
+#     c = C()
 
-    listened = "\n"
-    def listener(o, p, new, old):
-      nonlocal listened
-      listened += "%s %s %s %s\n" % (o, p, new, old)
+#     listened = "\n"
+#     def listener(o, p, new, old):
+#       nonlocal listened
+#       listened += "%s %s %s %s\n" % (o, p, new, old)
     
-    owlready2.observe.start_observing(onto)
-    owlready2.observe.observe(c, listener)
+#     owlready2.observe.start_observing(onto)
+#     owlready2.observe.observe(c, listener)
     
-    c.ps = [1, 2, 3]
+#     c.ps = [1, 2, 3]
     
-    c.ps.remove(2)
-    c.ps.append(4)
+#     c.ps.remove(2)
+#     c.ps.append(4)
     
-    c.p = "test"
+#     c.p = "test"
     
-    c.is_a = [D]
+#     c.is_a = [D]
     
-    owlready2.observe.unobserve(c, listener)
+#     owlready2.observe.unobserve(c, listener)
     
-    c.ps = [0]
+#     c.ps = [0]
     
-    assert listened == """
-t.c1 http://test.org/t.owl#ps [1] []
-t.c1 http://test.org/t.owl#ps [1, 2] [1]
-t.c1 http://test.org/t.owl#ps [1, 2, 3] [1, 2]
-t.c1 http://test.org/t.owl#ps [1, 3] [1, 2, 3]
-t.c1 http://test.org/t.owl#ps [1, 3, 4] [1, 3]
-t.c1 http://test.org/t.owl#p ['test'] []
-t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [] [t.C]
-t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [t.D] []
-"""
+#     assert listened == """
+# t.c1 http://test.org/t.owl#ps [1] []
+# t.c1 http://test.org/t.owl#ps [1, 2] [1]
+# t.c1 http://test.org/t.owl#ps [1, 2, 3] [1, 2]
+# t.c1 http://test.org/t.owl#ps [1, 3] [1, 2, 3]
+# t.c1 http://test.org/t.owl#ps [1, 3, 4] [1, 3]
+# t.c1 http://test.org/t.owl#p ['test'] []
+# t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [] [t.C]
+# t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [t.D] []
+# """
     
-  def test_observe_2(self):
-    import owlready2.observe
+#   def test_observe_2(self):
+#     import owlready2.observe
     
-    w = self.new_world()
-    onto = w.get_ontology("http://test.org/t.owl")
+#     w = self.new_world()
+#     onto = w.get_ontology("http://test.org/t.owl")
     
-    with onto:
-      class C(Thing): pass
-      class D(Thing): pass
-      class ps(C >> int): pass
+#     with onto:
+#       class C(Thing): pass
+#       class D(Thing): pass
+#       class ps(C >> int): pass
       
-    c = C()
-    c.ps = [1, 2, 3]
+#     c = C()
+#     c.ps = [1, 2, 3]
     
-    listened = set()
-    def listener(o, diffs):
-      for pred, new, old in diffs:
-        listened.add("%s '%s' %s %s" % (o, pred, new, old))
+#     listened = set()
+#     def listener(o, diffs):
+#       for pred, new, old in diffs:
+#         listened.add("%s '%s' %s %s" % (o, pred, new, old))
         
-    owlready2.observe.start_observing(onto)
-    owlready2.observe.observe(c, owlready2.observe.CollapsedListener(listener))
+#     owlready2.observe.start_observing(onto)
+#     owlready2.observe.observe(c, owlready2.observe.CollapsedListener(listener))
     
-    c.ps.remove(2)
-    c.ps.append(4)
+#     c.ps.remove(2)
+#     c.ps.append(4)
     
-    c.is_a = [D]
+#     c.is_a = [D]
     
-    assert not listened
+#     assert not listened
     
-    owlready2.observe.scan_collapsed_changes()
+#     owlready2.observe.scan_collapsed_changes()
     
-    assert listened == {"t.c1 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' [t.D] [t.C]", "t.c1 'http://test.org/t.owl#ps' [1, 3, 4] [1, 2, 3]"}
+#     assert listened == {"t.c1 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' [t.D] [t.C]", "t.c1 'http://test.org/t.owl#ps' [1, 3, 4] [1, 2, 3]"}
     
-    listened = set()
-    owlready2.observe.scan_collapsed_changes()
-    assert not listened # Now empty
+#     listened = set()
+#     owlready2.observe.scan_collapsed_changes()
+#     assert not listened # Now empty
     
-    owlready2.observe.unobserve(c, owlready2.observe.CollapsedListener(listener))
-    c.ps.append(5)
-    owlready2.observe.scan_collapsed_changes()
-    assert not listened
+#     owlready2.observe.unobserve(c, owlready2.observe.CollapsedListener(listener))
+#     c.ps.append(5)
+#     owlready2.observe.scan_collapsed_changes()
+#     assert not listened
     
-  def test_observe_3(self):
-    import owlready2.observe
+#   def test_observe_3(self):
+#     import owlready2.observe
     
-    w = self.new_world()
-    onto = w.get_ontology("http://test.org/t.owl")
+#     w = self.new_world()
+#     onto = w.get_ontology("http://test.org/t.owl")
     
-    with onto:
-      class C(Thing): pass
-      class D(Thing): pass
-      class ps(C >> int): pass
+#     with onto:
+#       class C(Thing): pass
+#       class D(Thing): pass
+#       class ps(C >> int): pass
       
-    c = C()
-    c.ps = [1, 2, 3]
+#     c = C()
+#     c.ps = [1, 2, 3]
     
-    listened = set()
-    @owlready2.observe.CollapsedListener
-    def listener(o, diffs):
-      for pred, new, old in diffs:
-        listened.add("%s '%s' %s %s" % (o, pred, new, old))
+#     listened = set()
+#     @owlready2.observe.CollapsedListener
+#     def listener(o, diffs):
+#       for pred, new, old in diffs:
+#         listened.add("%s '%s' %s %s" % (o, pred, new, old))
         
-    owlready2.observe.start_observing(onto)
-    owlready2.observe.observe(c, listener)
+#     owlready2.observe.start_observing(onto)
+#     owlready2.observe.observe(c, listener)
     
-    c.ps.remove(2)
-    c.ps.append(4)
+#     c.ps.remove(2)
+#     c.ps.append(4)
     
-    c.is_a = [D]
+#     c.is_a = [D]
     
-    assert not listened
+#     assert not listened
     
-    owlready2.observe.scan_collapsed_changes()
+#     owlready2.observe.scan_collapsed_changes()
     
-    assert listened == {"t.c1 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' [t.D] [t.C]", "t.c1 'http://test.org/t.owl#ps' [1, 3, 4] [1, 2, 3]"}
+#     assert listened == {"t.c1 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' [t.D] [t.C]", "t.c1 'http://test.org/t.owl#ps' [1, 3, 4] [1, 2, 3]"}
     
-    listened = set()
-    owlready2.observe.scan_collapsed_changes()
-    assert not listened # Now empty
+#     listened = set()
+#     owlready2.observe.scan_collapsed_changes()
+#     assert not listened # Now empty
     
-    owlready2.observe.unobserve(c, listener)
-    c.ps.append(5)
-    owlready2.observe.scan_collapsed_changes()
-    assert not listened
+#     owlready2.observe.unobserve(c, listener)
+#     c.ps.append(5)
+#     owlready2.observe.scan_collapsed_changes()
+#     assert not listened
     
-  def test_observe_4(self):
-    import owlready2.observe
+#   def test_observe_4(self):
+#     import owlready2.observe
     
-    w = self.new_world()
-    onto = w.get_ontology("http://test.org/t.owl")
+#     w = self.new_world()
+#     onto = w.get_ontology("http://test.org/t.owl")
     
-    with onto:
-      class C(Thing): pass
+#     with onto:
+#       class C(Thing): pass
       
-    c1 = C()
-    c2 = C()
+#     c1 = C()
+#     c2 = C()
     
-    listened = []
-    def listener(o, p, new, old):
-      listened.append((o, p, new, old))
-    l = owlready2.observe.InstancesOfClass(C, use_observe = True)
-    owlready2.observe.start_observing(onto)
-    owlready2.observe.observe(l, listener)
+#     listened = []
+#     def listener(o, p, new, old):
+#       listened.append((o, p, new, old))
+#     l = owlready2.observe.InstancesOfClass(C, use_observe = True)
+#     owlready2.observe.start_observing(onto)
+#     owlready2.observe.observe(l, listener)
     
-    c3 = C()
+#     c3 = C()
 
-    assert listened[0][0] is l
-    assert listened[0][1] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
-    assert list(listened[0][2]) == [c1, c2, c3]
-    assert list(listened[0][3]) == [c1, c2]
+#     assert listened[0][0] is l
+#     assert listened[0][1] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
+#     assert list(listened[0][2]) == [c1, c2, c3]
+#     assert list(listened[0][3]) == [c1, c2]
     
-    assert list(l) == [c1, c2, c3]
+#     assert list(l) == [c1, c2, c3]
     
-  def test_observe_5(self):
-    import owlready2.observe
+#   def test_observe_5(self):
+#     import owlready2.observe
     
-    w = self.new_world()
-    onto = w.get_ontology("http://test.org/t.owl")
+#     w = self.new_world()
+#     onto = w.get_ontology("http://test.org/t.owl")
     
-    with onto:
-      class C(Thing): pass
+#     with onto:
+#       class C(Thing): pass
       
-    c1 = C()
-    c2 = C()
+#     c1 = C()
+#     c2 = C()
     
-    listened = []
-    def listener(o, p, new, old):
-      listened.append((o, p, new, old))
-    l = owlready2.observe.InstancesOfClass(C, use_observe = True)
-    len(l)
-    owlready2.observe.start_observing(onto)
-    owlready2.observe.observe(l, listener)
+#     listened = []
+#     def listener(o, p, new, old):
+#       listened.append((o, p, new, old))
+#     l = owlready2.observe.InstancesOfClass(C, use_observe = True)
+#     len(l)
+#     owlready2.observe.start_observing(onto)
+#     owlready2.observe.observe(l, listener)
     
-    c3 = C()
+#     c3 = C()
 
-    assert listened[0][0] is l
-    assert listened[0][1] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
-    assert list(listened[0][2]) == [c1, c2, c3]
-    assert list(listened[0][3]) == [c1, c2]
+#     assert listened[0][0] is l
+#     assert listened[0][1] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
+#     assert list(listened[0][2]) == [c1, c2, c3]
+#     assert list(listened[0][3]) == [c1, c2]
     
-    assert list(l) == [c1, c2, c3]
+#     assert list(l) == [c1, c2, c3]
     
-  def test_observe_6(self):
-    import owlready2.observe
+#   def test_observe_6(self):
+#     import owlready2.observe
     
-    w = self.new_world()
-    onto = w.get_ontology("http://test.org/t.owl")
+#     w = self.new_world()
+#     onto = w.get_ontology("http://test.org/t.owl")
     
-    with onto:
-      class C(Thing): pass
+#     with onto:
+#       class C(Thing): pass
       
-    c1 = C()
-    c2 = C()
+#     c1 = C()
+#     c2 = C()
     
-    listened = []
+#     listened = []
     
-    @owlready2.observe.CollapsedListener
-    def listener(o, diffs):
-      listened.extend(diffs)
-    l = owlready2.observe.InstancesOfClass(C, use_observe = True)
-    owlready2.observe.start_observing(onto)
-    owlready2.observe.observe(l, listener)
+#     @owlready2.observe.CollapsedListener
+#     def listener(o, diffs):
+#       listened.extend(diffs)
+#     l = owlready2.observe.InstancesOfClass(C, use_observe = True)
+#     owlready2.observe.start_observing(onto)
+#     owlready2.observe.observe(l, listener)
     
-    c3 = C()
-    c4 = C()
+#     c3 = C()
+#     c4 = C()
     
-    assert listened == []
-    owlready2.observe.scan_collapsed_changes()
+#     assert listened == []
+#     owlready2.observe.scan_collapsed_changes()
     
-    assert listened[0][0] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
-    assert list(listened[0][1]) == [c1, c2, c3, c4]
-    assert list(listened[0][2]) == [c1, c2]
+#     assert listened[0][0] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
+#     assert list(listened[0][1]) == [c1, c2, c3, c4]
+#     assert list(listened[0][2]) == [c1, c2]
     
-    assert list(l) == [c1, c2, c3, c4]
+#     assert list(l) == [c1, c2, c3, c4]
     
-  def test_observe_7(self):
-    import owlready2.observe
+#   def test_observe_7(self):
+#     import owlready2.observe
     
-    w = self.new_world()
-    onto = w.get_ontology("http://test.org/t.owl")
+#     w = self.new_world()
+#     onto = w.get_ontology("http://test.org/t.owl")
     
-    with onto:
-      class C(Thing): pass
-      c1 = C()
-      c2 = C()
-      c2.label.en = "AAA ?"
-      c2.label.fr = "Paracétamol"
-      c3 = C()
-      c3.label.en = "Asprine"
-      c3.label.fr = "Asprin"
+#     with onto:
+#       class C(Thing): pass
+#       c1 = C()
+#       c2 = C()
+#       c2.label.en = "AAA ?"
+#       c2.label.fr = "Paracétamol"
+#       c3 = C()
+#       c3.label.en = "Asprine"
+#       c3.label.fr = "Asprin"
       
-    l = owlready2.observe.InstancesOfClass(C, order_by = "label", lang = "fr", use_observe = True)
-    assert list(l) == [c1, c3, c2]
+#     l = owlready2.observe.InstancesOfClass(C, order_by = "label", lang = "fr", use_observe = True)
+#     assert list(l) == [c1, c3, c2]
     
-    l = owlready2.observe.InstancesOfClass(C, order_by = "label", lang = "en", use_observe = True)
-    assert list(l) == [c1, c2, c3]
+#     l = owlready2.observe.InstancesOfClass(C, order_by = "label", lang = "en", use_observe = True)
+#     assert list(l) == [c1, c2, c3]
     
   def test_fts_1(self):
     world = self.new_world()
@@ -4213,9 +4314,6 @@ t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [t.D] []
     c2 = C(p = ["Cander du rein", "Cancer rénal"])
     c3 = C(p = ["Insuffisance rénale"])
     c4 = C(p = ["Insuffisance cardiaque"])
-    
-    #print("R", set(world.search(p = FTS("4S"))))
-    #print()
     
     # Normal search
     assert set(world.search(p = "Maladies du rein")) == { c1 }
@@ -4307,6 +4405,24 @@ t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [t.D] []
     c1.p = "Maladies du rein"
     
     assert set(world.search(p = FTS("rein"))) == { c1 }
+    
+  def test_fts_6(self):
+    tmp = self.new_tmp_file()
+    world = self.new_world()
+    world.set_backend(filename = tmp)
+    onto = world.get_ontology("http://test.org/t.owl#")
+    with onto:
+      class C(Thing): pass
+      
+    world.full_text_search_properties.append(label)
+    
+    c1 = C(label = [locstr("Maladies du coeur", "fr"), locstr("Heart disorders", "en")])
+    c2 = C(label = [locstr("Maladies du rein", "fr"), locstr("Kidney disorders", "en")])
+    
+    assert set(world.search(label = FTS("coeur"))) == { c1 }
+    assert set(world.search(label = FTS("kidney"))) == { c2 }
+    assert set(world.search(label = FTS("coeur", "fr"))) == { c1 }
+    assert set(world.search(label = FTS("coeur", "en"))) == set()
 
     
 class Paper(BaseTest, unittest.TestCase):

@@ -62,10 +62,10 @@ class AllDisjoint(object):
       
   def _destroy_triples(self):
     if   isinstance(self.storid, str):
-      self.ontology.del_triple(self.storid, None, None)
+      self.ontology.del_obj_spo(self.storid, None, None)
       self.ontology._del_list(self._list_bnode)
     elif isinstance(self.storid, tuple):
-      self.ontology.del_triple(*self.storid)
+      self.ontology.del_obj_spo(*self.storid)
       
   def destroy(self): self._destroy_triples()
   
@@ -73,11 +73,11 @@ class AllDisjoint(object):
     if len(self.entities) == 2:
       if   isinstance(self.entities[0], ThingClass):
         self.storid = (self.entities[0].storid, owl_disjointwith, self.entities[1].storid)
-        self.ontology.add_triple(*self.storid)
+        self.ontology.add_obj_spo(*self.storid)
         return
       elif isinstance(self.entities[0], PropertyClass):
         self.storid = (self.entities[0].storid, owl_propdisjointwith, self.entities[1].storid)
-        self.ontology.add_triple(*self.storid)
+        self.ontology.add_obj_spo(*self.storid)
         return
       # It seems that there is no 1-1 relation for individuals
       # => continue
@@ -87,16 +87,16 @@ class AllDisjoint(object):
       if not self._list_bnode:             self._list_bnode = self.ontology.world.new_blank_node()
       
       if   isinstance(self.entities[0], ThingClass):
-        self.ontology.add_triple(self.storid, rdf_type, owl_alldisjointclasses)
-        self.ontology.add_triple(self.storid, owl_members, self._list_bnode)
+        self.ontology.add_obj_spo(self.storid, rdf_type, owl_alldisjointclasses)
+        self.ontology.add_obj_spo(self.storid, owl_members, self._list_bnode)
         
       elif isinstance(self.entities[0], PropertyClass):
-        self.ontology.add_triple(self.storid, rdf_type, owl_alldisjointproperties)
-        self.ontology.add_triple(self.storid, owl_members, self._list_bnode)
+        self.ontology.add_obj_spo(self.storid, rdf_type, owl_alldisjointproperties)
+        self.ontology.add_obj_spo(self.storid, owl_members, self._list_bnode)
         
       else: # Individuals
-        self.ontology.add_triple(self.storid, rdf_type, owl_alldifferent)
-        self.ontology.add_triple(self.storid, owl_distinctmembers, self._list_bnode)
+        self.ontology.add_obj_spo(self.storid, rdf_type, owl_alldifferent)
+        self.ontology.add_obj_spo(self.storid, owl_distinctmembers, self._list_bnode)
         
       self.ontology._set_list(self._list_bnode, self.entities)
       

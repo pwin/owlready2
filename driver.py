@@ -21,22 +21,35 @@ from functools import lru_cache
 
 import owlready2
 from owlready2.base import *
+from owlready2.base import _universal_datatype_2_abbrev
 
-try:
-  from rdfxml_2_ntriples_pyx import parse_rdfxml
+owlready2_optimized = None
+try: import owlready2_optimized
 except:
-  from owlready2.rdfxml_2_ntriples import parse as parse_rdfxml
+  print("* Owlready2 * Warning: optimized Cython parser module 'owlready2_optimized' is not available, defaulting to slower Python implementation", file = sys.stderr)
+  pass
 
-try:
-  from owlxml_2_ntriples_pyx import parse_owlxml
-except:
-  from owlready2.owlxml_2_ntriples import parse as parse_owlxml
 
+INT_DATATYPES   = { "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#byte", "http://www.w3.org/2001/XMLSchema#short", "http://www.w3.org/2001/XMLSchema#int", "http://www.w3.org/2001/XMLSchema#long", "http://www.w3.org/2001/XMLSchema#unsignedByte", "http://www.w3.org/2001/XMLSchema#unsignedShort", "http://www.w3.org/2001/XMLSchema#unsignedInt", "http://www.w3.org/2001/XMLSchema#unsignedLong", "http://www.w3.org/2001/XMLSchema#negativeInteger", "http://www.w3.org/2001/XMLSchema#nonNegativeInteger", "http://www.w3.org/2001/XMLSchema#positiveInteger" }
+FLOAT_DATATYPES = { "http://www.w3.org/2001/XMLSchema#decimal", "http://www.w3.org/2001/XMLSchema#double", "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2002/07/owl#real" }
 
 class BaseGraph(object):
   _SUPPORT_CLONING = False
-  READ_METHODS  = ["refactor", "new_numbered_iri", "abbreviate", "unabbreviate", "get_triple_sp", "get_triple_po", "get_transitive_sp", "get_transitive_po", "get_transitive_sym", "get_transitive_sp_indirect", "get_triples", "get_triples_s", "get_triples_sp", "get_triples_po", "get_pred", "get_quads", "get_quads_sp", "has_triple", "_del_triple"]
-  WRITE_METHODS = ["_add_triple", "_set_triple"]
+  #READ_METHODS  = ["refactor", "new_numbered_iri", "abbreviate", "unabbreviate",
+  #                 "get_triple_sp", "get_data_triple_sp", "get_triple_po", "get_transitive_sp", "get_transitive_po", "get_transitive_sym", "get_transitive_sp_indirect", "get_triples", "get_data_triples", "get_triples_s", "get_triples_sp", "get_data_triples_sp", "get_triples_po", "get_pred", "get_quads", "get_quad_data_triples_sp", "get_quad_data_triple_sp", "get_quads_sp", "has_triple", "has_data_triple", "_del_triple", "_del_data_triple"]
+  #WRITE_METHODS = ["_add_triple", "_set_triple", "_add_data_triple", "_set_data_triple"]
+  
+  READ_METHODS  = ["refactor", "new_numbered_iri", "abbreviate", "unabbreviate",
+                   
+                   "get_objs_cspo_cspo", "get_objs_spo_spo", "get_objs_sp_co", "get_objs_s_po",
+                   "get_objs_po_s", "get_objs_sp_o", "get_obj_sp_o", "get_obj_po_s", "has_obj_spo", "_del_obj_spo",
+                   
+                   "get_datas_spod_spod", "get_datas_sp_od", "get_data_sp_od", "get_datas_s_pod", "has_data_spod", "_del_data_spod",
+                   
+                   "get_quads_spod_spod", "get_quads_sp_od", "get_quad_sp_od", "get_quads_s_pod", "get_quads_s_p",
+                   
+                   "get_transitive_sp", "get_transitive_po", "get_transitive_sym", "get_transitive_sp_indirect"]
+  WRITE_METHODS = ["_add_obj_spo", "_set_obj_spo", "_add_data_spod", "_set_data_spod"]
   
   def sub_graph(self, user_context): return self.__class__(self, user_context)
   
@@ -49,97 +62,50 @@ class BaseGraph(object):
   def abbreviate  (self, iri): return iri
   def unabbreviate(self, iri): return iri
   
-  def has_triple(self, subject = None, predicate = None, object = None):
-    for s,p,o in self.get_triples(subject, predicate, object):
-      return True
-    return False
-    
-  def get_triple_sp(self, subject, predicate):
-    for o in self.get_triples_sp(subject, predicate): return o
-    return None
-  
-  def get_triple_po(self, predicate, object):
-    for s in self.get_triples_po(predicate, object): return s
-    return None
-
-  def get_transitive_sp(self, subject, predicate, already = None):
+  def get_transitive_sp(self, s, p, already = None):
     if already is None: already = set()
     else:
-      if subject in already: return already
-      already.add(subject)
-    for o in self.get_triples_sp(subject, predicate):
-      self.get_transitive_sp(o, predicate, already)
+      if s in already: return already
+      already.add(s)
+    for o in self.get_objs_sp_o(s, p):
+      self.get_transitive_sp(o, p, already)
     return already
   
-  def get_transitive_po(self, predicate, object, already = None):
+  def get_transitive_po(self, p, o, already = None):
     if already is None: already = set()
     else:
-      if object in already: return already
-      already.add(object)
-    for s in self.get_triples_po(predicate, object):
-      self.get_transitive_po(predicate, s, already)
+      if o in already: return already
+      already.add(o)
+    for s in self.get_objs_po_s(p, o):
+      self.get_transitive_po(p, s, already)
     return already
   
-  def get_transitive_sym(self, subject, predicate, already = None):
+  def get_transitive_sym(self, s, p, already = None):
     if already is None: already = set()
     else:
-      if subject in already: return already
-      already.add(subject)
-    for s in self.get_triples_po(predicate, subject): self.get_transitive_sym(s, predicate, already)
-    for s in self.get_triples_sp(subject, predicate): self.get_transitive_sym(s, predicate, already)
+      if s in already: return already
+      already.add(s)
+    for s2 in self.get_objs_po_s(p, s): self.get_transitive_sym(s2, p, already)
+    for s2 in self.get_objs_sp_o(s, p): self.get_transitive_sym(s2, p, already)
     return already
   
-  def get_transitive_sp_indirect(self, subject, predicates_inverses, already = None):
+  def get_transitive_sp_indirect(self, s, predicates_inverses, already = None):
     if already is None: already = set()
     else:
-      if subject in already: return already
-      already.add(subject)
+      if s in already: return already
+      already.add(s)
     for (predicate, inverse) in predicates_inverses:
-      for o in self.get_triples_sp(subject, predicate): self.get_transitive_sp_indirect(o, predicates_inverses, already)
+      for o in self.get_objs_sp_o(s, predicate): self.get_transitive_sp_indirect(o, predicates_inverses, already)
       if inverse:
-        for o in self.get_triples_po(inverse, subject): self.get_transitive_sp_indirect(o, predicates_inverses, already)
+        for o in self.get_objs_po_s(inverse, s): self.get_transitive_sp_indirect(o, predicates_inverses, already)
     return already
   
-    
-  def get_triples(self, subject = None, predicate = None, object = None):
-    for s,p,o,c in self.get_quads(subject, predicate, object, None):
-      yield s,p,o
-      
-  def get_triples_s(self, subject):
-    return [(p,o) for s,p,o in self.get_triples(subject, None, None)]
   
-  def get_triples_sp(self, subject, predicate):
-    return [o for s,p,o in self.get_triples(subject, predicate, None)]
-  
-  def get_triples_po(self, predicate, object):
-    return [s for s,p,o in self.get_triples(None, predicate, object)]
-  
-  def get_quads(self, subject = None, predicate = None, object = None, ontology_graph = None):
-    raise NotImplementedError
-  
-  def get_quads_sp(self, subject, predicate):
-    return [(o,c) for s,p,o,c in self.get_quads(subject, predicate)]
-  
-  def __len__(self): raise NotImplementedError
-  
-  def _add_triple(self, subject, predicate, object):
-    raise NotImplementedError
-  
-  def _del_triple(self, subject, predicate, object):
-    raise NotImplementedError
-  
-  def _set_triple(self, subject, predicate, object):
-    self._del_triple(subject, predicate, None)
-    self._add_triple(subject, predicate, object)
-    
-  def refactor(self, storid, new_iri):
-    raise NotImplementedError
-
-  def dump(self, format = "ntriples"):
+  def dump(self, format = "ntriples", file = None):
     import io
     s = io.BytesIO()
     self.save(s, format)
-    print(s.getvalue().decode("utf8"))
+    print(s.getvalue().decode("utf8"), file = file)
 
 
 class BaseMainGraph(BaseGraph):
@@ -157,71 +123,83 @@ class BaseSubGraph(BaseGraph):
     format = format or _guess_format(f)
     
     if   format == "ntriples":
-      on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)
+      objs, datas, on_prepare_obj, on_prepare_data, insert_objs, insert_datas, new_blank, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)
       
       try:
-        splitter = re.compile("\s")
-        bn_src_2_sql = {}
-        
-        line = f.readline().decode("utf8")
         current_line = 0
-        while line:
-          current_line += 1
-          if (not line.startswith("#")) and (not line.startswith("\n")):
-            s,p,o = splitter.split(line[:-3], 2)
-            
-            if   s.startswith("<"): s = s[1:-1]
-            elif s.startswith("_"):
-              bn = bn_src_2_sql.get(s)
-              if bn is None: bn = bn_src_2_sql[s] = new_blank()
-              s = bn
-              
-            p = p[1:-1]
-            
-            if   o.startswith("<"): o = o[1:-1]
-            elif o.startswith("_"):
-              bn = bn_src_2_sql.get(o)
-              if bn is None: bn = bn_src_2_sql[o] = new_blank()
-              o = bn
-            elif o.startswith('"'):
-              v, l = o.rsplit('"', 1)
-              v = v[1:].encode("raw-unicode-escape").decode("unicode-escape")
-              if   l.startswith("^"): o = new_literal(v, { "http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype" : l[3:-1] })
-              elif l.startswith("@"): o = new_literal(v, { "http://www.w3.org/XML/1998/namespacelang" : l[1:] })
-              else:                   o = new_literal(v, {})
-              
-            on_prepare_triple(s, p, o)
-            
+        if owlready2_optimized:
+          owlready2_optimized.parse_ntriples(f, objs, datas, insert_objs, insert_datas, abbreviate, new_blank, default_base)
+          
+        else:
+          splitter = re.compile("\s")
+          bn_src_2_sql = {}
+          
           line = f.readline().decode("utf8")
+          while line:
+            current_line += 1
+            if (not line.startswith("#")) and (not line.startswith("\n")):
+              s,p,o = splitter.split(line[:-3], 2)
+              
+              if   s.startswith("<"): s = s[1:-1]
+              elif s.startswith("_"):
+                bn = bn_src_2_sql.get(s)
+                if bn is None: bn = bn_src_2_sql[s] = new_blank()
+                s = bn
+              
+              p = p[1:-1]
+            
+              if   o.startswith("<"): on_prepare_obj(s, p, o[1:-1])
+              elif o.startswith("_"):
+                bn = bn_src_2_sql.get(o)
+                if bn is None: bn = bn_src_2_sql[o] = new_blank()
+                on_prepare_obj(s, p, bn)
+              elif o.startswith('"'):
+                o, d = o.rsplit('"', 1)
+                if d.startswith("^"):
+                  d = d[3:-1]
+                  if   d in INT_DATATYPES:   o = int  (o[1:])
+                  elif d in FLOAT_DATATYPES: o = float(o[1:])
+                  else:                      o = o[1:].encode("raw-unicode-escape").decode("unicode-escape")
+                else:
+                  o = o[1:].encode("raw-unicode-escape").decode("unicode-escape")
+                on_prepare_data(s, p, o, d)
+                
+            line = f.readline().decode("utf8")
           
         onto_base_iri = on_finish()
         
       except Exception as e:
         if len(self) == 0:
-          self._add_triple(self.onto.storid, rdf_type, owl_ontology)
-        raise OwlReadyOntologyParsingError("NTriples parsing error in file %s, line %s." % (getattr(f, "name", "???"), current_line)) from e
-      
-      #if not self.has_triple(self.onto.storid, rdf_type, owl_ontology): # Not always present (e.g. not in dbpedia)
-      #  self._add_triple(self.onto.storid, rdf_type, owl_ontology)
-        
+          self._add_obj_spo(self.onto.storid, rdf_type, owl_ontology)
+        if current_line:
+          raise OwlReadyOntologyParsingError("NTriples parsing error in file %s, line %s." % (getattr(f, "name", "???"), current_line)) from e
+        else:
+          raise OwlReadyOntologyParsingError("NTriples parsing error in file %s." % getattr(f, "name", "???")) from e
+          
     elif format == "rdfxml":
+      objs, datas, on_prepare_obj, on_prepare_data, insert_objs, insert_datas, new_blank, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)
       try:
-        on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)
-        parse_rdfxml(f, on_prepare_triple, new_blank, new_literal, default_base)
+        if owlready2_optimized:
+          owlready2_optimized.parse_rdfxml(f, objs, datas, insert_objs, insert_datas, abbreviate, new_blank, default_base)
+        else:
+          import owlready2.rdfxml_2_ntriples
+          owlready2.rdfxml_2_ntriples.parse(f, on_prepare_obj, on_prepare_data, new_blank, default_base)
         onto_base_iri = on_finish()
       except OwlReadyOntologyParsingError as e:
-        if len(self) == 0:
-          self._add_triple(self.onto.storid, rdf_type, owl_ontology)
+        if len(self) == 0: self._add_obj_spo(self.onto.storid, rdf_type, owl_ontology)
         raise e
       
     elif format == "owlxml":
+      objs, datas, on_prepare_obj, on_prepare_data, insert_objs, insert_datas, new_blank, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)
       try:
-        on_prepare_triple, new_blank, new_literal, abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples, "datatypeIRI")
-        parse_owlxml(f, on_prepare_triple, new_blank, new_literal)
+        if owlready2_optimized:
+          owlready2_optimized.parse_owlxml(f, objs, datas, insert_objs, insert_datas, abbreviate, new_blank, default_base)
+        else:
+          import owlready2.owlxml_2_ntriples
+          owlready2.owlxml_2_ntriples.parse(f, on_prepare_obj, on_prepare_data, new_blank, default_base)
         onto_base_iri = on_finish()
       except OwlReadyOntologyParsingError as e:
-        if len(self) == 0:
-          self._add_triple(self.onto.storid, rdf_type, owl_ontology)
+        if len(self) == 0: self._add_obj_spo(self.onto.storid, rdf_type, owl_ontology)
         raise e
       
     else:
@@ -252,23 +230,25 @@ def _guess_format(f):
   
   return "rdfxml"
 
+
 def _save(f, format, graph):
   if   format == "ntriples":
     unabbreviate = lru_cache(None)(graph.unabbreviate)
     
-    for s,p,o in graph._iter_triples():
+    for s,p,o,d in graph._iter_triples():
       if   s.startswith("_"): s = "_:%s" % s[1:]
       else:                   s = "<%s>" % unabbreviate(s)
       p = "<%s>" % unabbreviate(p)
-      if   o.startswith("_"): o = "_:%s" % o[1:]
-      elif o.startswith('"'):
-        v, l = o.rsplit('"', 1)
-        v = v[1:].replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
-        if   l.startswith("@"): o = '"%s"%s' % (v, l)
-        elif l:                 o = '"%s"^^<%s>' % (v, unabbreviate(l)) # Unabbreviate datatype's iri
-        else:                   o = '"%s"' % v
+      if d is None:
+        if o.startswith("_"): o = "_:%s" % o[1:]
+        else:                 o = "<%s>" % unabbreviate(o)
+      else:
+        if isinstance(o, str):  o = o.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        #else:                   o = str(o)
+        if   d.startswith("@"): o = '"%s"%s' % (o, d)
+        elif d == "":           o = '"%s"' % o
+        else:                   o = '"%s"^^<%s>' % (o, unabbreviate(d)) # Unabbreviate datatype's iri
         
-      else: o = "<%s>" % unabbreviate(o)
       f.write(("%s %s %s .\n" % (s, p, o)).encode("utf8"))
       
   elif format == "nquads":
@@ -277,19 +257,20 @@ def _save(f, format, graph):
     c_2_iri = { c : iri for c, iri in graph._iter_ontology_iri() }
     print(c_2_iri)
     
-    for c, s,p,o in graph._iter_triples(True):
+    for c,s,p,o,d in graph._iter_triples(True):
       if   s.startswith("_"): s = "_:%s" % s[1:]
       else:                   s = "<%s>" % unabbreviate(s)
       p = "<%s>" % unabbreviate(p)
-      if   o.startswith("_"): o = "_:%s" % o[1:]
-      elif o.startswith('"'):
-        v, l = o.rsplit('"', 1)
-        v = v[1:].replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
-        if   l.startswith("@"): o = '"%s"%s' % (v, l)
-        elif l:                 o = '"%s"^^<%s>' % (v, unabbreviate(l)) # Unabbreviate datatype's iri
-        else:                   o = '"%s"' % v
+      if d is None:
+        if o.startswith("_"): o = "_:%s" % o[1:]
+        else:                 o = "<%s>" % unabbreviate(o)
+      else:
+        if isinstance(o, str):  o = o.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        #else:                   o = str(o)
+        if   d.startswith("@"): o = '"%s"%s' % (o, d)
+        elif l:                 o = '"%s"^^<%s>' % (o, unabbreviate(d)) # Unabbreviate datatype's iri
+        else:                   o = '"%s"' % o
         
-      else: o = "<%s>" % unabbreviate(o)
       f.write(("<%s> %s %s %s .\n" % (c_2_iri[c], s, p, o)).encode("utf8"))
       
   elif format == "rdfxml":
@@ -300,13 +281,10 @@ def _save(f, format, graph):
         if base_iri.endswith("/"): return r[len(base_iri) :]
         else:                      return r[len(base_iri) - 1 :]
       return r
-      #return graph.unabbreviate(storid).replace("&", "&amp;")
     
     base_iri = graph._iter_ontology_iri(graph.c)
     
     xmlns = {
-#      base_iri[:-1] : "",
-#      base_iri : "#",
       "http://www.w3.org/1999/02/22-rdf-syntax-ns#" : "rdf:",
       "http://www.w3.org/2001/XMLSchema#" : "xsd:",
       "http://www.w3.org/2000/01/rdf-schema#" : "rdfs:",
@@ -385,9 +363,9 @@ def _save(f, format, graph):
     def parse_list(bn):
       inner_lists_used.add(id(bn_2_inner_list[bn]))
       while bn and (bn != rdf_nil):
-        first = graph.get_triple_sp(bn, rdf_first)
+        first = graph.get_obj_sp_o(bn, rdf_first)
         if first != rdf_nil: yield first
-        bn = graph.get_triple_sp(bn, rdf_rest)
+        bn = graph.get_obj_sp_o(bn, rdf_rest)
         
     def purge():
       nonlocal s_lines, current_s, type
@@ -404,7 +382,6 @@ def _save(f, format, graph):
           
         elif current_s:
           current_s = unabbreviate(current_s)
-          #if current_s.startswith(base_iri): current_s = current_s[len(base_iri)-1 :]
           l.append("""<%s rdf:about="%s">""" % (type, current_s))
           
         else:
@@ -421,7 +398,6 @@ def _save(f, format, graph):
           
         elif current_s:
           current_s = unabbreviate(current_s)
-          #if current_s.startswith(base_iri): current_s = current_s[len(base_iri)-1 :]
           l.append("""<%s rdf:about="%s"/>""" % (type, current_s))
           
         else:
@@ -433,7 +409,7 @@ def _save(f, format, graph):
     type      = "rdf:Description"
     s_lines   = []
     current_s = ""
-    for s,p,o in graph._iter_triples(False, True):
+    for s,p,o,d in graph._iter_triples(False, True):
       if s != current_s:
         if current_s: purge()
         current_s = s
@@ -449,12 +425,11 @@ def _save(f, format, graph):
       p = abbrev(unabbreviate(p))
       if p.startswith("#"): p = p[1:]
       
-      if   o.startswith('"'):
-        v, l = o.rsplit('"', 1)
-        v = v[1:].replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        if   l.startswith("@"): s_lines.append("""  <%s xml:lang="%s">%s</%s>""" % (p, l[1:], v, p))
-        elif l:                 s_lines.append("""  <%s rdf:datatype="%s">%s</%s>""" % (p, unabbreviate(l), v, p))
-        else:                   s_lines.append("""  <%s>%s</%s>""" % (p, v, p))
+      if  not d is None:
+        if isinstance(o, str):  o = o.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        if   d.startswith("@"): s_lines.append("""  <%s xml:lang="%s">%s</%s>""" % (p, d[1:], o, p))
+        elif d:                 s_lines.append("""  <%s rdf:datatype="%s">%s</%s>""" % (p, unabbreviate(d), o, p))
+        else:                   s_lines.append("""  <%s>%s</%s>""" % (p, o, p))
         
       elif o.startswith('_'):
           if p in tags_with_list:
@@ -468,7 +443,6 @@ def _save(f, format, graph):
                 pass
               else:
                 i = unabbreviate(i)
-                #if i.startswith(base_iri): i = i[len(base_iri)-1 :]
                 s_lines.append("""    <rdf:Description rdf:about="%s"/>""" % i)
           else:
             l = bn_2_inner_list[o]
@@ -479,7 +453,6 @@ def _save(f, format, graph):
           
       else:
         o = unabbreviate(o)
-        #if o.startswith(base_iri): o = o[len(base_iri)-1 :]
         s_lines.append("""  <%s rdf:resource="%s"/>""" % (p, o))
         
     purge()

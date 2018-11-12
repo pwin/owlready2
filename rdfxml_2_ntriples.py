@@ -25,9 +25,11 @@ try:
 except:
   class OwlReadyOntologyParsingError(Exception): pass
 
+INT_DATATYPES   = { "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#byte", "http://www.w3.org/2001/XMLSchema#short", "http://www.w3.org/2001/XMLSchema#int", "http://www.w3.org/2001/XMLSchema#long", "http://www.w3.org/2001/XMLSchema#unsignedByte", "http://www.w3.org/2001/XMLSchema#unsignedShort", "http://www.w3.org/2001/XMLSchema#unsignedInt", "http://www.w3.org/2001/XMLSchema#unsignedLong", "http://www.w3.org/2001/XMLSchema#negativeInteger", "http://www.w3.org/2001/XMLSchema#nonNegativeInteger", "http://www.w3.org/2001/XMLSchema#positiveInteger" }
+FLOAT_DATATYPES = { "http://www.w3.org/2001/XMLSchema#decimal", "http://www.w3.org/2001/XMLSchema#double", "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2002/07/owl#real" }
 
   
-def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, default_base = ""):
+def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, default_base = ""):
   parser = xml.parsers.expat.ParserCreate(None, "")
   try:
     parser.buffer_text          = True
@@ -57,14 +59,27 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
     xml_base                 = ""
     xml_dir                  = ""
     
-  if not on_prepare_triple:
-    def on_prepare_triple(s,p,o):
+  if not on_prepare_obj:
+    def on_prepare_obj(s,p,o):
       nonlocal nb_triple
       nb_triple += 1
       if not s.startswith("_"): s = "<%s>" % s
-      if not (o.startswith("_") or o.startswith('"')): o = "<%s>" % o
+      if not o.startswith("_"): o = "<%s>" % o
       print("%s %s %s ." % (s,"<%s>" % p,o))
       
+    def on_prepare_data(s,p,o,d):
+      nonlocal nb_triple
+      nb_triple += 1
+      if not s.startswith("_"): s = "<%s>" % s
+      
+      o = o.replace('"', '\\"').replace("\n", "\\n")
+      if d and d.startswith("@"):
+        print('%s %s "%s"%s .' % (s,"<%s>" % p,o,d))
+      elif d:
+        print('%s %s "%s"^^<%s> .' % (s,"<%s>" % p,o,d))
+      else:
+        print('%s %s "%s" .' % (s,"<%s>" % p,o))
+        
   if not new_blank:
     def new_blank():
       nonlocal current_blank
@@ -79,34 +94,25 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
   node_2_blanks = defaultdict(new_blank)
   known_nodes   = set()
   
-  if not new_literal:
-    def new_literal(value, attrs):
-      value = value.replace('"', '\\"').replace("\n", "\\n")
-      lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
-      if lang: return '"%s"@%s' % (value, lang)
-      datatype = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype")
-      if datatype: return '"%s"^^<%s>' % (value, datatype)
-      return '"%s"' % (value)
-    
   def new_list(l):
     bn = bn0 = new_blank()
     
     if l:
       for i in range(len(l) - 1):
-        on_prepare_triple(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[i])
+        on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[i])
         bn_next = new_blank()
-        on_prepare_triple(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", bn_next)
+        on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", bn_next)
         bn = bn_next
-      on_prepare_triple(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[-1])
-      on_prepare_triple(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil")
+      on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[-1])
+      on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil")
       
     else:
-      on_prepare_triple(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil")
-      on_prepare_triple(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",  "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil")
+      on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil")
+      on_prepare_obj(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",  "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil")
       
     return bn0
   
-  def add_to_bn(bn, type, rel, value):
+  def add_to_bn(bn, type, rel, value, d = ""):
     if type == "COL":
       value = tuple(frozenset(bns[v])
                     if v.startswith("_") and (not v in known_nodes)
@@ -114,9 +120,12 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
                     for v in value)
       bns[bn].add((type, rel) + value)
     else:
-      if value.startswith("_") and (not value in known_nodes): value = frozenset(bns[value])
-      bns[bn].add((type, rel, value))
-    
+      if type == "DAT":
+        bns[bn].add((type, rel, value, d))
+      else:
+        if value.startswith("_") and (not value in known_nodes): value = frozenset(bns[value])
+        bns[bn].add((type, rel, value))
+        
   def startNamespace(prefix, uri):
     nonlocal prefixes
     prefixes = prefixes.copy()
@@ -194,7 +203,7 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
           
       if tag != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Description":
         if not iri.startswith("_ "):
-          on_prepare_triple(iri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
+          on_prepare_obj(iri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
         if iri.startswith("_"):
           add_to_bn(iri, "REL", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
           
@@ -239,7 +248,7 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
       
       if   parse_type == "Resource":
         if not iri.startswith("_ "):
-          on_prepare_triple(iri, tag, value)
+          on_prepare_obj(iri, tag, value)
           
         if iri.startswith("_"):
           add_to_bn(iri, "REL", tag, value)
@@ -249,15 +258,23 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
           
           
       elif parse_type == "Literal":
-        value = new_literal(current_content, current_attrs)
+        o = current_content
+        d = current_attrs.get("http://www.w3.org/XML/1998/namespacelang")
+        if d is None:
+          d = current_attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype", "")
+          if   d in INT_DATATYPES:   o = int  (o)
+          elif d in FLOAT_DATATYPES: o = float(o)
+        else:
+          d = "@%s" % d
+          
         if not iri.startswith("_ "):
-          on_prepare_triple(iri, tag, value)
+          on_prepare_data(iri, tag, o, d)
         if iri.startswith("_"):
-          add_to_bn(iri, "REL", tag, value)
+          add_to_bn(iri, "DAT", tag, o, d)
           
       elif parse_type == "Collection":
         if not iri.startswith("_ "):
-          on_prepare_triple(iri, tag, new_list(value))
+          on_prepare_obj(iri, tag, new_list(value))
         if iri.startswith("_"):
           add_to_bn(iri, "COL", tag, value)
           
@@ -300,16 +317,20 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
         if   i[0] == "REL":
           drop, p, o = i
           if not isinstance(o, str): o = rebuild_bn(o)
-          on_prepare_triple(bn, p, o)
+          on_prepare_obj(bn, p, o)
+        elif i[0] == "DAT":
+          drop, p, o, d = i
+          if not isinstance(o, str): o = rebuild_bn(o)
+          on_prepare_data(bn, p, o, d)
         elif i[0] == "INV":
           drop, p, o = i
           if not isinstance(o, str): o = rebuild_bn(o)
-          on_prepare_triple(o, p, bn)
+          on_prepare_obj(o, p, bn)
         elif i[0] == "COL":
           drop, p, *l = i
           l = [(isinstance(x, str) and x) or rebuild_bn(x) for x in l]
           o = new_list(l)
-          on_prepare_triple(bn, p, o)
+          on_prepare_obj(bn, p, o)
         else:
           print(i)
           raise ValueError
@@ -333,11 +354,8 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None, def
             
           if candidates_bn: o = candidates_bn[-1]
           else:
-            #print()
-            #print("rebuild", o, content)
             o = rebuild_bn(content)
-            #print()
-          on_prepare_triple(axiom_iri,p,o)
+          on_prepare_obj(axiom_iri,p,o)
         except Exception as e:
           raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), line, column)) from e
         

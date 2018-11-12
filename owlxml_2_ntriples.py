@@ -24,6 +24,9 @@ try:
 except:
   class OwlReadyOntologyParsingError(Exception): pass
 
+INT_DATATYPES   = { "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#byte", "http://www.w3.org/2001/XMLSchema#short", "http://www.w3.org/2001/XMLSchema#int", "http://www.w3.org/2001/XMLSchema#long", "http://www.w3.org/2001/XMLSchema#unsignedByte", "http://www.w3.org/2001/XMLSchema#unsignedShort", "http://www.w3.org/2001/XMLSchema#unsignedInt", "http://www.w3.org/2001/XMLSchema#unsignedLong", "http://www.w3.org/2001/XMLSchema#negativeInteger", "http://www.w3.org/2001/XMLSchema#nonNegativeInteger", "http://www.w3.org/2001/XMLSchema#positiveInteger" }
+FLOAT_DATATYPES = { "http://www.w3.org/2001/XMLSchema#decimal", "http://www.w3.org/2001/XMLSchema#double", "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2002/07/owl#real" }
+
 rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 
 types = {
@@ -105,7 +108,7 @@ disjoints = {
 
 
 
-def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
+def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, default_base = ""):
   parser = xml.parsers.expat.ParserCreate(None, "")
   try:
     parser.buffer_text          = True
@@ -124,30 +127,39 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
   before_declaration     = True
   last_cardinality       = "0"
   nb_triple              = 0
+  
 
-
-  if not on_prepare_triple:
-    def on_prepare_triple(s,p,o):
+  if not on_prepare_obj:
+    def on_prepare_obj(s,p,o):
       nonlocal nb_triple
       nb_triple += 1
       if not s.startswith("_"): s = "<%s>" % s
-      if not (o.startswith("_") or o.startswith('"')): o = "<%s>" % o
+      if not o.startswith("_"): o = "<%s>" % o
       print("%s %s %s ." % (s,"<%s>" % p,o))
       
+    def on_prepare_data(s,p,o,d):
+      nonlocal nb_triple
+      nb_triple += 1
+      if not s.startswith("_"): s = "<%s>" % s
+      
+      #o = o.replace('"', '\\"').replace("\n", "\\n")
+      if d and d.startswith("@"):
+        print('%s %s "%s"%s .' % (s,"<%s>" % p,o,d))
+      elif d:
+        print('%s %s "%s"^^<%s> .' % (s,"<%s>" % p,o,d))
+      else:
+        print('%s %s "%s" .' % (s,"<%s>" % p,o))
+
+
+  def on_prepare_triple(s,p,o):
+    if isinstance(o, tuple): on_prepare_data(s, p, o[0], o[1])
+    else:                    on_prepare_obj (s, p, o)
+    
   if not new_blank:
     def new_blank():
       nonlocal current_blank
       current_blank += 1
       return "_:%s" % current_blank
-    
-  if not new_literal:
-    def new_literal(value, attrs):
-      value = value.replace('"', '\\"').replace("\n", "\\n")
-      lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
-      if lang: return '"%s"@%s' % (value, lang)
-      datatype = attrs.get("datatypeIRI")
-      if datatype: return '"%s"^^<%s>' % (value, datatype)
-      return '"%s"' % (value)
     
   def new_list(l):
     bn = bn0 = new_blank()
@@ -156,14 +168,14 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
       for i in range(len(l) - 1):
         on_prepare_triple(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[i])
         bn_next = new_blank()
-        on_prepare_triple(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", bn_next)
+        on_prepare_obj   (bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", bn_next)
         bn = bn_next
       on_prepare_triple(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", l[-1])
-      on_prepare_triple(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil")
+      on_prepare_obj   (bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil")
       
     else:
       on_prepare_triple(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#first", "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil")
-      on_prepare_triple(bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",  "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil")
+      on_prepare_obj   (bn, "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",  "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil")
       
     return bn0
   
@@ -193,14 +205,15 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
       
     elif (tag in types):
       iri = get_IRI(attrs)
-      if in_declaration: on_prepare_triple(iri, rdf_type, types[tag])
+      if in_declaration: on_prepare_obj(iri, rdf_type, types[tag])
       objs.append(iri)
       
     elif (tag == "http://www.w3.org/2002/07/owl#Datatype"):           objs.append(get_IRI(attrs))
     
     elif (tag == "http://www.w3.org/2002/07/owl#Literal"):            current_attrs = attrs
     
-    elif((tag == "http://www.w3.org/2002/07/owl#ObjectIntersectionOf") or (tag == "http://www.w3.org/2002/07/owl#ObjectUnionOf") or (tag == "http://www.w3.org/2002/07/owl#ObjectOneOf") or
+    elif((tag == "http://www.w3.org/2002/07/owl#ObjectIntersectionOf") or (tag == "http://www.w3.org/2002/07/owl#ObjectUnionOf") or
+         (tag == "http://www.w3.org/2002/07/owl#ObjectOneOf") or (tag == "http://www.w3.org/2002/07/owl#DataOneOf") or
          (tag == "http://www.w3.org/2002/07/owl#DataIntersectionOf") or (tag == "http://www.w3.org/2002/07/owl#DataUnionOf") or
          (tag == "http://www.w3.org/2002/07/owl#DisjointClasses") or (tag == "http://www.w3.org/2002/07/owl#DisjointObjectProperties") or (tag == "http://www.w3.org/2002/07/owl#DisjointDataProperties") or (tag == "http://www.w3.org/2002/07/owl#DifferentIndividuals")):
       objs.append("(")
@@ -224,24 +237,31 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
     
     elif (tag == "http://www.w3.org/2002/07/owl#Ontology"):
       ontology_iri = attrs["ontologyIRI"]
-      on_prepare_triple(ontology_iri, rdf_type, "http://www.w3.org/2002/07/owl#Ontology")
+      on_prepare_obj(ontology_iri, rdf_type, "http://www.w3.org/2002/07/owl#Ontology")
       version_iri = attrs.get("versionIRI")
       if version_iri:
-        on_prepare_triple(ontology_iri, "http://www.w3.org/2002/07/owl#versionIRI", version_iri)
-      
+        on_prepare_obj(ontology_iri, "http://www.w3.org/2002/07/owl#versionIRI", version_iri)
+        
     elif (tag == "RDF") or (tag == "rdf:RDF"): raise ValueError("Not an OWL/XML file! (It seems to be an OWL/RDF file)")
     
     
   def endElement(tag):
     nonlocal in_declaration, objs, in_prop_chain
-
+    
     if   (tag == "http://www.w3.org/2002/07/owl#Declaration"):
       in_declaration = False
       objs = [] # Purge stack
       
     elif (tag == "http://www.w3.org/2002/07/owl#Literal"):
-      objs.append(new_literal(current_content, current_attrs))
-      
+      lang = current_attrs.get("http://www.w3.org/XML/1998/namespacelang")
+      if lang: objs.append((current_content, "@%s" % lang))
+      else:
+        d = current_attrs.get("datatypeIRI", "")
+        if   d in INT_DATATYPES:   o = int  (current_content)
+        elif d in FLOAT_DATATYPES: o = float(current_content)
+        else:                      o =       current_content
+        objs.append((o, d))
+        
     elif (tag == "http://www.w3.org/2002/07/owl#SubClassOf") or (tag == "http://www.w3.org/2002/07/owl#SubObjectPropertyOf") or (tag == "http://www.w3.org/2002/07/owl#SubDataPropertyOf") or (tag == "http://www.w3.org/2002/07/owl#SubAnnotationPropertyOf"):
       parent = objs.pop()
       child  = objs.pop()
@@ -250,39 +270,39 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
         parent, child = child, parent
       else:
         relation = sub_ofs[tag]
-      on_prepare_triple(child, relation, parent)
+      on_prepare_obj(child, relation, parent)
       if annots: purge_annotations((child, relation, parent))
       
     elif (tag == "http://www.w3.org/2002/07/owl#ClassAssertion"):
       child  = objs.pop() # Order is reversed compared to SubClassOf!
       parent = objs.pop()
-      on_prepare_triple(child, rdf_type, parent)
+      on_prepare_obj(child, rdf_type, parent)
       if annots: purge_annotations((child, rdf_type, parent))
       
     elif (tag == "http://www.w3.org/2002/07/owl#EquivalentClasses") or (tag == "http://www.w3.org/2002/07/owl#EquivalentObjectProperties") or (tag == "http://www.w3.org/2002/07/owl#EquivalentDataProperties"):
       o1 = objs.pop()
       o2 = objs.pop()
       if o1.startswith("_"): o1, o2 = o2, o1 # Swap in order to have blank node at third position -- rapper seems to do that
-      on_prepare_triple(o1, equivs[tag], o2)
+      on_prepare_obj(o1, equivs[tag], o2)
       if annots: purge_annotations((o1, equivs[tag], o2))
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectPropertyDomain") or (tag == "http://www.w3.org/2002/07/owl#DataPropertyDomain") or (tag == "http://www.w3.org/2002/07/owl#AnnotationPropertyDomain"):
       val = objs.pop(); obj = objs.pop();
-      on_prepare_triple(obj, "http://www.w3.org/2000/01/rdf-schema#domain", val)
+      on_prepare_obj(obj, "http://www.w3.org/2000/01/rdf-schema#domain", val)
       if annots: purge_annotations((obj, "http://www.w3.org/2000/01/rdf-schema#domain", val))
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectPropertyRange") or (tag == "http://www.w3.org/2002/07/owl#DataPropertyRange") or (tag == "http://www.w3.org/2002/07/owl#AnnotationPropertyRange"):
       val = objs.pop(); obj = objs.pop();
-      on_prepare_triple(obj, "http://www.w3.org/2000/01/rdf-schema#range", val)
+      on_prepare_obj(obj, "http://www.w3.org/2000/01/rdf-schema#range", val)
       if annots: purge_annotations((obj, "http://www.w3.org/2000/01/rdf-schema#range", val))
       
     elif (tag in prop_types):
       obj = objs.pop()
-      on_prepare_triple(obj, rdf_type, prop_types[tag])
+      on_prepare_obj(obj, rdf_type, prop_types[tag])
       
     elif (tag == "http://www.w3.org/2002/07/owl#InverseObjectProperties") or (tag == "http://www.w3.org/2002/07/owl#InverseDataProperties"):
       a, b = objs.pop(), objs.pop()
-      on_prepare_triple(b, "http://www.w3.org/2002/07/owl#inverseOf", a)
+      on_prepare_obj(b, "http://www.w3.org/2002/07/owl#inverseOf", a)
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectPropertyChain"):
       start    = _rindex(objs)
@@ -295,63 +315,77 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
       list_obj = objs[start + 1 : ]
       tag, rel, member = disjoints[tag]
       if rel and (len(list_obj) == 2):
-        on_prepare_triple(list_obj[0], rel, list_obj[1])
+        on_prepare_obj(list_obj[0], rel, list_obj[1])
         if annots: purge_annotations((list_obj[0], rel, list_obj[1]))
         
       else:
         list_iri = new_list(list_obj)
         iri = new_blank()
-        on_prepare_triple(iri, rdf_type, tag)
-        on_prepare_triple(iri, member, list_iri)
+        on_prepare_obj(iri, rdf_type, tag)
+        on_prepare_obj(iri, member, list_iri)
         if annots: purge_annotations((iri, rdf_type, tag))
         
       del objs[start :]
       
-    elif (tag == "http://www.w3.org/2002/07/owl#ObjectPropertyAssertion") or (tag == "http://www.w3.org/2002/07/owl#DataPropertyAssertion"):
+    elif (tag == "http://www.w3.org/2002/07/owl#ObjectPropertyAssertion"):
       p,s,o = objs[-3 :]
-      on_prepare_triple(s, p, o)
+      on_prepare_obj(s, p, o)
+      if annots: purge_annotations((s,p,o))
+      del objs[-3 :]
+      
+    elif (tag == "http://www.w3.org/2002/07/owl#DataPropertyAssertion"):
+      p,s,o = objs[-3 :]
+      on_prepare_data(s, p, *o)
       if annots: purge_annotations((s,p,o))
       del objs[-3 :]
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectComplementOf") or (tag == "http://www.w3.org/2002/07/owl#DataComplementOf"):
       iri = new_blank()
-      on_prepare_triple(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class")
-      on_prepare_triple(iri, "http://www.w3.org/2002/07/owl#complementOf", objs[-1])
+      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class")
+      on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#complementOf", objs[-1])
       objs[-1] = iri
     
     elif (tag in restrs):
       iri = new_blank()
-      on_prepare_triple(iri, rdf_type, "http://www.w3.org/2002/07/owl#Restriction")
-      on_prepare_triple(iri, "http://www.w3.org/2002/07/owl#onProperty", objs.pop(-2))
+      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Restriction")
+      on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onProperty", objs.pop(-2))
       on_prepare_triple(iri, restrs[tag], objs[-1])
       objs[-1] = iri
       
     elif (tag in card_restrs):
       iri = new_blank()
-      on_prepare_triple(iri, rdf_type, "http://www.w3.org/2002/07/owl#Restriction")
+      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Restriction")
       start = _rindex(objs)
       values = objs[start + 1 : ]
       del objs[start :]
       
       if len(values) == 2: # Qualified
         tag = qual_card_restrs[tag]
-        on_prepare_triple(iri, "http://www.w3.org/2002/07/owl#onProperty", values[-2])
+        on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onProperty", values[-2])
         if objs[-1].startswith("http://www.w3.org/2001/XMLSchema"):
-          on_prepare_triple(iri, "http://www.w3.org/2002/07/owl#onDataRange", values[-1])
+          on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onDataRange", values[-1])
         else:
-          on_prepare_triple(iri, "http://www.w3.org/2002/07/owl#onClass", values[-1])
+          on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onClass", values[-1])
       else: # Non qualified
         tag = card_restrs[tag]
-        on_prepare_triple(iri, "http://www.w3.org/2002/07/owl#onProperty", values[-1])
-      on_prepare_triple(iri, tag, new_literal(last_cardinality, {"datatypeIRI" : "http://www.w3.org/2001/XMLSchema#nonNegativeInteger"}))
+        on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onProperty", values[-1])
+      on_prepare_data(iri, tag, last_cardinality, "http://www.w3.org/2001/XMLSchema#nonNegativeInteger")
       objs.append(iri)
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectOneOf"):
       start    = _rindex(objs)
       list_iri = new_list(objs[start + 1 : ])
       iri      = new_blank()
-      on_prepare_triple(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class")
-      on_prepare_triple(iri, "http://www.w3.org/2002/07/owl#oneOf", list_iri)
+      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class")
+      on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#oneOf", list_iri)
+      objs[start :] = [iri]
+      
+    elif (tag == "http://www.w3.org/2002/07/owl#DataOneOf"):
+      start    = _rindex(objs)
+      list_iri = new_list(objs[start + 1 : ])
+      iri      = new_blank()
+      on_prepare_obj(iri, rdf_type, "http://www.w3.org/2000/01/rdf-schema#Datatype")
+      on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#oneOf", list_iri)
       objs[start :] = [iri]
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectIntersectionOf") or (tag == "http://www.w3.org/2002/07/owl#ObjectUnionOf") or (tag == "http://www.w3.org/2002/07/owl#DataIntersectionOf") or (tag == "http://www.w3.org/2002/07/owl#DataUnionOf"):
@@ -359,17 +393,17 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
       list_iri = new_list(objs[start + 1 : ])
       iri      = new_blank()
       if objs[start + 1 : ][0].startswith("http://www.w3.org/2001/XMLSchema"):
-        on_prepare_triple(iri, rdf_type, "http://www.w3.org/2000/01/rdf-schema#Datatype")
+        on_prepare_obj(iri, rdf_type, "http://www.w3.org/2000/01/rdf-schema#Datatype")
       else:
-        on_prepare_triple(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class")
+        on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class")
       if (tag == "http://www.w3.org/2002/07/owl#ObjectIntersectionOf") or (tag == "http://www.w3.org/2002/07/owl#DataIntersectionOf"):
-        on_prepare_triple(iri, "http://www.w3.org/2002/07/owl#intersectionOf", list_iri)
+        on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#intersectionOf", list_iri)
       else:
-        on_prepare_triple(iri, "http://www.w3.org/2002/07/owl#unionOf", list_iri)
+        on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#unionOf", list_iri)
       objs[start :] = [iri]
       
     elif (tag == "http://www.w3.org/2002/07/owl#Import"):
-      on_prepare_triple(ontology_iri, "http://www.w3.org/2002/07/owl#imports", current_content)
+      on_prepare_data(ontology_iri, "http://www.w3.org/2002/07/owl#imports", current_content, "")
       
     elif (tag == "http://www.w3.org/2002/07/owl#IRI"):
       iri = current_content
@@ -399,9 +433,9 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
       list_bns            = new_list(list_bns)
       bn                  = new_blank()
       objs[start :]  = [bn]
-      on_prepare_triple(bn, rdf_type, "http://www.w3.org/2000/01/rdf-schema#Datatype")
-      on_prepare_triple(bn, "http://www.w3.org/2002/07/owl#onDatatype", datatype)
-      on_prepare_triple(bn, "http://www.w3.org/2002/07/owl#withRestrictions", list_bns)
+      on_prepare_obj(bn, rdf_type, "http://www.w3.org/2000/01/rdf-schema#Datatype")
+      on_prepare_obj(bn, "http://www.w3.org/2002/07/owl#onDatatype", datatype)
+      on_prepare_obj(bn, "http://www.w3.org/2002/07/owl#withRestrictions", list_bns)
       
     elif (tag == "http://www.w3.org/2002/07/owl#FacetRestriction"):
       facet, literal = objs[-2:]
@@ -411,7 +445,7 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
       
     elif (tag == "http://www.w3.org/2002/07/owl#ObjectInverseOf") or (tag == "http://www.w3.org/2002/07/owl#DataInverseOf") or (tag == "http://www.w3.org/2002/07/owl#inverseOf"):
       bn, prop = objs[-2:]
-      on_prepare_triple(bn, "http://www.w3.org/2002/07/owl#inverseOf", prop)
+      on_prepare_obj(bn, "http://www.w3.org/2002/07/owl#inverseOf", prop)
       
       objs[-2:] = [bn]
     
@@ -425,9 +459,9 @@ def parse(f, on_prepare_triple = None, new_blank = None, new_literal = None):
     if isinstance(on_iri, tuple):
       s,p,o  = on_iri
       on_iri = new_blank()
-      on_prepare_triple(on_iri, rdf_type, "http://www.w3.org/2002/07/owl#Axiom")
-      on_prepare_triple(on_iri, "http://www.w3.org/2002/07/owl#annotatedSource", s)
-      on_prepare_triple(on_iri, "http://www.w3.org/2002/07/owl#annotatedProperty", p)
+      on_prepare_obj(on_iri, rdf_type, "http://www.w3.org/2002/07/owl#Axiom")
+      on_prepare_obj(on_iri, "http://www.w3.org/2002/07/owl#annotatedSource", s)
+      on_prepare_obj(on_iri, "http://www.w3.org/2002/07/owl#annotatedProperty", p)
       on_prepare_triple(on_iri, "http://www.w3.org/2002/07/owl#annotatedTarget", o)
       
     for prop_iri, value in annots: on_prepare_triple(on_iri, prop_iri, value)

@@ -20,12 +20,26 @@
 def _int_base_62(i):
   if i == 0: return ""
   return _int_base_62(i // 62) + "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"[i % 62]
-  #return _int_base_62(i // 62) + ".-[]{}@~&^abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"[i % 62]
-
-class normstr(str):
-  __slots__ = []
-
+  
+  
 class FTS(str):
+  __slots__ = ["lang"]
+  def __new__(Class, s, lang = ""): return str.__new__(Class, s)
+  
+  def __init__(self, s, lang = ""):
+    str.__init__(self)
+    self.lang = lang
+
+class NumS(object):
+  _OPERATORS = { "<", ">", ">=", "<=", "=", "!=" }
+  def __init__(self, *operators_and_values):
+    self.operators_and_values = list(zip(operators_and_values[::2], operators_and_values[1::2]))
+    for (operator, value) in self.operators_and_values:
+      if not operator in self._OPERATORS: raise ValueError("Supported operators are %s!" % self._OPERATORS)
+    #  assert (type(value) is float) or (type(value) is int)
+    
+    
+class normstr(str):
   __slots__ = []
 
 class locstr(str):

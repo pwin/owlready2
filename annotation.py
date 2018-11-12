@@ -21,30 +21,56 @@ from owlready2.namespace import *
 from owlready2.prop      import *
 from owlready2.prop      import _CLASS_PROPS
 
+# import weakref
+# _annot_axiom_cache = weakref.WeakValueDictionary()
 
-class AnnotList(CallbackListWithLanguage):
-  __slots__ = ["_property", "_target", "_annot"]
-  def __init__(self, l, source, property, target, annot):
+# class _AnnotAxiom(object):
+#   def __init__(self, source, property, target, target_d):
+#     self.namespace = source.namespace.ontology
+#     self.source    = source
+#     self.property  = property
+#     self.target    = target
+#     self.target_d  = target_d
+#     self.bnode     = self.search_bnode()
+    
+#   def search_bnode(self):
+#     if self.target_d is None:
+#       for bnode in self.namespace.get_objs_po_s(rdf_type, owl_axiom):
+#         for p, o in self.get_objs_s_po(bnode):
+#           if   (p == owl_annotatedsource)   and (o != self.source):   break
+#           elif (p == owl_annotatedproperty) and (o != self.property): break
+#           elif (p == owl_annotatedtarget)   and (o != self.target):   break
+#       else:
+#         return bnode
+#     else:
+#       for bnode in self.namespace.get_objs_po_s(rdf_type, owl_axiom):
+#         for p, o, d in self.get_quads_s_pod(bnode):
+#           if   (p == owl_annotatedsource)   and (o != self.source):   break
+#           elif (p == owl_annotatedproperty) and (o != self.property): break
+#           elif (p == owl_annotatedtarget)   and (o != self.target):   break
+#       else:
+#         return bnode
+
+class _AnnotList(CallbackListWithLanguage):
+  __slots__ = ["_property", "_target", "_target_d", "_annot"]
+  def __init__(self, l, source, property, target, target_d, annot):
     list.__init__(self, l)
     self._obj      = source
     self._property = property
     self._target   = target
+    self._target_d = target_d
     self._annot    = annot
     
   def _callback(self, obj, old):
     old = set(old)
     new = set(self)
     
-    if not new:
-      obj.namespace.ontology.del_annotation_axiom(obj.storid, self._property, self._target)
-      return
-    
     # Add before, in order to avoid destroying the axiom and then recreating, if all annotations are modified
     for added in new - old:
-      obj.namespace.ontology.add_annotation_axiom(obj.storid, self._property, self._target, self._annot, obj.namespace.ontology._to_rdf(added))
+      x = obj.namespace.ontology.add_annotation_axiom(obj.storid, self._property, self._target, self._target_d, self._annot, *obj.namespace.ontology._to_rdf(added))
       
     for removed in old - new:
-      obj.namespace.ontology.del_annotation_axiom(obj.storid, self._property, self._target, self._annot, obj.namespace.ontology._to_rdf(removed))
+      obj.namespace.ontology.del_annotation_axiom    (obj.storid, self._property, self._target, self._target_d, self._annot, *obj.namespace.ontology._to_rdf(removed))
     
     
 class AnnotationPropertyClass(PropertyClass):
@@ -54,34 +80,29 @@ class AnnotationPropertyClass(PropertyClass):
   def __getitem__(Annot, index):
     if isinstance(index, tuple):
       source, property, target = index
-      world = source.namespace.world # if Annot is in owl_world (e.g. comment), use the world of the source
       if hasattr(source,   "storid"):
+        world = source.namespace.world # if Annot is in owl_world (e.g. comment), use the world of the source
         source_orig = source
         source      = source.storid
+      else:
+        world = self.namespace.world
       if hasattr(property, "storid"): property = property.storid
-      target = world._to_rdf(target)
+      target, target_d = world._to_rdf(target)
       l = []
-      for bnode in world.get_annotation_axioms(source, property, target):
-        for o in world.get_triples_sp(bnode, Annot.storid):
-          l.append(world._to_python(o))
-      return AnnotList(l, source_orig, property, target, Annot.storid)
+      for bnode in world.get_annotation_axioms(source, property, target, target_d):
+        for o, d in world.get_quads_sp_od(bnode, Annot.storid):
+          l.append(world._to_python(o, d))
+          
+      return _AnnotList(l, source_orig, property, target, target_d, Annot.storid)
     
     else:
       return getattr(index, Annot.python_name)
     
   def __setitem__(Annot, index, values):
     if not isinstance(values, list): values = [values]
-    if isinstance(index, tuple):
-      source, property, target = index; lang = None
-      ontology = source.namespace.ontology # if Annot is in owl_world (e.g. comment), use the world of the source
-      source   = source.storid
-      if hasattr(property, "storid"): property = property.storid
-      target = ontology._to_rdf(target)
-      values = [ontology._to_rdf(value) for value in values]
-      ontology.set_annotation_axiom(source, property, target, Annot.storid, values)
-      
-    else:
-      return setattr(index, Annot.python_name, values)
+    
+    if isinstance(index, tuple): Annot[index].reinit(values)
+    else: return setattr(index, Annot.python_name, values)
     
   def __call__(Prop, type, c, *args):
     raise ValueError("Cannot create a property value restriction on an annotation property!")
