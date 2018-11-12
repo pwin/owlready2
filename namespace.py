@@ -85,7 +85,7 @@ class _GraphManager(object):
   def get_transitive_sym(self, subject, predicate): return set()
   def get_transitive_sp_indirect(self, subject, predicates_inverses, already = None): return set()
   def get_objs_spo_spo(self, subject = None, predicate = None, object = None): return []
-  get_objs_s = get_objs_sp = get_objs_po = get_quads_s_p = get_objs_spo_spo
+  get_quads_s_p = get_objs_spo_spo
   
   def has_data_spod(self, subject = None, predicate = None, object = None, d = ""): return False
   has_obj_spo = has_data_spod

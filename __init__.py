@@ -59,6 +59,7 @@ owlready2.namespace.ConstrainedDatatype     = ConstrainedDatatype
 owlready2.namespace.Inverse                 = Inverse
 owlready2.namespace.ValueList               = ValueList
 owlready2.entity.Thing              = Thing
+owlready2.entity.Nothing            = Nothing
 owlready2.entity.ClassConstruct     = ClassConstruct
 owlready2.entity.And                = And
 owlready2.entity.Or                 = Or
