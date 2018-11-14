@@ -17,6 +17,7 @@ from owlready2.ntriples_diff import *
 
 print("Testing Owlready2 version 2-%s located in %s" % (VERSION, owlready2.__file__))
 
+
 set_log_level(0)
 
 next_id = 0
