@@ -15,6 +15,8 @@ from owlready2.base import _universal_abbrev_2_datatype, _universal_datatype_2_a
 
 from owlready2.ntriples_diff import *
 
+print("Testing Owlready2 version 2-%s located in %s" % (VERSION, owlready2.__file__))
+
 set_log_level(0)
 
 next_id = 0
@@ -3426,7 +3428,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
 
     o1.p = [o2, o3]
     o4.p = [o2]
-    
+
     assert onto.search(p = [o2, o3]) == [o1]
     
     o1 = O()
@@ -3489,6 +3491,17 @@ multiple lines with " and ’ and \ and & and < and > and é."""
 
     assert set(onto.search(i = NumS("<=", 3))) == set([o1, o2, o4])
     assert set(onto.search(i = NumS("=" , 1))) == set([o1, o4])
+    assert set(onto.search(i = NumS(">" , 1, "<", 4))) == set([o2])
+    
+  def test_search_11(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    l = world.search(type = n.Pizza, has_topping = world.search(type = n.Tomato))
+    assert set(l) == { n.ma_pizza }
+    
+    l = world.search(type = n.Tomato, topping_of = world.search(has_topping = n.mon_frometon))
+    assert set(l) == { n.ma_tomate }
     
     
   def test_rdflib_1(self):

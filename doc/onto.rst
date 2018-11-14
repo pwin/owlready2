@@ -207,6 +207,14 @@ Owlready classes and individuals can be used as values within search(), as follo
    >>> onto.search_one(is_a = onto.Pizza)
    
    
+Finally, search() can be nested, as in the following example:
+
+::
+
+   >>> onto.search(is_a = onto.Pizza, has_topping = onto.search(is_a = onto.Tomato))
+
+Owlready automatically combines nested searches in a single, optimized, search.
+
 For more complex queries, SQPARQL can be used with RDFlib (see :doc:`world`).
 
 

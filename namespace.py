@@ -212,15 +212,60 @@ class _GraphManager(object):
       
   def disjoints(self): return itertools.chain(self.disjoint_classes(), self.disjoint_properties(), self.different_individuals())
   
+  # def search(self, _use_str_as_loc_str = True, debug = False, **kargs):
+  #   prop_vals = []
+  #   for k, v0 in kargs.items():
+  #     if not isinstance(v0, list): v0 = (v0,)
+  #     for v in v0:
+  #       if   k == "iri":
+  #         prop_vals.append((" iri", v, None))
+  #       elif (k == "is_a") or (k == "subclass_of") or (k == "type"):
+  #         v2 = [child.storid for child in v.descendants()]
+  #         prop_vals.append((" %s" % k, v2, None))
+  #       else:
+  #         d = None
+  #         k2 = self.world._props.get(k)
+  #         if k2 is None:
+  #           k2 = _universal_iri_2_abbrev.get(k) or k
+  #         else:
+  #           if k2.inverse_property:
+  #             k2 = (k2.storid, k2.inverse.storid)
+  #           else:
+  #             k2 = k2.storid
+  #         if v is None:
+  #           v2 = None
+  #         else:
+  #           if   isinstance(v, FTS):  v2 = v; d = "*"
+  #           elif isinstance(v, NumS): v2 = v; d = "*"
+  #           else:
+  #             v2, d = self.world._to_rdf(v)
+  #             if not d is None: prop_type = 2
+  #             if isinstance(v2, int) or isinstance(v2, float) or (_use_str_as_loc_str and (d == "Y")): # A string, which can be associated to a language in RDF
+  #               d = "*"
+  #         prop_vals.append((k2, v2, d))
+          
+  #   r = self.graph.search(prop_vals, debug = debug)
+  #   return [self.world._get_by_storid(o) for (o,) in r if not o.startswith("_")]
+
+  # def search_one(self, **kargs):
+  #   r = self.search(**kargs)
+  #   if r: return r[0]
+  #   return None
+
+  
+  
   def search(self, _use_str_as_loc_str = True, debug = False, **kargs):
+    from owlready2.triplelite import _SearchList
+    
     prop_vals = []
     for k, v0 in kargs.items():
-      if not isinstance(v0, list): v0 = (v0,)
+      if isinstance(v0, _SearchList) or not isinstance(v0, list): v0 = (v0,)
       for v in v0:
         if   k == "iri":
           prop_vals.append((" iri", v, None))
         elif (k == "is_a") or (k == "subclass_of") or (k == "type"):
-          v2 = [child.storid for child in v.descendants()]
+          if isinstance(v, _SearchList): v2 = v
+          else:                          v2 = [child.storid for child in v.descendants()]
           prop_vals.append((" %s" % k, v2, None))
         else:
           d = None
@@ -237,6 +282,7 @@ class _GraphManager(object):
           else:
             if   isinstance(v, FTS):  v2 = v; d = "*"
             elif isinstance(v, NumS): v2 = v; d = "*"
+            elif isinstance(v, _SearchList): v2 = v
             else:
               v2, d = self.world._to_rdf(v)
               if not d is None: prop_type = 2
@@ -244,13 +290,11 @@ class _GraphManager(object):
                 d = "*"
           prop_vals.append((k2, v2, d))
           
-    r = self.graph.search(prop_vals, debug = debug)
-    return [self.world._get_by_storid(o) for (o,) in r if not o.startswith("_")]
-  
-  def search_one(self, **kargs):
-    r = self.search(**kargs)
-    if r: return r[0]
-    return None
+    #r = self.graph.search(prop_vals, debug = debug)
+    #return self.world._get_by_storid(o) for (o,) in r if not o.startswith("_")]
+    return _SearchList(self.world, prop_vals)
+    
+  def search_one(self, **kargs): return self.search(**kargs).first()
     
   
 onto_path = []

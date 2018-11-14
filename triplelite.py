@@ -509,152 +509,152 @@ class Graph(BaseMainGraph):
         else:           self.execute("DELETE FROM datas WHERE s=? AND p=? AND o=? AND d=?", (s, p, o, d,))
         
         
-  def search(self, prop_vals, c = None, debug = False):
-    tables       = []
-    conditions   = []
-    params       = []
-    alternatives = []
-    excepts      = []
-    i = 0
+#   def search(self, prop_vals, c = None, debug = False):
+#     tables       = []
+#     conditions   = []
+#     params       = []
+#     alternatives = []
+#     excepts      = []
+#     i = 0
     
-    for k, v, d in prop_vals:
-      if v is None:
-        excepts.append(k)
-        continue
+#     for k, v, d in prop_vals:
+#       if v is None:
+#         excepts.append(k)
+#         continue
       
-      i += 1
-      if d is None:
-        tables.append("objs q%s" % i)
-      else:
-        tables.append("datas q%s" % i)
+#       i += 1
+#       if d is None:
+#         tables.append("objs q%s" % i)
+#       else:
+#         tables.append("datas q%s" % i)
         
-      if not c is None:
-        conditions  .append("q%s.c = ?" % i)
-        params      .append(c)
+#       if not c is None:
+#         conditions  .append("q%s.c = ?" % i)
+#         params      .append(c)
         
-      if   k == " iri":
-        if i > 1: conditions.append("q%s.s = q1.s" % i)
-        tables    .append("resources")
-        conditions.append("resources.storid = q%s.s" % i)
-        if "*" in v: conditions.append("resources.iri GLOB ?")
-        else:        conditions.append("resources.iri = ?")
-        params.append(v)
+#       if   k == " iri":
+#         if i > 1: conditions.append("q%s.s = q1.s" % i)
+#         tables    .append("resources")
+#         conditions.append("resources.storid = q%s.s" % i)
+#         if "*" in v: conditions.append("resources.iri GLOB ?")
+#         else:        conditions.append("resources.iri = ?")
+#         params.append(v)
         
-      elif k == " is_a":
-        if i > 1: conditions.append("q%s.s = q1.s" % i)
-        conditions.append("(q%s.p = '%s' OR q%s.p = '%s') AND q%s.o IN (%s)" % (i, rdf_type, i, rdfs_subclassof, i, ",".join("?" for i in v)))
-        params    .extend(v)
+#       elif k == " is_a":
+#         if i > 1: conditions.append("q%s.s = q1.s" % i)
+#         conditions.append("(q%s.p = '%s' OR q%s.p = '%s') AND q%s.o IN (%s)" % (i, rdf_type, i, rdfs_subclassof, i, ",".join("?" for i in v)))
+#         params    .extend(v)
         
-      elif k == " type":
-        if i > 1: conditions.append("q%s.s = q1.s" % i)
-        conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdf_type, i, ",".join("?" for i in v)))
-        params    .extend(v)
+#       elif k == " type":
+#         if i > 1: conditions.append("q%s.s = q1.s" % i)
+#         conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdf_type, i, ",".join("?" for i in v)))
+#         params    .extend(v)
         
-      elif k == " subclass_of":
-        if i > 1: conditions.append("q%s.s = q1.s" % i)
-        conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdfs_subclassof, i, ",".join("?" for i in v)))
-        params    .extend(v)
+#       elif k == " subclass_of":
+#         if i > 1: conditions.append("q%s.s = q1.s" % i)
+#         conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdfs_subclassof, i, ",".join("?" for i in v)))
+#         params    .extend(v)
         
-      elif isinstance(k, tuple): # Prop with inverse
-        if i == 1: # Does not work if it is the FIRST => add a dumb first.
-          i += 1
-          tables.append("objs q%s" % i)
-          if not c is None:
-            conditions  .append("q%s.c = ?" % i)
-            params      .append(c)
+#       elif isinstance(k, tuple): # Prop with inverse
+#         if i == 1: # Does not work if it is the FIRST => add a dumb first.
+#           i += 1
+#           tables.append("objs q%s" % i)
+#           if not c is None:
+#             conditions  .append("q%s.c = ?" % i)
+#             params      .append(c)
             
-        if v.startswith('"*"'):
-          cond1 = "q%s.s = q1.s AND q%s.p = ?" % (i, i)
-          cond2 = "q%s.o = q1.s AND q%s.p = ?" % (i, i)
-          params1 = [k[0]]
-          params2 = [k[1]]
-        else:
-          cond1 = "q%s.s = q1.s AND q%s.p = ? AND q%s.o = ?" % (i, i, i)
-          cond2 = "q%s.o = q1.s AND q%s.p = ? AND q%s.s = ?" % (i, i, i)
-          params1 = [k[0], v]
-          params2 = [k[1], v]
-        alternatives.append(((cond1, params1), (cond2, params2)))
+#         if v == "*":
+#           cond1 = "q%s.s = q1.s AND q%s.p = ?" % (i, i)
+#           cond2 = "q%s.o = q1.s AND q%s.p = ?" % (i, i)
+#           params1 = [k[0]]
+#           params2 = [k[1]]
+#         else:
+#           cond1 = "q%s.s = q1.s AND q%s.p = ? AND q%s.o = ?" % (i, i, i)
+#           cond2 = "q%s.o = q1.s AND q%s.p = ? AND q%s.s = ?" % (i, i, i)
+#           params1 = [k[0], v]
+#           params2 = [k[1], v]
+#         alternatives.append(((cond1, params1), (cond2, params2)))
         
-      else: # Prop without inverse
-        if i > 1: conditions.append("q%s.s = q1.s" % i)
-        if isinstance(v, FTS):
-          fts = self.prop_fts[k]
-          tables    .append("fts_%s" % fts)
-          conditions.append("q%s.rowid = fts_%s.rowid" % (i, fts))
-          conditions.append("fts_%s MATCH ?" % fts)
-          params    .append(v)
-          if v.lang != "":
-            conditions.append("fts_%s.d = ?" % (fts,))
-            params    .append("@%s" % v.lang)
+#       else: # Prop without inverse
+#         if i > 1: conditions.append("q%s.s = q1.s" % i)
+#         if isinstance(v, FTS):
+#           fts = self.prop_fts[k]
+#           tables    .append("fts_%s" % fts)
+#           conditions.append("q%s.rowid = fts_%s.rowid" % (i, fts))
+#           conditions.append("fts_%s MATCH ?" % fts)
+#           params    .append(v)
+#           if v.lang != "":
+#             conditions.append("fts_%s.d = ?" % (fts,))
+#             params    .append("@%s" % v.lang)
             
-        elif isinstance(v, NumS):
-          for operator, value in v.operators_and_values:
-            conditions.append("q%s.p = ?" % i)
-            params    .append(k)
-            conditions.append("q%s.o %s ?" % (i, operator))
-            params    .append(value)
-        else:
-          conditions.append("q%s.p = ?" % i)
-          params    .append(k)
-          if isinstance(v, str) and ("*" in v):
-            if   v.startswith('"*"'):
-              conditions.append("q%s.o GLOB '*'" % i)
-            else:
-              conditions.append("q%s.o GLOB ?" % i)
-              params    .append(v)
-          else:
-            conditions.append("q%s.o = ?" % i)
-            params    .append(v)
-            if d and (d != "*"):
-              conditions.append("q%s.d = ?" % i)
-              params    .append(d)
+#         elif isinstance(v, NumS):
+#           for operator, value in v.operators_and_values:
+#             conditions.append("q%s.p = ?" % i)
+#             params    .append(k)
+#             conditions.append("q%s.o %s ?" % (i, operator))
+#             params    .append(value)
+#         else:
+#           conditions.append("q%s.p = ?" % i)
+#           params    .append(k)
+#           if isinstance(v, str) and ("*" in v):
+#             if   v == "*":
+#               conditions.append("q%s.o GLOB '*'" % i)
+#             else:
+#               conditions.append("q%s.o GLOB ?" % i)
+#               params    .append(v)
+#           else:
+#             conditions.append("q%s.o = ?" % i)
+#             params    .append(v)
+#             if d and (d != "*"):
+#               conditions.append("q%s.d = ?" % i)
+#               params    .append(d)
               
             
-    if alternatives:
-      conditions0 = conditions
-      params0     = params
-      params      = []
-      reqs        = []
-      for combination in all_combinations(alternatives):
-        combination_conditions, combination_paramss = zip(*combination)
-        req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions0 + list(combination_conditions)))
-        reqs.append(req)
-        params.extend(params0)
-        for combination_params in combination_paramss: params.extend(combination_params)
-      req = "SELECT DISTINCT * FROM (\n%s\n)" % "\nUNION\n".join(reqs)
+#     if alternatives:
+#       conditions0 = conditions
+#       params0     = params
+#       params      = []
+#       reqs        = []
+#       for combination in all_combinations(alternatives):
+#         combination_conditions, combination_paramss = zip(*combination)
+#         req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions0 + list(combination_conditions)))
+#         reqs.append(req)
+#         params.extend(params0)
+#         for combination_params in combination_paramss: params.extend(combination_params)
+#       req = "SELECT DISTINCT * FROM (\n%s\n)" % "\nUNION\n".join(reqs)
       
-    else:
-      req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions))
+#     else:
+#       req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions))
       
       
-    if excepts:
-      conditions = []
-      for except_p in excepts:
-        if isinstance(except_p, tuple): # Prop with inverse
-          conditions.append("objs.s = candidates.s AND objs.p = ?")
-          params    .append(except_p[0])
-          conditions.append("objs.o = candidates.s AND objs.p = ?")
-          params    .append(except_p[1])
-          req = """
-WITH candidates(s) AS (%s)
-SELECT s FROM candidates
-EXCEPT SELECT candidates.s FROM candidates, objs WHERE (%s)""" % (req, ") OR (".join(conditions))
+#     if excepts:
+#       conditions = []
+#       for except_p in excepts:
+#         if isinstance(except_p, tuple): # Prop with inverse
+#           conditions.append("objs.s = candidates.s AND objs.p = ?")
+#           params    .append(except_p[0])
+#           conditions.append("objs.o = candidates.s AND objs.p = ?")
+#           params    .append(except_p[1])
+#           req = """
+# WITH candidates(s) AS (%s)
+# SELECT s FROM candidates
+# EXCEPT SELECT candidates.s FROM candidates, objs WHERE (%s)""" % (req, ") OR (".join(conditions))
           
-        else: # No inverse
-          conditions.append("quads.s = candidates.s AND quads.p = ?")
-          params    .append(except_p)
-          req = """
-WITH candidates(s) AS (%s)
-SELECT s FROM candidates
-EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR (".join(conditions))
+#         else: # No inverse
+#           conditions.append("quads.s = candidates.s AND quads.p = ?")
+#           params    .append(except_p)
+#           req = """
+# WITH candidates(s) AS (%s)
+# SELECT s FROM candidates
+# EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR (".join(conditions))
     
-    if debug:   
-      print("search debug:")
-      print("  prop_vals = ", prop_vals)
-      print("  req       = ", req)
-      print("  params    = ", params)
+#     if debug:   
+#       print("search debug:")
+#       print("  prop_vals = ", prop_vals)
+#       print("  req       = ", req)
+#       print("  params    = ", params)
       
-    return self.execute(req, params).fetchall()
+#     return self.execute(req, params).fetchall()
   
   def _punned_entities(self):
     from owlready2.base import rdf_type, owl_class, owl_named_individual
@@ -1256,3 +1256,216 @@ SELECT DISTINCT x FROM transit""", (self.c, p, o, self.c, p)).fetchall(): yield 
 #      r.add(s)
 #      r.add(o)
 #    yield from r
+
+
+
+_NEXT_SEARCH_ID = 0
+class _SearchList(LazyList):
+  def __init__(self, world, prop_vals, c = None):
+    global _NEXT_SEARCH_ID
+    
+    super().__init__(self._do_search)
+    self.world     = world
+    self.prop_vals = prop_vals
+    self._c         = c
+    
+    _NEXT_SEARCH_ID += 1
+    self.id = _NEXT_SEARCH_ID
+    
+    self.tables            = []
+    self.conditions        = []
+    self.params            = []
+    self.alternatives      = []
+    self.excepts           = []
+    self.except_conditions = []
+    self.except_params     = []
+    self.nested_searchs    = []
+    
+    n = 0
+    for k, v, d in prop_vals:
+      if v is None:
+        self.excepts.append(k)
+        continue
+      
+      n += 1
+      i = "%s_%s" % (self.id, n)
+      if n == 1: self.target = i
+      if d is None:
+        self.tables.append("objs q%s" % i)
+      else:
+        self.tables.append("datas q%s" % i)
+        
+      if not c is None:
+        self.conditions  .append("q%s.c = ?" % i)
+        self.params      .append(c)
+        
+      if   k == " iri":
+        if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
+        self.tables    .append("resources")
+        self.conditions.append("resources.storid = q%s.s" % i)
+        if "*" in v: self.conditions.append("resources.iri GLOB ?")
+        else:        self.conditions.append("resources.iri = ?")
+        self.params.append(v)
+        
+      elif k == " is_a":
+        if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
+        if isinstance(v, _SearchList):
+          self.conditions.append("(q%s.p = '%s' OR q%s.p = '%s') AND q%s.o = q%s.s" % (i, rdf_type, i, rdfs_subclassof, i, v.target))
+          self.nested_searchs.append(v)
+          self.nested_searchs.extend(v.nested_searchs)
+        else:
+          self.conditions.append("(q%s.p = '%s' OR q%s.p = '%s') AND q%s.o IN (%s)" % (i, rdf_type, i, rdfs_subclassof, i, ",".join("?" for i in v)))
+          self.params    .extend(v)
+          
+      elif k == " type":
+        if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
+        if isinstance(v, _SearchList):
+          self.conditions.append("q%s.p = '%s' AND q%s.o = q%s.s" % (i, rdf_type, i, v.target))
+          self.nested_searchs.append(v)
+          self.nested_searchs.extend(v.nested_searchs)
+        else:
+          self.conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdf_type, i, ",".join("?" for i in v)))
+          self.params    .extend(v)
+          
+      elif k == " subclass_of":
+        if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
+        if isinstance(v, _SearchList):
+          self.conditions.append("q%s.p = '%s' AND q%s.o = q%s.s" % (i, rdfs_subclassof, i, v.target))
+          self.nested_searchs.append(v)
+          self.nested_searchs.extend(v.nested_searchs)
+        else:
+          self.conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdfs_subclassof, i, ",".join("?" for i in v)))
+          self.params    .extend(v)
+          
+      elif isinstance(k, tuple): # Prop with inverse
+        if n == 1: # Does not work if it is the FIRST => add a dumb first.
+          n += 1
+          i = "%s_%s" % (self.id, n)
+          self.tables.append("objs q%s" % i)
+          if not c is None:
+            self.conditions  .append("q%s.c = ?" % i)
+            self.params      .append(c)
+
+        if   v == "*":
+          cond1 = "q%s.s = q%s.s AND q%s.p = ?" % (i, self.target, i)
+          cond2 = "q%s.o = q%s.s AND q%s.p = ?" % (i, self.target, i)
+          params1 = [k[0]]
+          params2 = [k[1]]
+        elif isinstance(v, _SearchList):
+          cond1 = "q%s.s = q%s.s AND q%s.p = ? AND q%s.o = q%s.s" % (i, self.target, i, i, v.target)
+          cond2 = "q%s.o = q%s.s AND q%s.p = ? AND q%s.s = q%s.s" % (i, self.target, i, i, v.target)
+          params1 = [k[0]]
+          params2 = [k[1]]
+          self.nested_searchs.append(v)
+          self.nested_searchs.extend(v.nested_searchs)
+        else:
+          cond1 = "q%s.s = q%s.s AND q%s.p = ? AND q%s.o = ?" % (i, self.target, i, i)
+          cond2 = "q%s.o = q%s.s AND q%s.p = ? AND q%s.s = ?" % (i, self.target, i, i)
+          params1 = [k[0], v]
+          params2 = [k[1], v]
+        self.alternatives.append(((cond1, params1), (cond2, params2)))
+        
+      else: # Prop without inverse
+        if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
+        if isinstance(v, FTS):
+          fts = world.graph.prop_fts[k]
+          self.tables    .append("fts_%s" % fts)
+          self.conditions.append("q%s.rowid = fts_%s.rowid" % (i, fts))
+          self.conditions.append("fts_%s MATCH ?" % fts)
+          self.params    .append(v)
+          if v.lang != "":
+            self.conditions.append("fts_%s.d = ?" % (fts,))
+            self.params    .append("@%s" % v.lang)
+            
+        else:
+          self.conditions.append("q%s.p = ?" % i)
+          self.params    .append(k)
+          if   isinstance(v, _SearchList):
+            self.conditions.append("q%s.o = q%s.s" % (i, v.target))
+            self.params    .append(v)
+            self.nested_searchs.append(v)
+            self.nested_searchs.extend(v.nested_searchs)
+            
+          elif isinstance(v, NumS):
+            for operator, value in v.operators_and_values:
+              self.conditions.append("q%s.o %s ?" % (i, operator))
+              self.params    .append(value)
+              
+          elif isinstance(v, str) and ("*" in v):
+            if   v == "*":
+              self.conditions.append("q%s.o GLOB '*'" % i)
+            else:
+              self.conditions.append("q%s.o GLOB ?" % i)
+              self.params    .append(v)
+              
+          else:
+            self.conditions.append("q%s.o = ?" % i)
+            self.params    .append(v)
+            if d and (d != "*"):
+              self.conditions.append("q%s.d = ?" % i)
+              self.params    .append(d)
+              
+    if self.excepts:
+      for except_p in self.excepts:  # Use only quads because it may contain several properties mixing objs and datas
+        self.except_conditions.append("quads.s = candidates.s AND quads.p = ?")
+        self.except_params    .append(except_p[0])
+        if isinstance(except_p, tuple): # Prop with inverse
+          self.except_conditions.append("quads.o = candidates.s AND quads.p = ?")
+          self.except_params    .append(except_p[1])
+
+          
+  def sql_request(self):
+    tables     = self.tables     + [x for search in self.nested_searchs for x in search.tables]
+    conditions = self.conditions + [x for search in self.nested_searchs for x in search.conditions]
+    params     = self.params     + [x for search in self.nested_searchs for x in search.params]
+
+    if self.nested_searchs:
+      for search in self.nested_searchs:
+        if search.excepts: raise ValueError("Nested searches with exclusions are not supported!")
+      
+    if not self.alternatives:
+      sql = "SELECT DISTINCT q%s.s from %s WHERE %s" % (self.target, ", "   .join(tables), " AND ".join(conditions))
+      
+    else:
+      conditions0 = conditions
+      params0     = params
+      params      = []
+      sqls        = []
+      for combination in all_combinations(self.alternatives):
+        combination_conditions, combination_paramss = zip(*combination)
+        sql = "SELECT DISTINCT q%s.s from %s WHERE %s" % (self.target, ", ".join(tables), " AND ".join(conditions0 + list(combination_conditions)))
+        sqls.append(sql)
+        params.extend(params0)
+        for combination_params in combination_paramss: params.extend(combination_params)
+      sql = "SELECT DISTINCT * FROM (\n%s\n)" % "\nUNION\n".join(sqls)
+      
+    if self.excepts:
+      sql = """
+WITH candidates(s) AS (%s)
+SELECT s FROM candidates
+EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (sql, ") OR (".join(self.except_conditions))
+      params = params + self.except_params
+      
+    return sql, params
+
+  
+  def _do_search(self):
+    sql, params = self.sql_request()
+    return (self.world._get_by_storid(o) for (o,) in self.world.graph.execute(sql, params).fetchall())
+  
+  def _do_search_rdf(self):
+    sql, params = self.sql_request()
+    return self.world.graph.execute(sql, params).fetchall()
+    
+  def dump(self):
+    sql, params = self.sql_request()
+    print("search debug:")
+    print("  prop_vals = ", self.prop_vals)
+    try:
+      sql_with_params = sql.replace("?", "%s") % tuple(params)
+      print("  req       = ", sql_with_params)
+    except:
+      print("  req       = ", )
+      print("  params    = ", params)
+    print("  params    = ", params)
+    

@@ -125,7 +125,99 @@ class CallbackListWithLanguage(CallbackList):
       self.reinit(l)
   
 
-
+class LazyList(FirstList):
+  __slots__ = ["_populate"]
+  
+  def __init__(self, populate):
+    super().__init__()
+    self._populate = populate
+  
+  def __repr__(self):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().__repr__()
+  
+  def __str__(self):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().__str__()
+    
+  def __iter__(self):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().__iter__()
+    
+  def __len__(self):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().__len__()
+    
+  def __eq__(self, o):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().__eq__(o)
+    
+  def __ne__(self, o):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().__ne__(o)
+    
+  def __getitem__(self, i):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().__getitem__(i)
+    
+  def __delitem__(self, i):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    super().__delitem__(i)
+    
+  def __setitem__(self, i, x):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    super().__setitem__(i, x)
+    
+  def __iadd__(self, x):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    super().__iadd__(x)
+    
+  def __imul__(self, x):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    super().__imul__(x)
+    
+  def pop(self, index):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().pop(index)
+    
+  def count(self, e):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().count(e)
+    
+  def index(self, e):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().index(e)
+    
+  def reverse(self):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().reverse()
+  
+  def sort(self, key = None, reverse = False):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().sort(key, reverse)
+    
+  def append(self, e):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().append(e)
+    
+  def insert(self, index, e):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().insert(index, e)
+    
+  def extend(self, l):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().extend(l)
+    
+  def remove(self, e):
+    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    return super().remove(e)
+    
+  def clear(self):
+    if self._populate: self._populate = None
+    return super().clear()
+    
+  
+  
 class Environment(object):
   __slots__ = ["level"]
   def __init__(self): self.level = 0
