@@ -23,7 +23,6 @@ import weakref
 
 from owlready2.base import rdf_type, rdfs_subclassof, owl_equivalentclass, owl_equivalentproperty, owl_equivalentindividual
 from owlready2.namespace import Ontology
-import editobj3.introsp
 
 class ObservedOntology(Ontology):
   def _get_pred_value(self, subject, predicate):
@@ -32,7 +31,7 @@ class ObservedOntology(Ontology):
     else:
       return [self._to_python(o) for o in self.get_triples_sp(subject, predicate)]
     
-  def _gen_triple_method(self, triple_method):
+  def _gen_triple_method_spo(self, triple_method):
     def f(subject, predicate, object):
       observation = self.world._observations.get(subject)
         
@@ -62,17 +61,26 @@ class ObservedOntology(Ontology):
   
 def start_observing(onto):
   if not hasattr(onto.world, "_observations"): onto.world._observations = {}
-  if onto.__class__ is ObservedOntology: return
-  onto.__class__ = ObservedOntology
-  onto._add_triple = onto._gen_triple_method(onto.graph._add_triple)
-  onto._set_triple = onto._gen_triple_method(onto.graph._set_triple)
-  onto._del_triple = onto._gen_triple_method(onto.graph._del_triple)
-  
+  if not onto.__class__ is ObservedOntology:
+    onto.__class__ = ObservedOntology
+    onto._add_obj_spo   = onto._gen_triple_method_spo(onto.graph._add_obj_spo)
+    onto._set_obj_spo   = onto._gen_triple_method_spo(onto.graph._set_obj_spo)
+    onto._del_obj_spo   = onto._gen_triple_method_spo(onto.graph._del_obj_spo)
+    onto._add_data_spod = onto._gen_triple_method(onto.graph._add_data_spod)
+    onto._set_data_spod = onto._gen_triple_method(onto.graph._set_data_spod)
+    onto._del_data_spod = onto._gen_triple_method(onto.graph._del_data_spod)
+    
 def stop_observing(onto):
   onto.__class__ = Ontology
   onto._add_triple = onto.graph._add_triple
   onto._set_triple = onto.graph._set_triple
   onto._del_triple = onto.graph._del_triple
+  onto._add_obj_spo   = onto._add_obj_spo
+  onto._set_obj_spo   = onto._set_obj_spo
+  onto._del_obj_spo   = onto._del_obj_spo
+  onto._add_data_spod = onto._add_data_spod
+  onto._set_data_spod = onto._set_data_spod
+  onto._del_data_spod = onto._del_data_spod
   
   
   
@@ -108,9 +116,9 @@ def scan_collapsed_changes():
   
 
 def observe(o, listener):
-  if isinstance(o, editobj3.introsp.ObjectPack):
-    for o2 in o.objects: observe(o2, listener)
-    return
+  #if isinstance(o, editobj3.introsp.ObjectPack):
+  #  for o2 in o.objects: observe(o2, listener)
+  #  return
   
   observation = o.namespace.world._observations.get(o.storid)
   if observation: observation.listeners.append(listener)
@@ -119,10 +127,10 @@ def observe(o, listener):
     
     
 def isobserved(o, listener = None):
-  if isinstance(o, editobj3.introsp.ObjectPack):
-    for o2 in o.objects:
-      if isobserved(o2, listener): return True
-    return False
+  #if isinstance(o, editobj3.introsp.ObjectPack):
+  #  for o2 in o.objects:
+  #    if isobserved(o2, listener): return True
+  #  return False
   
   observation = o.namespace.world._observations.get(o.storid)
   
@@ -134,9 +142,9 @@ def send_event(o, pred, new, old):
   if observation: observation.call(pred, new, old)
     
 def unobserve(o, listener = None):
-  if isinstance(o, editobj3.introsp.ObjectPack):
-    for o2 in o.objects: unobserve(o2, listener)
-    return
+  #if isinstance(o, editobj3.introsp.ObjectPack):
+  #  for o2 in o.objects: unobserve(o2, listener)
+  #  return
     
   if listener:
     observation = o.namespace.world._observations.get(o.storid)

@@ -62,7 +62,7 @@ def all_combinations(l):
 
 class Graph(BaseMainGraph):
   _SUPPORT_CLONING = True
-  def __init__(self, filename, clone = None, exclusive = True, world = None):
+  def __init__(self, filename, clone = None, exclusive = True, world = None, profiling = False):
     exists        = os.path.exists(filename) and os.path.getsize(filename) # BEFORE creating db!
     initialize_db = (clone is None) and ((filename == ":memory:") or (not exists))
     
@@ -70,7 +70,48 @@ class Graph(BaseMainGraph):
     if exclusive: self.db.execute("""PRAGMA locking_mode = EXCLUSIVE""")
     else:         self.db.execute("""PRAGMA locking_mode = NORMAL""")
     
-    self.execute  = self.db.execute
+    if profiling:
+      import time
+      from collections import Counter
+      self.requests_counts = Counter()
+      self.requests_times  = Counter()
+      
+      def execute(s, args = ()):
+        if "SELECT" in s:
+          self.requests_counts[s] += 1
+          t0 = time.time()
+          r = list(self.db.execute(s, args))
+          t = time.time() - t0
+          self.requests_times[s] += t
+        return self.db.execute(s, args)
+      self.execute = execute
+      
+      def reset_profiling():
+        self.requests_counts = Counter()
+        self.requests_times  = Counter()
+      self.reset_profiling = reset_profiling
+      
+      def show_profiling():
+        print(file = sys.stderr)
+        print("Request counts:", file = sys.stderr)
+        for s, nb in self.requests_counts.most_common():
+          print(" ", nb, "\t", s.replace("\n", " "), file = sys.stderr)
+        print(file = sys.stderr)
+        print("Request total times:", file = sys.stderr)
+        for s, nb in self.requests_times.most_common():
+          print(" ", nb, "\t", s.replace("\n", " "), file = sys.stderr)
+        print(file = sys.stderr)
+        print("Request mean times:", file = sys.stderr)
+        rmt = Counter()
+        for s, nb in self.requests_counts.most_common():
+          rmt[s] = self.requests_times[s] / nb
+        for s, nb in rmt.most_common():
+          print(" ", nb, "\t", s.replace("\n", " "), file = sys.stderr)
+      self.show_profiling = show_profiling
+      
+    else:
+      self.execute  = self.db.execute
+      
     self.c_2_onto          = {}
     self.onto_2_subgraph   = {}
     self.last_numbered_iri = {}
@@ -421,7 +462,7 @@ class Graph(BaseMainGraph):
     
   def get_objs_po_s(self, p, o):
     for (x,) in self.execute("SELECT s FROM objs WHERE p=? AND o=?", (p, o)).fetchall(): yield x
-    
+        
   def get_obj_sp_o(self, s, p):
     r = self.execute("SELECT o FROM objs WHERE s=? AND p=? LIMIT 1", (s, p)).fetchone()
     if r: return r[0]

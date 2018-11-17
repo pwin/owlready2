@@ -10,7 +10,7 @@ from owlready2 import *
 
 t = time.time()
 
-default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite3", exclusive = True)
+#default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite3", exclusive = True)
 #default_world.set_backend("postgresql", user = "jiba")
 #default_world.set_backend("mysql", user = "jiba")
 
