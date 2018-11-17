@@ -131,6 +131,28 @@ class Graph(BaseMainGraph):
       self.execute("""CREATE TABLE objs (c INTEGER, s TEXT, p TEXT, o TEXT)""")
       self.execute("""CREATE TABLE datas (c INTEGER, s TEXT, p TEXT, o BLOB, d TEXT)""")
       self.execute("""CREATE VIEW quads (c,s,p,o,d) AS SELECT c,s,p,o,NULL FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
+      
+#       self.execute("""CREATE TABLE equivs (rowid INTEGER, c INTEGER, s TEXT, o TEXT)""")
+#       self.db.cursor().executescript("""
+# CREATE TRIGGER equivs_insert AFTER INSERT ON objs WHEN new.p='x' BEGIN
+#   INSERT INTO equivs VALUES (new.rowid * 2, new.c, new.s, new.o), (new.rowid * 2 + 1, new.c, new.o, new.s);
+# END;
+# CREATE TRIGGER equivs_delete AFTER DELETE ON objs WHEN old.p='x' BEGIN
+#   DELETE FROM equivs WHERE rowid IN (old.rowid * 2, old.rowid * 2 + 1);
+# END;
+# CREATE TRIGGER equivs_update AFTER UPDATE ON objs WHEN new.p='%s' BEGIN
+#   UPDATE equivs SET s=new.s, o=new.o  WHERE rowid = new.rowid * 2;
+#   UPDATE equivs SET s=new.o, o=new.s  WHERE rowid = new.rowid * 2;
+# END;
+# """)
+#       self.execute("""CREATE INDEX index_equivs_s ON equivs(s)""")
+
+#       """
+# INSERT INTO equivs VALUES SELECT c,s,o FROM objs WHERE p='x';
+# INSERT INTO equivs VALUES SELECT c,o,s FROM objs WHERE p='x';
+# """
+      
+      
       self.execute("""CREATE TABLE ontologies (c INTEGER PRIMARY KEY, iri TEXT, last_update DOUBLE)""")
       self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
       self.execute("""CREATE TABLE prop_fts (fts INTEGER PRIMARY KEY, storid TEXT)""")
@@ -140,10 +162,10 @@ class Graph(BaseMainGraph):
         self.execute("""CREATE TABLE resources (storid TEXT PRIMARY KEY, iri TEXT)""")
       self.db.executemany("INSERT INTO resources VALUES (?,?)", _universal_abbrev_2_iri.items())
       self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
-      self.execute("""CREATE INDEX index_objs_s ON objs(s)""")
-      self.execute("""CREATE INDEX index_objs_o ON objs(o)""")
-      self.execute("""CREATE INDEX index_datas_s ON datas(s)""")
-      self.execute("""CREATE INDEX index_datas_o ON datas(o)""")
+      self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
+      self.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
+      self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
+      self.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
       self.db.commit()
       
     else:
@@ -186,10 +208,10 @@ class Graph(BaseMainGraph):
         self.execute("""DROP TABLE quads""")
         self.execute("""DROP INDEX IF EXISTS index_quads_s """)
         self.execute("""DROP INDEX IF EXISTS index_quads_o""")
-        self.execute("""CREATE INDEX index_objs_s ON objs(s)""")
-        self.execute("""CREATE INDEX index_objs_o ON objs(o)""")
-        self.execute("""CREATE INDEX index_datas_s ON datas(s)""")
-        self.execute("""CREATE INDEX index_datas_o ON datas(o)""")
+        self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
+        self.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
+        self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
+        self.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
         
         self.execute("""UPDATE store SET version=4""")
         self.db.commit()
@@ -462,7 +484,7 @@ class Graph(BaseMainGraph):
     
   def get_objs_po_s(self, p, o):
     for (x,) in self.execute("SELECT s FROM objs WHERE p=? AND o=?", (p, o)).fetchall(): yield x
-        
+    
   def get_obj_sp_o(self, s, p):
     r = self.execute("SELECT o FROM objs WHERE s=? AND p=? LIMIT 1", (s, p)).fetchone()
     if r: return r[0]
@@ -708,6 +730,14 @@ class Graph(BaseMainGraph):
     return self.execute("SELECT COUNT() FROM quads").fetchone()[0]
 
   
+#  def get_equivs_s_o(self, s):
+#    for (x,) in self.execute("""
+#WITH RECURSIVE transit(x)
+#AS (  SELECT o FROM equivs WHERE s=?
+#UNION SELECT equivs.o FROM equivs, transit WHERE equivs.s=transit.x)
+#SELECT DISTINCT x FROM transit""", (s,)).fetchall(): yield x
+    
+    
   # Reimplemented using RECURSIVE SQL structure, for performance
   def get_transitive_sp(self, s, p):
     for (x,) in self.execute("""
@@ -919,10 +949,10 @@ class SubGraph(BaseSubGraph):
       
     if cur.execute("""SELECT COUNT() FROM ontologies""").fetchone()[0] < 2:
       cur.execute("""DROP INDEX index_resources_iri""")
-      cur.execute("""DROP INDEX index_objs_s""")
-      cur.execute("""DROP INDEX index_objs_o""")
-      cur.execute("""DROP INDEX index_datas_s""")
-      cur.execute("""DROP INDEX index_datas_o""")
+      cur.execute("""DROP INDEX index_objs_sp""")
+      cur.execute("""DROP INDEX index_objs_po""")
+      cur.execute("""DROP INDEX index_datas_sp""")
+      cur.execute("""DROP INDEX index_datas_po""")
       reindex = True
     else:
       reindex = False
@@ -992,10 +1022,11 @@ class SubGraph(BaseSubGraph):
       
       if reindex:
         cur.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
-        cur.execute("""CREATE INDEX index_objs_s ON objs(s)""")
-        cur.execute("""CREATE INDEX index_objs_o ON objs(o)""")
-        cur.execute("""CREATE INDEX index_datas_s ON datas(s)""")
-        cur.execute("""CREATE INDEX index_datas_o ON datas(o)""")
+        cur.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
+        cur.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
+        cur.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
+        cur.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
+
         
       onto_base_iri = cur.execute("SELECT resources.iri FROM objs, resources WHERE objs.c=? AND objs.o=? AND resources.storid=objs.s LIMIT 1", (self.c, owl_ontology)).fetchone()
       if onto_base_iri: onto_base_iri = onto_base_iri[0]
@@ -1269,8 +1300,7 @@ class SubGraph(BaseSubGraph):
     return self.parent._iter_triples(quads, sort_by_s, self.c)
   
   def refactor(self, storid, new_iri): return self.parent.refactor(storid, new_iri)
-  
-  
+    
   # Reimplemented using RECURSIVE SQL structure, for performance
   def get_transitive_sp(self, s, p):
     for (x,) in self.execute("""

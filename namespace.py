@@ -93,6 +93,7 @@ class _GraphManager(object):
   def get_objs_cspo(self, subject = None, predicate = None, object = None, ontology_graph = None): return []
   def get_objs_sp_o(self, subject, predicate): return []
   def get_objs_sp_co(self, s, p): return []
+  def get_equivs_s_o(self, s): return [s]
   def get_quads_sp_od(self, s, p): return []
   
   def refactor(self, storid, new_iri): pass
@@ -334,13 +335,14 @@ class World(_GraphManager):
         self.graph = Graph(filename, world = self, **kargs)
     else:
       raise ValueError("Unsupported backend type '%s'!" % backend)
-    for method in self.graph.__class__.READ_METHODS: setattr(self, method, getattr(self.graph, method))
+    for method in self.graph.__class__.BASE_METHODS + self.graph.__class__.WORLD_METHODS:
+      setattr(self, method, getattr(self.graph, method))
     
     self.filename = filename
     
     for ontology in self.ontologies.values():
       ontology.graph, new_in_quadstore = self.graph.sub_graph(ontology)
-      for method in ontology.graph.__class__.READ_METHODS + ontology.graph.__class__.WRITE_METHODS:
+      for method in ontology.graph.__class__.BASE_METHODS + ontology.graph.__class__.ONTO_METHODS:
         setattr(ontology, method, getattr(ontology.graph, method))
         
     for iri in self.graph.ontologies_iris():
@@ -553,7 +555,7 @@ class Ontology(Namespace, _GraphManager):
       self.graph = None
     else:
       self.graph, new_in_quadstore = world.graph.sub_graph(self)
-      for method in self.graph.__class__.READ_METHODS + self.graph.__class__.WRITE_METHODS:
+      for method in self.graph.__class__.BASE_METHODS + self.graph.__class__.ONTO_METHODS:
         setattr(self, method, getattr(self.graph, method))
       if not new_in_quadstore:
         self._load_properties()

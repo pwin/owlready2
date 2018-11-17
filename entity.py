@@ -33,9 +33,13 @@ class _EquivalentToList(CallbackList):
   def transitive_symmetric(self):
     if self._indirect is None:
       n = self._obj.namespace
-      self._indirect = set()
-      for o in n.world.get_transitive_sym(self._obj.storid, self._obj._owl_equivalent):
-        if o != self._obj.storid: self._indirect.add(n.ontology._to_python(o, main_type = self._obj.__class__))
+      self._indirect = set( n.ontology._to_python(o, main_type = self._obj.__class__)
+                            for o in n.world.get_transitive_sym(self._obj.storid, self._obj._owl_equivalent)
+                            if o != self._obj.storid )
+      #self._indirect = set( n.ontology._to_python(o, main_type = self._obj.__class__)
+      #                      for o in n.world.get_equivs_s_o(self._obj.storid)
+      #                      if o != self._obj.storid )
+      
     yield from self._indirect
     
   indirect = transitive_symmetric

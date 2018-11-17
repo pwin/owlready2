@@ -39,7 +39,7 @@ class BaseGraph(object):
   #                 "get_triple_sp", "get_data_triple_sp", "get_triple_po", "get_transitive_sp", "get_transitive_po", "get_transitive_sym", "get_transitive_sp_indirect", "get_triples", "get_data_triples", "get_triples_s", "get_triples_sp", "get_data_triples_sp", "get_triples_po", "get_pred", "get_quads", "get_quad_data_triples_sp", "get_quad_data_triple_sp", "get_quads_sp", "has_triple", "has_data_triple", "_del_triple", "_del_data_triple"]
   #WRITE_METHODS = ["_add_triple", "_set_triple", "_add_data_triple", "_set_data_triple"]
   
-  READ_METHODS  = ["refactor", "new_numbered_iri", "abbreviate", "unabbreviate",
+  BASE_METHODS  = ["refactor", "new_numbered_iri", "abbreviate", "unabbreviate",
                    
                    "get_objs_cspo_cspo", "get_objs_spo_spo", "get_objs_sp_co", "get_objs_s_po",
                    "get_objs_po_s", "get_objs_sp_o", "get_obj_sp_o", "get_obj_po_s", "has_obj_spo", "_del_obj_spo",
@@ -49,7 +49,10 @@ class BaseGraph(object):
                    "get_quads_spod_spod", "get_quads_sp_od", "get_quad_sp_od", "get_quads_s_pod", "get_quads_s_p",
                    
                    "get_transitive_sp", "get_transitive_po", "get_transitive_sym", "get_transitive_sp_indirect"]
-  WRITE_METHODS = ["_add_obj_spo", "_set_obj_spo", "_add_data_spod", "_set_data_spod"]
+  
+  WORLD_METHODS = [] # "get_equivs_s_o"
+  
+  ONTO_METHODS = ["_add_obj_spo", "_set_obj_spo", "_add_data_spod", "_set_data_spod"]
   
   def sub_graph(self, user_context): return self.__class__(self, user_context)
   
