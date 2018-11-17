@@ -10,7 +10,7 @@ from owlready2 import *
 
 t = time.time()
 
-#default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite3", exclusive = True)
+default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite3", exclusive = True)
 #default_world.set_backend("postgresql", user = "jiba")
 #default_world.set_backend("mysql", user = "jiba")
 
@@ -32,22 +32,40 @@ t = time.time()
 
 obo = go.get_namespace("http://purl.obolibrary.org/obo/")
 
-def render(entity):
-  label = entity.label.first()
-  if label: return "%s:'%s'" % (entity.name, label)
-  return entity.name
-set_render_func(render)
+#nb = 0
+#def render(entity):
+#  global nb
+#  nb += 1
+#  label = entity.label.first()
+#  if label: return "%s:'%s'" % (entity.name, label)
+#  return entity.name
+#set_render_func(render)
 
-for c in default_world.classes():
-  print(repr(c))
-  for parent in c.is_a:
-    print("    is a %s" % parent)
+#for c in default_world.classes():
+#  print(repr(c))
+#  for parent in c.is_a:
+#    print("    is a %s" % parent)
+
+def recursive(e, depth = 0):
+#  global nb
+#  nb += 1
+  label = e.label
+  if label: print("%s%s:%s" % ("  " * depth, e.name, label[0]))
+  else:     print("%s%s"    % ("  " * depth, e.name))
+  for s in e.subclasses():
+    recursive(s, depth + 1)
+
+recursive(obo.GO_0005575)
+recursive(obo.GO_0008150)
+recursive(obo.GO_0003674)
 
 #go.save("/tmp/t.ntriples", "ntriples")
 #go.save("/tmp/t.owl", "rdfxml")
 
 t = time.time() - t
 print("List class time %s s." % t, file = sys.stderr)
+
+#print(nb, file = sys.stderr)
 
 #print(obo.GO_0000001)
 

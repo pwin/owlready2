@@ -301,26 +301,30 @@ class EntityClass(type):
         else:
           if only_loaded:
             subclass = world._entities.get(x)
-            if not subclass is None: r.append(subclass)
+            if not subclass is None: yield subclass # r.append(subclass)
           else:
-            r.append(world._get_by_storid(x, None, ThingClass))
+            yield world._get_by_storid(x, None, ThingClass)
+            #r.append(world._get_by_storid(x, None, ThingClass))
       return r
     
     else:
       if only_loaded:
-        r = []
+        #r = []
         for x in Class.namespace.world.get_objs_po_s(Class._rdfs_is_a, Class.storid):
           if not x.startswith("_"):
             subclass = Class.namespace.world._entities.get(x)
-            if not subclass is None: r.append(subclass)
-        return r
+            if not subclass is None: yield subclass #r.append(subclass)
+        #return r
       
       else:
-        return [
-          Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
-          for x in Class.namespace.world.get_objs_po_s(Class._rdfs_is_a, Class.storid)
-          if not x.startswith("_")
-        ]
+        #return [
+        #  Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
+        #  for x in Class.namespace.world.get_objs_po_s(Class._rdfs_is_a, Class.storid)
+        #  if not x.startswith("_")
+        #]
+        for x in Class.namespace.world.get_objs_po_s(Class._rdfs_is_a, Class.storid):
+          if not x.startswith("_"):
+            yield Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
       
   def constructs(Class, Prop = None):
     def _top_bn(s):

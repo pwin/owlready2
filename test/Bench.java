@@ -17,6 +17,8 @@ import org.semanticweb.owlapi.apibinding.*;
 import org.semanticweb.owlapi.vocab.*;
 
 class Bench {
+  static int nb = 0;
+  
   public static void main(String[] args) throws Exception {
     
     long t;
@@ -53,6 +55,7 @@ class Bench {
     
     t = (new Date().getTime());
 
+    /*
     int nb = 0;
     for (OWLClass cls : o.getClassesInSignature()) {
       nb += 1;
@@ -82,6 +85,11 @@ class Bench {
         }
       }
     }
+    */
+    
+    recursive(df, o, df.getOWLClass(IRI.create("http://purl.obolibrary.org/obo/GO_0005575")), 0);
+    recursive(df, o, df.getOWLClass(IRI.create("http://purl.obolibrary.org/obo/GO_0008150")), 0);
+    recursive(df, o, df.getOWLClass(IRI.create("http://purl.obolibrary.org/obo/GO_0003674")), 0);
     
     System.err.print("NB ");
     System.err.println(nb);
@@ -91,6 +99,40 @@ class Bench {
     System.err.println(t / 1000.0f);
     
     Thread.sleep(40000);
+  }
+  
+  public static void recursive(OWLDataFactory df, OWLOntology o, OWLClass cls, int depth) {
+    String iri = cls.getIRI().toString();
+    String name = iri.substring(iri.lastIndexOf("/") + 1, iri.length());
+    
+    OWLAnnotationProperty label = df.getOWLAnnotationProperty(OWLRDFVocabulary.RDFS_LABEL.getIRI());
+    
+    String tab = "";
+    for (int i = 0; i < depth; i++) {
+      tab += "  ";
+    }
+    
+    boolean ok = false;
+    for (OWLAnnotation annotation : cls.getAnnotations(o, label)) {
+      if (annotation.getValue() instanceof OWLLiteral) {
+        OWLLiteral val = (OWLLiteral) annotation.getValue();
+        System.out.println(tab + name + ":" + val.getLiteral());
+        ok = true;
+        break;
+      }
+    }
+    if (ok == false) {
+      System.out.println(tab + name);
+    }
+
+    nb += 1;
+    
+    Set<OWLClassExpression> subClasses = cls.getSubClasses(o);
+    for (OWLClassExpression desc : subClasses) {
+      if(desc instanceof OWLClass) {
+        recursive(df, o, (OWLClass) desc, depth + 1);
+      }
+    }
   }
   
   public static String cls_2_str(OWLDataFactory df, OWLOntology o, OWLEntity cls) {
