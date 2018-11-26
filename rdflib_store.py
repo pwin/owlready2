@@ -57,7 +57,9 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
       if o.language is None:
         if o.datatype:
           d = self.triplelite.abbreviate(str(o.datatype))
-          o = o.value
+          if   isinstance(o.value, bool):         o = str(o)
+          elif isinstance(o.value, (int, float)): o = o.value
+          else:                                   o = str(o)
         else:
           d = ""
           o = str(o)
@@ -100,6 +102,7 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     
   def triples(self, triple_pattern, context = None):
     rs,rp,ro,rd = self._rdflib_2_owlready(triple_pattern)
+    
     if   rd is None:
       for s,p,o,d in context.triplelite.get_quads_spod_spod(rs,rp,ro, None):
         yield self._owlready_2_rdflib(s,p,o,d), context

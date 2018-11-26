@@ -3586,6 +3586,57 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     }
     """)
     assert list(r) == [["D"]]
+
+  def test_rdflib_4(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/test.owl")
+    with n:
+      class O(Thing): pass
+      class p(Thing >> bool, FunctionalProperty): pass
+      class i(Thing >> int , FunctionalProperty): pass
+      o1 = O(p = False, i = 1)
+      o2 = O(p = True , i = 1)
+      o3 = O(p = True , i = 2)
+      
+    g = world.as_rdflib_graph()
+    
+    r = list(g.query_owlready("""
+    PREFIX P: <http://www.semanticweb.org/test.owl#>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    SELECT ?s WHERE {
+    ?s P:i "1"^^xsd:int.
+    }
+    """))
+    assert set(l[0] for l in r) == { o1, o2 }
+    
+    r = list(g.query_owlready("""
+    PREFIX P: <http://www.semanticweb.org/test.owl#>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    SELECT ?s WHERE {
+    ?s P:p "true"^^xsd:boolean.
+    }
+    """))
+    assert set(l[0] for l in r) == { o2, o3 }
+    
+    r = list(g.query_owlready("""
+    PREFIX P: <http://www.semanticweb.org/test.owl#>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    SELECT ?o WHERE {
+    P:o3 P:i ?o.
+    }
+    """))
+    assert set(l[0] for l in r) == { 2 }
+    
+    r = list(g.query_owlready("""
+    PREFIX P: <http://www.semanticweb.org/test.owl#>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    SELECT ?o WHERE {
+    P:o1 P:p ?o.
+    }
+    """))
+    assert set(l[0] for l in r) == { False }
+    assert type(r[0][0]) is bool
+    
     
   def test_refactor_1(self):
     world = self.new_world()
