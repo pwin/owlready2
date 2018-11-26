@@ -11,7 +11,7 @@ from owlready2 import *
 t = time.time()
 
 if "-f" in sys.argv:
-  default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite3", exclusive = True)
+  default_world.set_backend(filename = "/home/jiba/tmp/go.sqlite3", exclusive = True) #, profiling = True)
   #default_world.set_backend("postgresql", user = "jiba")
   #default_world.set_backend("mysql", user = "jiba")
   
@@ -65,6 +65,8 @@ recursive(obo.GO_0003674)
 
 t = time.time() - t
 print("List class time %s s." % t, file = sys.stderr)
+
+#default_world.graph.show_profiling()
 
 #print(nb, file = sys.stderr)
 

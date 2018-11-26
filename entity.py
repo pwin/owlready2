@@ -388,10 +388,19 @@ class ThingClass(EntityClass):
       else:
         yield Prop
         
-  def instances(Class):
-    if Class.namespace is owl: return [] # For Thing
+  def instances(Class, world = None):
+    if Class.namespace is owl:
+      import owlready2
+      return (world or owlready2.default_world).world.search(type = Class)
     return Class.namespace.world.search(type = Class)
-    
+  
+  def direct_instances(Class, world = None):
+    if Class.namespace is owl:
+      import owlready2
+      world = world or owlready2.default_world
+      return [world._get_by_storid(s, None, Thing) for s in world.get_objs_po_s(rdf_type, Class.storid)]
+    return [Class.namespace.world._get_by_storid(s, None, Thing) for s in Class.namespace.world.get_objs_po_s(rdf_type, Class.storid)]
+  
   def get_class_properties(Class):
     for construct in itertools.chain(Class.is_a, Class.equivalent_to.indirect()):
       if isinstance(construct, Restriction) and construct.type == SOME:

@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-__all__ = ["start_observing", "stop_observing", "observe", "unobserve", "isobserved", "send_event", "CollapsedListener", "scan_collapsed_changes"]
+__all__ = ["start_observing", "stop_observing", "observe", "unobserve", "isobserved", "send_event", "scan_collapsed_changes"]
 
 import weakref
 
@@ -25,16 +25,19 @@ from owlready2.base import rdf_type, rdfs_subclassof, owl_equivalentclass, owl_e
 from owlready2.namespace import Ontology
 
 class ObservedOntology(Ontology):
-  def _get_pred_value(self, subject, predicate):
+  def _get_pred_value_obj(self, subject, predicate):
     if   predicate == rdf_type:
-      return list(filter(None, [self._to_python(o, default_to_none = True) for o in self.get_triples_sp(subject, predicate)]))
+      return list(filter(None, [self._to_python(o, default_to_none = True) for o in self.get_objs_sp_o(subject, predicate)]))
     else:
-      return [self._to_python(o) for o in self.get_triples_sp(subject, predicate)]
+      return [self._to_python(o) for o in self.get_objs_sp_o(subject, predicate)]
     
-  def _gen_triple_method_spo(self, triple_method):
+  def _get_pred_value_data(self, subject, predicate):
+    return [self._to_python(o, d) for o, d in self.get_datas_sp_od(subject, predicate)]
+  
+  def _gen_triple_method_obj(self, triple_method):
     def f(subject, predicate, object):
       observation = self.world._observations.get(subject)
-        
+      
       if (predicate == rdf_type) and _INSTANCES_OF_CLASS:
         Class = self.world._get_by_storid(object)
         l_2_old_instances = {}
@@ -44,11 +47,10 @@ class ObservedOntology(Ontology):
               l_2_old_instances[l] = l._get_old_value()
               
       if observation:
-        old = self._get_pred_value(subject, predicate)
+        #old = self._get_pred_value_obj(subject, predicate)
         triple_method(subject, predicate, object)
-        new = self._get_pred_value(subject, predicate)
-        Prop = self.world._get_by_storid(predicate)
-        observation.call(self.world.graph.unabbreviate(predicate), new, old)
+        #new = self._get_pred_value_obj(subject, predicate)
+        observation.call(predicate) #, new, old)
       else:
         triple_method(subject, predicate, object)
         
@@ -58,23 +60,34 @@ class ObservedOntology(Ontology):
           
     return f
   
+  def _gen_triple_method_data(self, triple_method):
+    def f(subject, predicate, object, datatype):
+      observation = self.world._observations.get(subject)
+      
+      if observation:
+        #old = self.get_quads_sp_od(subject, predicate)
+        triple_method(subject, predicate, object, datatype)
+        #new = self.get_quads_sp_od(subject, predicate)
+        observation.call(predicate) #, new, old)
+      else:
+        triple_method(subject, predicate, object, datatype)
+        
+    return f
+  
   
 def start_observing(onto):
   if not hasattr(onto.world, "_observations"): onto.world._observations = {}
   if not onto.__class__ is ObservedOntology:
     onto.__class__ = ObservedOntology
-    onto._add_obj_spo   = onto._gen_triple_method_spo(onto.graph._add_obj_spo)
-    onto._set_obj_spo   = onto._gen_triple_method_spo(onto.graph._set_obj_spo)
-    onto._del_obj_spo   = onto._gen_triple_method_spo(onto.graph._del_obj_spo)
-    onto._add_data_spod = onto._gen_triple_method(onto.graph._add_data_spod)
-    onto._set_data_spod = onto._gen_triple_method(onto.graph._set_data_spod)
-    onto._del_data_spod = onto._gen_triple_method(onto.graph._del_data_spod)
+    onto._add_obj_spo   = onto._gen_triple_method_obj(onto.graph._add_obj_spo)
+    onto._set_obj_spo   = onto._gen_triple_method_obj(onto.graph._set_obj_spo)
+    onto._del_obj_spo   = onto._gen_triple_method_obj(onto.graph._del_obj_spo)
+    onto._add_data_spod = onto._gen_triple_method_data(onto.graph._add_data_spod)
+    onto._set_data_spod = onto._gen_triple_method_data(onto.graph._set_data_spod)
+    onto._del_data_spod = onto._gen_triple_method_data(onto.graph._del_data_spod)
     
 def stop_observing(onto):
   onto.__class__ = Ontology
-  onto._add_triple = onto.graph._add_triple
-  onto._set_triple = onto.graph._set_triple
-  onto._del_triple = onto.graph._del_triple
   onto._add_obj_spo   = onto._add_obj_spo
   onto._set_obj_spo   = onto._set_obj_spo
   onto._del_obj_spo   = onto._del_obj_spo
@@ -83,89 +96,116 @@ def stop_observing(onto):
   onto._del_data_spod = onto._del_data_spod
   
   
-  
+
 _NON_EMPTY_COLLAPSED_LISTENERS = set()
-class CollapsedListener(object):
-  def __init__(self, listener = None):
-    self.listener = listener
-    self.collapsed_changes = {}
+class Observation(object):
+  def __init__(self, o):
+    self.listeners           = []
+    self.collapsed_listeners = []
+    self.o                   = o
+    self.collapsed_changes   = set()
     
-  def __eq__(self, other): return isinstance(other, CollapsedListener) and (self.listener == other.listener)
-  
-  def __hash__(self): return hash(self.listener)
-  
-  def __call__(self, obj, pred, new, old):
-    l = self.collapsed_changes.get(obj)
-    if l is None:
-      if not self.collapsed_changes: _NON_EMPTY_COLLAPSED_LISTENERS.add(self)
-      self.collapsed_changes[obj] = { pred : [new, old] }
+  def call(self, predicate):
+    for listener in self.listeners: listener(self.o, predicate)
+    
+  def add_listener(self, listener, collapsed):
+    if collapsed:
+      if not self.collapsed_listeners:
+        self.listeners.append(self.collapser)
+      self.collapsed_listeners.append(listener)
     else:
-      l2 = l.get(pred)
-      if l2 is None: l[pred] = [new, old]
-      else:          l2[0] = new
+      self.listeners.append(listener)
       
+  def remove_listener(self, listener):
+    if   listener in self.collapsed_listeners:
+      self.collapsed_listeners.remove(listener)
+      if not self.collapsed_listeners:
+        self.listeners.remove(self.collapser)
+    elif listener in self.listeners:
+      self.listeners.remove(listener)
+    
+  def collapser(self, o, predicate):
+    if not self.collapsed_changes: _NON_EMPTY_COLLAPSED_LISTENERS.add(self)
+    self.collapsed_changes.add(predicate)
+    
   def scan(self):
-    for obj, l in self.collapsed_changes.items():
-      self.listener(obj, [(pred, values[0], values[1]) for (pred, values) in l.items()])
+    for listener in self.collapsed_listeners: listener(self.o, self.collapsed_changes)
     self.collapsed_changes.clear()
     
     
+
+class ObjectPack(object):
+  def __init__(self, objects):
+    self._objects = objects
+
+  def __repr__(self): return "<ObjectPack %s>" % self._objects
+  
+  
 def scan_collapsed_changes():
   for collapsed_listener in _NON_EMPTY_COLLAPSED_LISTENERS: collapsed_listener.scan()
   _NON_EMPTY_COLLAPSED_LISTENERS.clear()
   
 
-def observe(o, listener):
-  #if isinstance(o, editobj3.introsp.ObjectPack):
-  #  for o2 in o.objects: observe(o2, listener)
-  #  return
+def observe(o, listener, collapsed = False, world = None):
+  if isinstance(o, ObjectPack):
+    for o2 in o.objects: observe(o2, listener)
+    return
   
-  observation = o.namespace.world._observations.get(o.storid)
-  if observation: observation.listeners.append(listener)
-  else:
-    o.namespace.world._observations[o.storid] = Observation(o, [listener])
+  print("OBSERVE", o, listener)
+  if world is None:
+    world = o.namespace.world
+    o = o.storid
     
+  observation = world._observations.get(o)
+  if not observation: observation = world._observations[o] = Observation(o)
+  observation.add_listener(listener, collapsed)
+  
     
-def isobserved(o, listener = None):
-  #if isinstance(o, editobj3.introsp.ObjectPack):
-  #  for o2 in o.objects:
-  #    if isobserved(o2, listener): return True
-  #  return False
+def isobserved(o, listener = None, world = None):
+  if isinstance(o, ObjectPack):
+    for o2 in o.objects:
+      if isobserved(o2, listener): return True
+    return False
   
-  observation = o.namespace.world._observations.get(o.storid)
+  if world is None:
+    world = o.namespace.world
+    o = o.storid
   
-  if listener: return observation and (listener in observation.listeners)
+  observation = world._observations.get(o)
+  if listener: return observation and ((listener in observation.listeners) or (listener in observation.collapsed_listeners))
   else:        return observation and observation.listeners
 
-def send_event(o, pred, new, old):
-  observation = o.namespace.world._observations.get(o.storid)
-  if observation: observation.call(pred, new, old)
+def send_event(o, pred, world = None):
+  if isinstance(o, ObjectPack):
+    for o2 in o.objects: send_event(o2, pred)
+    return
+  
+  if world is None:
+    world = o.namespace.world
+    o = o.storid
     
-def unobserve(o, listener = None):
-  #if isinstance(o, editobj3.introsp.ObjectPack):
-  #  for o2 in o.objects: unobserve(o2, listener)
-  #  return
-    
+  observation = world._observations.get(o)
+  if observation: observation.call(pred)
+  
+def unobserve(o, listener = None, world = None):
+  if isinstance(o, ObjectPack):
+    for o2 in o.objects: unobserve(o2, listener)
+    return
+  
+  print("UNOBSERVE", o, listener)
+  if world is None:
+    world = o.namespace.world
+    o = o.storid
+  
   if listener:
-    observation = o.namespace.world._observations.get(o.storid)
+    observation = world._observations.get(o)
     if observation:
-      try: observation.listeners.remove(listener)
-      except ValueError: pass
-      if not observation.listeners: del o.namespace.world._observations[o.storid]
+      observation.remove_listener(listener)
+      if not observation.listeners: del world._observations[o]
       
   else:
-    if o.storid in o.namespace.world._observations: del o.namespace.world._observations[o.storid]
+    if o in world._observations: del world._observations[o]
 
-
-class Observation(object):
-  def __init__(self, o, listeners):
-    self.listeners = listeners
-    try:    self.object = weakref.ref(o)
-    except: self.object = o
-    
-  def call(self, predicate, new, old):
-    for listener in self.listeners: listener(self.object(), predicate, new, old)
-    
     
 _INSTANCES_OF_CLASS = {} #weakref.WeakValueDictionary()
 
@@ -195,8 +235,8 @@ class StoridList(object):
     
   def __repr__(self):
     return """<StoridList: %s>""" % list(self)
-      
-    
+  
+  
 class InstancesOfClass(StoridList):
   def __init__(self, Class, onto = None, order_by = "", lang = "", use_observe = False):
     self._Class = Class
@@ -225,11 +265,11 @@ class InstancesOfClass(StoridList):
   def _update(self):
     if self._order_by:
       if self._lang:
-        self._storids = [x[0] for x in self.namespace.graph.execute("""SELECT s FROM quads WHERE p = ? AND o IN (%s) ORDER BY (select q2.o FROM quads q2 WHERE q2.s = quads.s AND q2.p = ? AND q2.o LIKE '%%@%s')""" % (self._Class_storids, self._lang), (rdf_type, self._order_by))]
+        self._storids = [x[0] for x in self.namespace.graph.execute("""SELECT s FROM objs WHERE p = ? AND o IN (%s) ORDER BY (select q2.o FROM quads q2 WHERE q2.s = objs.s AND q2.p = ? AND q2.d LIKE '@%s')""" % (self._Class_storids, self._lang), (rdf_type, self._order_by))]
       else:
-        self._storids = [x[0] for x in self.namespace.graph.execute("""SELECT s FROM quads WHERE p = ? AND o IN (%s) ORDER BY (select q2.o FROM quads q2 WHERE q2.s = quads.s AND q2.p = ?)""" % self._Class_storids, (rdf_type, self._order_by))]
+        self._storids = [x[0] for x in self.namespace.graph.execute("""SELECT s FROM objs WHERE p = ? AND o IN (%s) ORDER BY (select q2.o FROM quads q2 WHERE q2.s = objs.s AND q2.p = ?)""" % self._Class_storids, (rdf_type, self._order_by))]
     else:
-      self._storids = [x[0] for x in self.namespace.graph.execute("""SELECT s FROM quads WHERE p = ? AND o IN (%s)""" % self._Class_storids, (rdf_type)).fetchall()]
+      self._storids = [x[0] for x in self.namespace.graph.execute("""SELECT s FROM objs WHERE p = ? AND o IN (%s)""" % self._Class_storids, (rdf_type)).fetchall()]
       
   def _get_old_value(self):
     if self._storids is None: self._update()
@@ -242,7 +282,7 @@ class InstancesOfClass(StoridList):
       observation.call("Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)", self, old)
     else:
       self._storids = None
-    
+      
   def add(self, o):
     if not self.Class in o.is_a: o.is_a.append(self.Class)
     self._changed()
@@ -252,45 +292,3 @@ class InstancesOfClass(StoridList):
     destroy_entity(o)
     self._changed()
     
-    
-    
-    
-if __name__ == "__main__":
-  from owlready2 import *
-  
-  onto = get_ontology("http://test.org/test.owl")
-  start_observing(onto)
-  
-  with onto:
-    class C(Thing): pass
-    c1 = C()
-    c2 = C()
-    c2.label.en = "AAA ?"
-    c2.label.fr = "Paracétamol"
-    c3 = C()
-    c3.label.en = "Asprine"
-    c3.label.fr = "Asprin"
-    class D(Thing): pass
-    
-  default_world.graph.dump()
-
-  def listener(obj, p, new, old):
-    print("changed!", obj, p, new, old)
-  
-  l = InstancesOfClass(C, order_by = "label", lang = "fr", use_observe = True)
-  observe(l, listener)
-  
-  print(len(l))
-  print(l[0])
-  print(l[1])
-  print(l[2])
-  print(l[0:2])
-  
-  print(l)
-  
-  c3 = C()
-  
-  print(l)
-  
-  
-  set_log_level(9)

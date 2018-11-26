@@ -417,15 +417,15 @@ class World(_GraphManager):
     return self._get_by_storid(self.abbreviate(iri), iri)
   
   def _get_by_storid(self, storid, full_iri = None, main_type = None, main_onto = None, trace = None, default_to_none = True):
-    try:
-      return self._get_by_storid2(storid, full_iri, main_type, main_onto, default_to_none)
-    except RecursionError:
-      return self._get_by_storid2(storid, full_iri, main_type, main_onto, default_to_none, ())
-    
-  def _get_by_storid2(self, storid, full_iri = None, main_type = None, main_onto = None, default_to_none = True, trace = None):
     entity = self._entities.get(storid)
     if not entity is None: return entity
     
+    try:
+      return self._load_by_storid(storid, full_iri, main_type, main_onto, default_to_none)
+    except RecursionError:
+      return self._load_by_storid(storid, full_iri, main_type, main_onto, default_to_none, ())
+    
+  def _load_by_storid(self, storid, full_iri = None, main_type = None, main_onto = None, default_to_none = True, trace = None):
     with LOADING:
       types       = []
       is_a_bnodes = []
@@ -461,8 +461,9 @@ class World(_GraphManager):
         for graph, obj in self.get_objs_sp_co(storid, main_type._rdfs_is_a):
           if obj.startswith("_"): is_a_bnodes.append((self.graph.context_2_user_context(graph), obj))
           else:
-            obj = self._get_by_storid2(obj, None, main_type, main_onto, default_to_none, trace)
-            if not obj is None: is_a_entities.append(obj)
+            obj2 = self._entities.get(obj)
+            if obj2 is None: obj2 = self._load_by_storid(obj, None, main_type, main_onto, default_to_none, trace)
+            if not obj2 is None: is_a_entities.append(obj2)
             
       if main_onto is None:
         main_onto = self.get_ontology("http://anonymous/")
@@ -741,7 +742,7 @@ class Ontology(Namespace, _GraphManager):
     if _LOG_LEVEL > 1:
       if not s.startswith("_"): s = self.unabbreviate(s)
       if p: p = self.unabbreviate(p)
-      if o and not (o.startswith("_") or o.startswith('"')): o = self.unabbreviate(o)
+      if o and (d is None) and (not o.startswith("_")): o = self.unabbreviate(o)
       print("* Owlready2 * SET TRIPLE", s, p, o, d, file = sys.stderr)
     
   # Will be replaced by the graph methods

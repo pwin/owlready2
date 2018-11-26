@@ -4045,248 +4045,247 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert len(w.graph) == 5
 
 
-#   def test_observe_1(self):
-#     import owlready2.observe
+  def test_observe_1(self):
+    import owlready2.observe
 
-#     w = self.new_world()
-#     onto = w.get_ontology("http://test.org/t.owl")
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
     
-#     with onto:
-#       class C(Thing): pass
-#       class D(Thing): pass
-#       class p(C >> str, FunctionalProperty): pass
-#       class ps(C >> int): pass
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class p(C >> str, FunctionalProperty): pass
+      class ps(C >> int): pass
       
-#     c = C()
-
-#     listened = "\n"
-#     def listener(o, p, new, old):
-#       nonlocal listened
-#       listened += "%s %s %s %s\n" % (o, p, new, old)
+    c = C()
     
-#     owlready2.observe.start_observing(onto)
-#     owlready2.observe.observe(c, listener)
-    
-#     c.ps = [1, 2, 3]
-    
-#     c.ps.remove(2)
-#     c.ps.append(4)
-    
-#     c.p = "test"
-    
-#     c.is_a = [D]
-    
-#     owlready2.observe.unobserve(c, listener)
-    
-#     c.ps = [0]
-    
-#     assert listened == """
-# t.c1 http://test.org/t.owl#ps [1] []
-# t.c1 http://test.org/t.owl#ps [1, 2] [1]
-# t.c1 http://test.org/t.owl#ps [1, 2, 3] [1, 2]
-# t.c1 http://test.org/t.owl#ps [1, 3] [1, 2, 3]
-# t.c1 http://test.org/t.owl#ps [1, 3, 4] [1, 3]
-# t.c1 http://test.org/t.owl#p ['test'] []
-# t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [] [t.C]
-# t.c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type [t.D] []
-# """
-    
-#   def test_observe_2(self):
-#     import owlready2.observe
-    
-#     w = self.new_world()
-#     onto = w.get_ontology("http://test.org/t.owl")
-    
-#     with onto:
-#       class C(Thing): pass
-#       class D(Thing): pass
-#       class ps(C >> int): pass
+    listened = "\n"
+    def listener(o, p):
+      nonlocal listened
+      listened += "%s %s\n" % (w.unabbreviate(o), w.unabbreviate(p))
       
-#     c = C()
-#     c.ps = [1, 2, 3]
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(c, listener)
     
-#     listened = set()
-#     def listener(o, diffs):
-#       for pred, new, old in diffs:
-#         listened.add("%s '%s' %s %s" % (o, pred, new, old))
+    c.ps = [1, 2, 3]
+    
+    c.ps.remove(2)
+    c.ps.append(4)
+    
+    c.p = "test"
+    
+    c.is_a = [D]
+    
+    owlready2.observe.unobserve(c, listener)
+    
+    c.ps = [0]
+    
+    assert listened == """
+http://test.org/t.owl#c1 http://test.org/t.owl#ps
+http://test.org/t.owl#c1 http://test.org/t.owl#ps
+http://test.org/t.owl#c1 http://test.org/t.owl#ps
+http://test.org/t.owl#c1 http://test.org/t.owl#ps
+http://test.org/t.owl#c1 http://test.org/t.owl#ps
+http://test.org/t.owl#c1 http://test.org/t.owl#p
+http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
+"""
+    
+  def test_observe_2(self):
+    import owlready2.observe
+    
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
+    
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class ps(C >> int): pass
+      
+    c = C()
+    c.ps = [1, 2, 3]
+    
+    listened = set()
+    def listener(o, ps):
+      for p in ps:
+        listened.add("%s %s" % (w.unabbreviate(o), w.unabbreviate(p)))
         
-#     owlready2.observe.start_observing(onto)
-#     owlready2.observe.observe(c, owlready2.observe.CollapsedListener(listener))
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(c.storid, listener, True, w)
     
-#     c.ps.remove(2)
-#     c.ps.append(4)
+    c.ps.remove(2)
+    c.ps.append(4)
     
-#     c.is_a = [D]
+    c.is_a = [D]
     
-#     assert not listened
+    assert not listened
     
-#     owlready2.observe.scan_collapsed_changes()
+    owlready2.observe.scan_collapsed_changes()
+
+    assert listened == {"http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://test.org/t.owl#c1 http://test.org/t.owl#ps"}
     
-#     assert listened == {"t.c1 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' [t.D] [t.C]", "t.c1 'http://test.org/t.owl#ps' [1, 3, 4] [1, 2, 3]"}
+    listened = set()
+    owlready2.observe.scan_collapsed_changes()
+    assert not listened # Now empty
     
-#     listened = set()
-#     owlready2.observe.scan_collapsed_changes()
-#     assert not listened # Now empty
+    owlready2.observe.unobserve(c.storid, listener, w)
+    c.ps.append(5)
+    owlready2.observe.scan_collapsed_changes()
+    assert not listened
     
-#     owlready2.observe.unobserve(c, owlready2.observe.CollapsedListener(listener))
-#     c.ps.append(5)
-#     owlready2.observe.scan_collapsed_changes()
-#     assert not listened
+  def test_observe_3(self):
+    import owlready2.observe
     
-#   def test_observe_3(self):
-#     import owlready2.observe
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
     
-#     w = self.new_world()
-#     onto = w.get_ontology("http://test.org/t.owl")
-    
-#     with onto:
-#       class C(Thing): pass
-#       class D(Thing): pass
-#       class ps(C >> int): pass
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class ps(C >> int): pass
       
-#     c = C()
-#     c.ps = [1, 2, 3]
+    c = C()
+    c.ps = [1, 2, 3]
     
-#     listened = set()
-#     @owlready2.observe.CollapsedListener
-#     def listener(o, diffs):
-#       for pred, new, old in diffs:
-#         listened.add("%s '%s' %s %s" % (o, pred, new, old))
+    listened = set()
+    def listener(o, ps):
+      for p in ps:
+        listened.add("%s %s" % (w.unabbreviate(o), w.unabbreviate(p)))
         
-#     owlready2.observe.start_observing(onto)
-#     owlready2.observe.observe(c, listener)
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(c, listener, True)
     
-#     c.ps.remove(2)
-#     c.ps.append(4)
+    c.ps.remove(2)
+    c.ps.append(4)
     
-#     c.is_a = [D]
+    c.is_a = [D]
     
-#     assert not listened
+    assert not listened
     
-#     owlready2.observe.scan_collapsed_changes()
+    owlready2.observe.scan_collapsed_changes()
     
-#     assert listened == {"t.c1 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type' [t.D] [t.C]", "t.c1 'http://test.org/t.owl#ps' [1, 3, 4] [1, 2, 3]"}
+    assert listened == {"http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://test.org/t.owl#c1 http://test.org/t.owl#ps"}
     
-#     listened = set()
-#     owlready2.observe.scan_collapsed_changes()
-#     assert not listened # Now empty
+    listened = set()
+    owlready2.observe.scan_collapsed_changes()
+    assert not listened # Now empty
     
-#     owlready2.observe.unobserve(c, listener)
-#     c.ps.append(5)
-#     owlready2.observe.scan_collapsed_changes()
-#     assert not listened
+    owlready2.observe.unobserve(c, listener)
+    c.ps.append(5)
+    owlready2.observe.scan_collapsed_changes()
+    assert not listened
     
-#   def test_observe_4(self):
-#     import owlready2.observe
+  def test_observe_4(self):
+    import owlready2.observe
     
-#     w = self.new_world()
-#     onto = w.get_ontology("http://test.org/t.owl")
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
     
-#     with onto:
-#       class C(Thing): pass
+    with onto:
+      class C(Thing): pass
       
-#     c1 = C()
-#     c2 = C()
+    c1 = C()
+    c2 = C()
     
-#     listened = []
-#     def listener(o, p, new, old):
-#       listened.append((o, p, new, old))
-#     l = owlready2.observe.InstancesOfClass(C, use_observe = True)
-#     owlready2.observe.start_observing(onto)
-#     owlready2.observe.observe(l, listener)
+    listened = []
+    def listener(o, p):
+      listened.append((o, p))
+    l = owlready2.observe.InstancesOfClass(C, use_observe = True)
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(l, listener)
     
-#     c3 = C()
+    c3 = C()
 
-#     assert listened[0][0] is l
-#     assert listened[0][1] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
-#     assert list(listened[0][2]) == [c1, c2, c3]
-#     assert list(listened[0][3]) == [c1, c2]
+    assert listened[0][0] is l
+    assert listened[0][1] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
+    assert list(listened[0][2]) == [c1, c2, c3]
+    assert list(listened[0][3]) == [c1, c2]
     
-#     assert list(l) == [c1, c2, c3]
+    assert list(l) == [c1, c2, c3]
     
-#   def test_observe_5(self):
-#     import owlready2.observe
+  def test_observe_5(self):
+    import owlready2.observe
     
-#     w = self.new_world()
-#     onto = w.get_ontology("http://test.org/t.owl")
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
     
-#     with onto:
-#       class C(Thing): pass
+    with onto:
+      class C(Thing): pass
       
-#     c1 = C()
-#     c2 = C()
+    c1 = C()
+    c2 = C()
     
-#     listened = []
-#     def listener(o, p, new, old):
-#       listened.append((o, p, new, old))
-#     l = owlready2.observe.InstancesOfClass(C, use_observe = True)
-#     len(l)
-#     owlready2.observe.start_observing(onto)
-#     owlready2.observe.observe(l, listener)
+    listened = []
+    def listener(o, p, new, old):
+      listened.append((o, p, new, old))
+    l = owlready2.observe.InstancesOfClass(C, use_observe = True)
+    len(l)
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(l, listener)
     
-#     c3 = C()
+    c3 = C()
 
-#     assert listened[0][0] is l
-#     assert listened[0][1] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
-#     assert list(listened[0][2]) == [c1, c2, c3]
-#     assert list(listened[0][3]) == [c1, c2]
+    assert listened[0][0] is l
+    assert listened[0][1] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
+    assert list(listened[0][2]) == [c1, c2, c3]
+    assert list(listened[0][3]) == [c1, c2]
     
-#     assert list(l) == [c1, c2, c3]
+    assert list(l) == [c1, c2, c3]
     
-#   def test_observe_6(self):
-#     import owlready2.observe
+  def test_observe_6(self):
+    import owlready2.observe
     
-#     w = self.new_world()
-#     onto = w.get_ontology("http://test.org/t.owl")
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
     
-#     with onto:
-#       class C(Thing): pass
+    with onto:
+      class C(Thing): pass
       
-#     c1 = C()
-#     c2 = C()
+    c1 = C()
+    c2 = C()
     
-#     listened = []
+    listened = []
     
-#     @owlready2.observe.CollapsedListener
-#     def listener(o, diffs):
-#       listened.extend(diffs)
-#     l = owlready2.observe.InstancesOfClass(C, use_observe = True)
-#     owlready2.observe.start_observing(onto)
-#     owlready2.observe.observe(l, listener)
+    def listener(o, diffs):
+      listened.extend(diffs)
+    l = owlready2.observe.InstancesOfClass(C, use_observe = True)
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(l, listener, True)
     
-#     c3 = C()
-#     c4 = C()
+    c3 = C()
+    c4 = C()
     
-#     assert listened == []
-#     owlready2.observe.scan_collapsed_changes()
+    assert listened == []
+    owlready2.observe.scan_collapsed_changes()
     
-#     assert listened[0][0] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
-#     assert list(listened[0][1]) == [c1, c2, c3, c4]
-#     assert list(listened[0][2]) == [c1, c2]
+    assert listened[0][0] == "Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)"
+    assert list(listened[0][1]) == [c1, c2, c3, c4]
+    assert list(listened[0][2]) == [c1, c2]
     
-#     assert list(l) == [c1, c2, c3, c4]
+    assert list(l) == [c1, c2, c3, c4]
     
-#   def test_observe_7(self):
-#     import owlready2.observe
+  def test_observe_7(self):
+    import owlready2.observe
     
-#     w = self.new_world()
-#     onto = w.get_ontology("http://test.org/t.owl")
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
     
-#     with onto:
-#       class C(Thing): pass
-#       c1 = C()
-#       c2 = C()
-#       c2.label.en = "AAA ?"
-#       c2.label.fr = "Paracétamol"
-#       c3 = C()
-#       c3.label.en = "Asprine"
-#       c3.label.fr = "Asprin"
+    with onto:
+      class C(Thing): pass
+      c1 = C()
+      c2 = C()
+      c2.label.en = "AAA ?"
+      c2.label.fr = "Paracétamol"
+      c3 = C()
+      c3.label.en = "Asprine"
+      c3.label.fr = "Asprin"
       
-#     l = owlready2.observe.InstancesOfClass(C, order_by = "label", lang = "fr", use_observe = True)
-#     assert list(l) == [c1, c3, c2]
+    l = owlready2.observe.InstancesOfClass(C, order_by = "label", lang = "fr", use_observe = True)
+    assert list(l) == [c1, c3, c2]
     
-#     l = owlready2.observe.InstancesOfClass(C, order_by = "label", lang = "en", use_observe = True)
-#     assert list(l) == [c1, c2, c3]
+    l = owlready2.observe.InstancesOfClass(C, order_by = "label", lang = "en", use_observe = True)
+    assert list(l) == [c1, c2, c3]
+    
     
   def test_fts_1(self):
     world = self.new_world()

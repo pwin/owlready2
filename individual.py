@@ -374,7 +374,7 @@ class Thing(metaclass = ThingClass):
             else:
               raise ValueError("Property '%s' is not functional, cannot assign directly (use .append() or assign a list)." % attr)
           getattr(self, attr).reinit(value)
-            
+          
       else: super().__setattr__(attr, value)
         
   def _get_instance_possible_relations(self, ignore_domainless_properties = False):
