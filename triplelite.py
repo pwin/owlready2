@@ -948,11 +948,11 @@ class SubGraph(BaseSubGraph):
       cur.execute("DELETE FROM datas WHERE c=?", (self.c,))
       
     if cur.execute("""SELECT COUNT() FROM ontologies""").fetchone()[0] < 2:
-      cur.execute("""DROP INDEX index_resources_iri""")
-      cur.execute("""DROP INDEX index_objs_sp""")
-      cur.execute("""DROP INDEX index_objs_po""")
-      cur.execute("""DROP INDEX index_datas_sp""")
-      cur.execute("""DROP INDEX index_datas_po""")
+      cur.execute("""DROP IF EXISTS INDEX index_resources_iri""")
+      cur.execute("""DROP IF EXISTS INDEX index_objs_sp""")
+      cur.execute("""DROP IF EXISTS INDEX index_objs_po""")
+      cur.execute("""DROP IF EXISTS INDEX index_datas_sp""")
+      cur.execute("""DROP IF EXISTS INDEX index_datas_po""")
       reindex = True
     else:
       reindex = False

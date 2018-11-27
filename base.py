@@ -146,6 +146,14 @@ def bool_unparser(b):
 def number_unparser(x):
   return x
 
+def _parse_date(s):
+  try:
+    r = datetime.date(*(int(i or "1") or 1 for i in s.rsplit("-", 2)))
+  except:
+    sys.excepthook(*sys.exc_info())
+    return None
+  return r
+
 _universal_abbrev_datatype(int, None, number_unparser, "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#byte", "http://www.w3.org/2001/XMLSchema#short", "http://www.w3.org/2001/XMLSchema#int", "http://www.w3.org/2001/XMLSchema#long", "http://www.w3.org/2001/XMLSchema#unsignedByte", "http://www.w3.org/2001/XMLSchema#unsignedShort", "http://www.w3.org/2001/XMLSchema#unsignedInt", "http://www.w3.org/2001/XMLSchema#unsignedLong", "http://www.w3.org/2001/XMLSchema#negativeInteger", "http://www.w3.org/2001/XMLSchema#nonNegativeInteger", "http://www.w3.org/2001/XMLSchema#positiveInteger")
 _universal_abbrev_datatype(bool, bool_parser, bool_unparser, "http://www.w3.org/2001/XMLSchema#boolean")
 _universal_abbrev_datatype(float, None, number_unparser, "http://www.w3.org/2001/XMLSchema#decimal", "http://www.w3.org/2001/XMLSchema#double", "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2002/07/owl#real")
@@ -156,7 +164,7 @@ _universal_abbrev_datatype(datetime.datetime,
                            lambda s: datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S"),
                            datetime.datetime.isoformat, "http://www.w3.org/2001/XMLSchema#dateTime")
 _universal_abbrev_datatype(datetime.date,
-                           lambda s: datetime.datetime.strptime(s, "%Y-%m-%d").date(),
+                           _parse_date,
                            datetime.date.isoformat, "http://www.w3.org/2001/XMLSchema#date")
 _universal_abbrev_datatype(datetime.time,
                            lambda s: datetime.datetime.strptime(s, "%H:%M:%S").time(),

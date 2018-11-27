@@ -317,7 +317,8 @@ class Thing(metaclass = ThingClass):
         if   len(values) > 1:
           try:    repr_self = repr(self)
           except: repr_self = "<instance of %s>" % self.__class__
-          raise AttributeError("More than one value for %s.%s (storid %s), but the property if functional or the class has been restricted." % (repr_self, attr, self.storid))
+          print("* Owlready2 * WARNING: More than one value for %s.%s (storid %s), but the property if functional or the class has been restricted." % (repr_self, attr, self.storid), file = sys.stderr)
+          values = values[0]
         elif not values: values = None
         else:            values = values[0]
         
