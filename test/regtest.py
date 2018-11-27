@@ -3621,6 +3621,15 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     r = list(g.query_owlready("""
     PREFIX P: <http://www.semanticweb.org/test.owl#>
     PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    SELECT ?s WHERE {
+    ?s P:p "true".
+    }
+    """))
+    assert set(l[0] for l in r) == { o2, o3 }
+    
+    r = list(g.query_owlready("""
+    PREFIX P: <http://www.semanticweb.org/test.owl#>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     SELECT ?o WHERE {
     P:o3 P:i ?o.
     }
