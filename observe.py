@@ -151,7 +151,7 @@ def observe(o, listener, collapsed = False, world = None):
     for o2 in o.objects: observe(o2, listener)
     return
   
-  print("OBSERVE", o, listener)
+  print("OBSERVE", sum(len(obs.collapsed_listeners) for obs in (world or o.namespace.world)._observations.values()), o, listener)
   if world is None:
     world = o.namespace.world
     o = o.storid
@@ -192,7 +192,7 @@ def unobserve(o, listener = None, world = None):
     for o2 in o.objects: unobserve(o2, listener)
     return
   
-  print("UNOBSERVE", o, listener)
+  print("UNOBSERVE", sum(len(obs.collapsed_listeners) for obs in (world or o.namespace.world)._observations.values()), o, listener)
   if world is None:
     world = o.namespace.world
     o = o.storid

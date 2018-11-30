@@ -948,11 +948,11 @@ class SubGraph(BaseSubGraph):
       cur.execute("DELETE FROM datas WHERE c=?", (self.c,))
       
     if cur.execute("""SELECT COUNT() FROM ontologies""").fetchone()[0] < 2:
-      cur.execute("""DROP IF EXISTS INDEX index_resources_iri""")
-      cur.execute("""DROP IF EXISTS INDEX index_objs_sp""")
-      cur.execute("""DROP IF EXISTS INDEX index_objs_po""")
-      cur.execute("""DROP IF EXISTS INDEX index_datas_sp""")
-      cur.execute("""DROP IF EXISTS INDEX index_datas_po""")
+      cur.execute("""DROP INDEX IF EXISTS index_resources_iri""")
+      cur.execute("""DROP INDEX IF EXISTS index_objs_sp""")
+      cur.execute("""DROP INDEX IF EXISTS index_objs_po""")
+      cur.execute("""DROP INDEX IF EXISTS index_datas_sp""")
+      cur.execute("""DROP INDEX IF EXISTS index_datas_po""")
       reindex = True
     else:
       reindex = False
@@ -1511,10 +1511,10 @@ class _SearchList(LazyList):
       sql = "SELECT DISTINCT * FROM (\n%s\n)" % "\nUNION\n".join(sqls)
       
     if self.excepts:
-      sql = """
-WITH candidates(s) AS (%s)
-SELECT s FROM candidates
-EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (sql, ") OR (".join(self.except_conditions))
+      if sql.startswith("SELECT DISTINCT"): sql = "SELECT %s" % sql[16:]
+      sql = """WITH candidates(s) AS (%s)
+SELECT DISTINCT s FROM candidates
+EXCEPT %s""" % (sql, "\nUNION ALL ".join("""SELECT candidates.s FROM candidates, quads WHERE %s""" % except_condition for except_condition in self.except_conditions))
       params = params + self.except_params
       
     return sql, params

@@ -137,6 +137,7 @@ class _GraphManager(object):
     if _LOG_LEVEL > 1:
       if not s.startswith("_"): s = self.unabbreviate(s)
       if p: p = self.unabbreviate(p)
+      if d and (not d.startswith("@")): d = self.unabbreviate(d)
       print("* Owlready2 * DEL TRIPLE", s, p, o, d, file = sys.stderr)
       
   def _parse_list(self, bnode):
@@ -733,7 +734,7 @@ class Ontology(Namespace, _GraphManager):
     if _LOG_LEVEL > 1:
       if not s.startswith("_"): s = self.unabbreviate(s)
       if p: p = self.unabbreviate(p)
-      if o and not (o.startswith("_") or o.startswith('"')): o = self.unabbreviate(o)
+      if d and (not d.startswith("@")): d = self.unabbreviate(d)
       print("* Owlready2 * ADD TRIPLE", s, p, o, d, file = sys.stderr)
       
   def set_data_spod(self, s, p, o, d):
@@ -742,7 +743,7 @@ class Ontology(Namespace, _GraphManager):
     if _LOG_LEVEL > 1:
       if not s.startswith("_"): s = self.unabbreviate(s)
       if p: p = self.unabbreviate(p)
-      if o and (d is None) and (not o.startswith("_")): o = self.unabbreviate(o)
+      if d and (not d.startswith("@")): d = self.unabbreviate(d)
       print("* Owlready2 * SET TRIPLE", s, p, o, d, file = sys.stderr)
     
   # Will be replaced by the graph methods
