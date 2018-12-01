@@ -4103,7 +4103,17 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert C.is_a == [Thing]
     assert getattr(c1, "p", None) == None
     assert len(w.graph) == 5
-
+    
+  def test_destroy_16(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class p(AnnotationProperty): pass
+      
+    destroy_entity(p)
+    
 
   def test_observe_1(self):
     import owlready2.observe

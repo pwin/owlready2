@@ -272,13 +272,13 @@ version 2 - 0.12
 * Numerical search (NumS, e.g. all patients with age > 65)
 * Nested searches
 * Synchronization for multithreading support
-* Add Class.inverse_restrictions()
+* Add Class.inverse_restrictions() and Class.direct_instances()
 * Bugfixes:
   - Fix call to _get_by_storid2
   - Fix rdfs_subclassof in doc
   - Fix FTS triggers
   - Fix boolean in RDFlib / SPARQL
-
+  - Fix bug when destroying an AnnotationProperty
 
 Links
 -----

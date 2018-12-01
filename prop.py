@@ -396,8 +396,8 @@ def destroy_entity(e):
       if s:
         delattr(s, e._python_name)
         
-    del e.namespace.world._props[e._python_name]
-    del e.namespace.world._reasoning_props[e._python_name]
+    e.namespace.world._props          .pop(e._python_name, None)
+    e.namespace.world._reasoning_props.pop(e._python_name, None)
     
   def destroyer(bnode):
     if bnode == e.storid: return
@@ -417,7 +417,7 @@ def destroy_entity(e):
         elif r == rdfs_subclassof:
           o.is_a.reinit([i for i in o.is_a if not i.storid in destroyed_storids])
           for Subclass in o.descendants(True, True): _FUNCTIONAL_FOR_CACHE.pop(Subclass, None)
-
+          
         elif (r == owl_equivalentproperty) or (r == owl_equivalentindividual):
           if o._equivalent_to._indirect:
             for o2 in o.equivalent_to._indirect: o2._equivalent_to._indirect = None
