@@ -213,7 +213,15 @@ class _GraphManager(object):
       yield self._parse_bnode(s)
       
   def disjoints(self): return itertools.chain(self.disjoint_classes(), self.disjoint_properties(), self.different_individuals())
-  
+
+  def general_axioms(self):
+    for s in itertools.chain(self._get_obj_triples_po_s(rdf_type, owl_restriction),
+                             self._get_obj_triples_po_s(rdf_type, owl_class),
+                             ):
+      if s.startswith("_"):
+        sub = self._get_obj_triple_po_s(rdfs_subclassof, s)
+        if sub is None: yield self._parse_bnode(s)
+        
   # def search(self, _use_str_as_loc_str = True, debug = False, **kargs):
   #   prop_vals = []
   #   for k, v0 in kargs.items():
@@ -568,7 +576,7 @@ class Ontology(Namespace, _GraphManager):
     if (not LOADING) and (not self.graph is None):
       if not self._has_obj_triple_spo(self.storid, rdf_type, owl_ontology):
         if self.world.graph: self.world.graph.acquire_write_lock()
-        self._add_obj_spo(self.storid, rdf_type, owl_ontology)
+        self._add_obj_triple_spo(self.storid, rdf_type, owl_ontology)
         if self.world.graph: self.world.graph.release_write_lock()
         
   def destroy(self):
@@ -590,7 +598,7 @@ class Ontology(Namespace, _GraphManager):
     for ontology in old - new:
       self._del_obj_triple_spod(self.storid, owl_imports, ontology.storid)
     for ontology in new - old:
-      self._add_obj_spo(self.storid, owl_imports, ontology.storid)
+      self._add_obj_triple_spo(self.storid, owl_imports, ontology.storid)
       
   def get_namespace(self, base_iri, name = ""):
     if (not base_iri.endswith("/")) and (not base_iri.endswith("#")): base_iri = "%s#" % base_iri
@@ -710,7 +718,7 @@ class Ontology(Namespace, _GraphManager):
       if _LOG_LEVEL: print("* Owlready2 * Saving ontology %s to %s..." % (self.name, getattr(file, "name", "???")), file = sys.stderr)
       self.graph.save(file, format, **kargs)
       
-  def _add_obj_spo(self, s, p, o):
+  def _add_obj_triple_spo(self, s, p, o):
     if CURRENT_NAMESPACES[-1] is None: self._add_obj_triple_raw_spo(s, p, o)
     else:   CURRENT_NAMESPACES[-1].ontology._add_obj_triple_raw_spo(s, p, o)
     if _LOG_LEVEL > 1:
@@ -719,7 +727,7 @@ class Ontology(Namespace, _GraphManager):
       if o and not (o.startswith("_") or o.startswith('"')): o = self._unabbreviate(o)
       print("* Owlready2 * ADD TRIPLE", s, p, o, file = sys.stderr)
       
-  def _set_obj_spo(self, s, p, o):
+  def _set_obj_triple_spo(self, s, p, o):
     if CURRENT_NAMESPACES[-1] is None: self._set_obj_triple_raw_spo(s, p, o)
     else:   CURRENT_NAMESPACES[-1].ontology._set_obj_triple_raw_spo(s, p, o)
     if _LOG_LEVEL > 1:
@@ -728,7 +736,7 @@ class Ontology(Namespace, _GraphManager):
       if o and not (o.startswith("_") or o.startswith('"')): o = self._unabbreviate(o)
       print("* Owlready2 * SET TRIPLE", s, p, o, file = sys.stderr)
       
-  def _add_data_spodd(self, s, p, o, d):
+  def _add_data_triple_spoddd(self, s, p, o, d):
     if CURRENT_NAMESPACES[-1] is None: self._add_data_triple_raw_spodd(s, p, o, d)
     else:   CURRENT_NAMESPACES[-1].ontology._add_data_triple_raw_spodd(s, p, o, d)
     if _LOG_LEVEL > 1:
@@ -737,7 +745,7 @@ class Ontology(Namespace, _GraphManager):
       if d and (not d.startswith("@")): d = self._unabbreviate(d)
       print("* Owlready2 * ADD TRIPLE", s, p, o, d, file = sys.stderr)
       
-  def _set_data_spodd(self, s, p, o, d):
+  def _set_data_triple_spoddd(self, s, p, o, d):
     if CURRENT_NAMESPACES[-1] is None: self._set_data_triple_raw_spodd(s, p, o, d)
     else:   CURRENT_NAMESPACES[-1].ontology._set_data_triple_raw_spodd(s, p, o, d)
     if _LOG_LEVEL > 1:
@@ -759,16 +767,16 @@ class Ontology(Namespace, _GraphManager):
       break # Take first
     else:
       bnode = self.world.new_blank_node() # Not found => new axiom
-      self._add_obj_spo(bnode, rdf_type, owl_axiom)
-      self._add_obj_spo(bnode, owl_annotatedsource  , source)
-      self._add_obj_spo(bnode, owl_annotatedproperty, property)
+      self._add_obj_triple_spo(bnode, rdf_type, owl_axiom)
+      self._add_obj_triple_spo(bnode, owl_annotatedsource  , source)
+      self._add_obj_triple_spo(bnode, owl_annotatedproperty, property)
       if target_d is None:
-        self._add_obj_spo(bnode, owl_annotatedtarget, target)
+        self._add_obj_triple_spo(bnode, owl_annotatedtarget, target)
       else:
-        self._add_data_spodd(bnode, owl_annotatedtarget, target, target_d)
+        self._add_data_triple_spoddd(bnode, owl_annotatedtarget, target, target_d)
     
-    if d is None: self._add_obj_spo  (bnode, annot, value)
-    else:         self._add_data_spodd(bnode, annot, value, d)
+    if d is None: self._add_obj_triple_spo  (bnode, annot, value)
+    else:         self._add_data_triple_spoddd(bnode, annot, value, d)
     return bnode
     
   
@@ -875,34 +883,34 @@ class Ontology(Namespace, _GraphManager):
       
   def _set_list(self, bnode, l):
     if not l:
-      self._add_obj_spo(bnode, rdf_first, rdf_nil)
-      self._add_obj_spo(bnode, rdf_rest,  rdf_nil)
+      self._add_obj_triple_spo(bnode, rdf_first, rdf_nil)
+      self._add_obj_triple_spo(bnode, rdf_rest,  rdf_nil)
       return
     for i in range(len(l)):
       o,d = self._to_rdf(l[i])
-      if d is None: self._add_obj_spo  (bnode, rdf_first, o)
-      else:         self._add_data_spodd(bnode, rdf_first, o, d)
+      if d is None: self._add_obj_triple_spo  (bnode, rdf_first, o)
+      else:         self._add_data_triple_spoddd(bnode, rdf_first, o, d)
       if i < len(l) - 1:
         bnode_next = self.world.new_blank_node()
-        self._add_obj_spo(bnode, rdf_rest, bnode_next)
+        self._add_obj_triple_spo(bnode, rdf_rest, bnode_next)
         bnode = bnode_next
       else:
-        self._add_obj_spo(bnode, rdf_rest, rdf_nil)
+        self._add_obj_triple_spo(bnode, rdf_rest, rdf_nil)
         
   def _set_list_as_rdf(self, bnode, l):
     if not l:
-      self._add_obj_spo(bnode, rdf_first, rdf_nil)
-      self._add_obj_spo(bnode, rdf_rest,  rdf_nil)
+      self._add_obj_triple_spo(bnode, rdf_first, rdf_nil)
+      self._add_obj_triple_spo(bnode, rdf_rest,  rdf_nil)
       return
     for i in range(len(l)):
-      if l[i][1] is None: self._add_obj_spo  (bnode, rdf_first, l[i][0])
-      else:               self._add_data_spodd(bnode, rdf_first, l[i][0], l[i][1])
+      if l[i][1] is None: self._add_obj_triple_spo  (bnode, rdf_first, l[i][0])
+      else:               self._add_data_triple_spoddd(bnode, rdf_first, l[i][0], l[i][1])
       if i < len(l) - 1:
         bnode_next = self.world.new_blank_node()
-        self._add_obj_spo(bnode, rdf_rest, bnode_next)
+        self._add_obj_triple_spo(bnode, rdf_rest, bnode_next)
         bnode = bnode_next
       else:
-        self._add_obj_spo(bnode, rdf_rest, rdf_nil)
+        self._add_obj_triple_spo(bnode, rdf_rest, rdf_nil)
         
   def __repr__(self): return """get_ontology("%s")""" % (self.base_iri)
   

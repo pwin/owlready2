@@ -86,8 +86,8 @@ class PropertyClass(EntityClass):
       
   def _add_is_a_triple(Prop, base):
     if   base in _CLASS_PROPS: pass
-    elif base in _TYPE_PROPS:  Prop.namespace.ontology._add_obj_spo(Prop.storid, rdf_type       , base.storid)
-    else:                      Prop.namespace.ontology._add_obj_spo(Prop.storid, Prop._rdfs_is_a, base.storid)
+    elif base in _TYPE_PROPS:  Prop.namespace.ontology._add_obj_triple_spo(Prop.storid, rdf_type       , base.storid)
+    else:                      Prop.namespace.ontology._add_obj_triple_spo(Prop.storid, Prop._rdfs_is_a, base.storid)
     
   def _del_is_a_triple(Prop, base):
     if   base in _CLASS_PROPS: pass
@@ -113,7 +113,7 @@ class PropertyClass(EntityClass):
       if isinstance(x, ClassConstruct): x._set_ontology(None)
     for x in new - old:
       if isinstance(x, ClassConstruct): x._set_ontology(Prop.namespace.ontology)
-      Prop.namespace.ontology._add_obj_spo(Prop.storid, rdf_domain, x.storid)
+      Prop.namespace.ontology._add_obj_triple_spo(Prop.storid, rdf_domain, x.storid)
       
   def domains_indirect(Prop):
     yield from Prop.domain
@@ -143,7 +143,7 @@ class PropertyClass(EntityClass):
     for x in new - old:
       if isinstance(x, ClassConstruct): x._set_ontology(Prop.namespace.ontology)
       x2 = _universal_datatype_2_abbrev.get(x) or x.storid
-      Prop.namespace.ontology._add_obj_spo(Prop.storid, rdf_range, x2)
+      Prop.namespace.ontology._add_obj_triple_spo(Prop.storid, rdf_range, x2)
       
       
   def get_property_chain(Prop):
@@ -166,7 +166,7 @@ class PropertyClass(EntityClass):
       x._set_ontology(None)
     for x in new - old:
       x._set_ontology(Prop.namespace.ontology)
-      Prop.namespace.ontology._add_obj_spo(Prop.storid, owl_propertychain, x.storid)
+      Prop.namespace.ontology._add_obj_triple_spo(Prop.storid, owl_propertychain, x.storid)
     
     
   def __getattr__(Prop, attr):
@@ -195,7 +195,7 @@ class PropertyClass(EntityClass):
   def get_python_name(Prop):
     return Prop._python_name
   def set_python_name(Prop, python_name):
-    if not LOADING: Prop.namespace.ontology._set_data_spodd(Prop.storid, owlready_python_name, *to_literal(python_name))
+    if not LOADING: Prop.namespace.ontology._set_data_triple_spoddd(Prop.storid, owlready_python_name, *to_literal(python_name))
     del Prop.namespace.world._props[Prop._python_name]
     Prop.namespace.world._props[python_name] = Prop
     Prop._python_name = python_name
@@ -289,7 +289,7 @@ class ObjectPropertyClass(ReasoningPropertyClass):
     return Prop._inverse_property
   
   def set_inverse_property(Prop, value):
-    Prop.namespace.ontology._set_obj_spo(Prop.storid, owl_inverse_property, value and value.storid)
+    Prop.namespace.ontology._set_obj_triple_spo(Prop.storid, owl_inverse_property, value and value.storid)
     Prop._inverse_property = value
     if value and not (value.inverse_property is Prop): value.inverse_property = Prop
     

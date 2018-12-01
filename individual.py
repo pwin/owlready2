@@ -107,7 +107,7 @@ class ValueList(CallbackListWithLanguage):
           removed.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
           
       for added in new - old:
-        obj.namespace.ontology._add_obj_spo(obj.storid, self._Prop.storid, added.storid)
+        obj.namespace.ontology._add_obj_triple_spo(obj.storid, self._Prop.storid, added.storid)
         if inverse: added.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
         
     elif self._Prop._owl_type == owl_data_property:
@@ -115,7 +115,7 @@ class ValueList(CallbackListWithLanguage):
         obj.namespace.ontology._del_data_triple_spoddd(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
         
       for added in new - old:
-        obj.namespace.ontology._add_data_spodd(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
+        obj.namespace.ontology._add_data_triple_spoddd(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
         
     else: #self._Prop._owl_type == owl_annotation_property:
       for removed in old - new:
@@ -126,9 +126,9 @@ class ValueList(CallbackListWithLanguage):
           
       for added in new - old:
         if hasattr(added, "storid"):
-          obj.namespace.ontology._add_obj_spo(obj.storid, self._Prop.storid, added.storid)
+          obj.namespace.ontology._add_obj_triple_spo(obj.storid, self._Prop.storid, added.storid)
         else:
-          obj.namespace.ontology._add_data_spodd(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
+          obj.namespace.ontology._add_data_triple_spoddd(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
           
     
 class Thing(metaclass = ThingClass):
@@ -173,7 +173,7 @@ class Thing(metaclass = ThingClass):
             if not C in already_existing.is_a:
               already_existing.is_a._append(C)
               if not LOADING:
-                already_existing.namespace.ontology._add_obj_spo(already_existing.storid, rdf_type, C.storid)
+                already_existing.namespace.ontology._add_obj_triple_spo(already_existing.storid, rdf_type, C.storid)
                 
         bases = ThingClass._find_base_classes(already_existing.is_a)
         if len(bases) == 1:
@@ -209,9 +209,9 @@ class Thing(metaclass = ThingClass):
         self.__dict__["is_a"] = CallbackList([self.__class__], self, Thing._instance_is_a_changed)
         
       if not LOADING:
-        self.namespace.ontology._add_obj_spo(self.storid, rdf_type, owl_named_individual)
+        self.namespace.ontology._add_obj_triple_spo(self.storid, rdf_type, owl_named_individual)
         for parent in self.is_a:
-          self.namespace.ontology._add_obj_spo(self.storid, rdf_type, parent.storid)
+          self.namespace.ontology._add_obj_triple_spo(self.storid, rdf_type, parent.storid)
           
         for attr, value in kargs.items(): setattr(self, attr, value)
         
@@ -239,7 +239,7 @@ class Thing(metaclass = ThingClass):
       
     for base in new - old:
       if isinstance(base, ClassConstruct): base._set_ontology(self.namespace.ontology)
-      if not LOADING: self.namespace.ontology._add_obj_spo(self.storid, rdf_type, base.storid)
+      if not LOADING: self.namespace.ontology._add_obj_triple_spo(self.storid, rdf_type, base.storid)
       
   #def __attrs__(self): # Not Python standard, but used by EditObj
   
@@ -269,7 +269,7 @@ class Thing(metaclass = ThingClass):
           x._equivalent_to._indirect = None
           
     for x in new - old:
-      self.namespace.ontology._add_obj_spo(self.storid, owl_equivalentindividual, x.storid)
+      self.namespace.ontology._add_obj_triple_spo(self.storid, owl_equivalentindividual, x.storid)
       if isinstance(x, ClassConstruct): x._set_ontology(self.namespace.ontology)
       else: # Invalidate it
         if x.equivalent_to._indirect:
@@ -352,7 +352,7 @@ class Thing(metaclass = ThingClass):
             if value is None:
               self.namespace.ontology._del_obj_triple_spod(self.storid, Prop.storid, None)
             else:
-              self.namespace.ontology._set_obj_spo(self.storid, Prop.storid, value.storid)
+              self.namespace.ontology._set_obj_triple_spo(self.storid, Prop.storid, value.storid)
               if Prop.inverse_property: value.__dict__.pop(Prop.inverse_property.python_name, None) # Remove => force reloading; XXX optimizable
             
           elif Prop._owl_type == owl_data_property:
@@ -363,7 +363,7 @@ class Thing(metaclass = ThingClass):
             if value is None:
               self.namespace.ontology._del_data_triple_spoddd(self.storid, Prop.storid, None, None)
             else:
-              self.namespace.ontology._set_data_spodd(self.storid, Prop.storid, *self.namespace.ontology._to_rdf(value))
+              self.namespace.ontology._set_data_triple_spoddd(self.storid, Prop.storid, *self.namespace.ontology._to_rdf(value))
           
           #else: #Prop._owl_type == owl_annotation_property: # Annotation cannot be functional
             

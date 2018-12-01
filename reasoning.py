@@ -254,7 +254,7 @@ def _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, en
     for parent_storid in parent_storids:
       owl_relation = _TYPE_2_IS_A[entity_2_type[child_storid]]
       if not ontology.world._has_obj_triple_spo(child_storid, owl_relation, parent_storid):
-        ontology._add_obj_spo(child_storid, owl_relation, parent_storid)
+        ontology._add_obj_triple_spo(child_storid, owl_relation, parent_storid)
         
     child = world._entities.get(child_storid)
     if not child is None:
@@ -270,7 +270,7 @@ def _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, en
     for concept2_storid in concept2_storids:
       owl_relation = _TYPE_2_EQUIVALENT_TO[entity_2_type[concept1_storid]]
       if not ontology.world._has_obj_triple_spo(concept1_storid, owl_relation, concept2_storid):
-        ontology._add_obj_spo(concept1_storid, owl_relation, concept2_storid)
+        ontology._add_obj_triple_spo(concept1_storid, owl_relation, concept2_storid)
         
       if concept2_storid == owl_nothing:
         concept1 = world._entities.get(concept1_storid)

@@ -126,7 +126,7 @@ class EntityClass(type):
       Class = namespace.world._entities[storid] = _is_a._obj = type.__new__(MetaClass, name, superclasses, obj_dict)
           
       if not LOADING:
-        namespace.ontology._add_obj_spo(storid, rdf_type, MetaClass._owl_type)
+        namespace.ontology._add_obj_triple_spo(storid, rdf_type, MetaClass._owl_type)
         for parent in _is_a: Class._add_is_a_triple(parent)
         
     else:
@@ -138,7 +138,7 @@ class EntityClass(type):
     return Class
   
   def _add_is_a_triple(Class, base):
-    Class.namespace.ontology._add_obj_spo(Class.storid, Class._rdfs_is_a, base.storid)
+    Class.namespace.ontology._add_obj_triple_spo(Class.storid, Class._rdfs_is_a, base.storid)
     
   def _del_is_a_triple(Class, base):
     Class.namespace.ontology._del_obj_triple_spod(Class.storid, Class._rdfs_is_a, base.storid)
@@ -187,7 +187,7 @@ class EntityClass(type):
         if x.equivalent_to._indirect:
           for x2 in x.equivalent_to._indirect: x2._equivalent_to._indirect = None
           x._equivalent_to._indirect = None
-      Class.namespace.ontology._add_obj_spo(Class.storid, Class._owl_equivalent, x.storid)
+      Class.namespace.ontology._add_obj_triple_spo(Class.storid, Class._owl_equivalent, x.storid)
       
     Class._equivalent_to._indirect = None # Invalidate, because the addition / removal may add its own equivalent.
     

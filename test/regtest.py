@@ -267,9 +267,9 @@ class Test(BaseTest, unittest.TestCase):
     o = world.get_ontology("http://test.org/t.owl")
     A = world._abbreviate("http://test.org/t.owl#A")
     B = world._abbreviate("http://test.org/t.owl#B")
-    o._add_obj_spo(A, rdf_type, owl_class)
+    o._add_obj_triple_spo(A, rdf_type, owl_class)
     #missing triple (B, rdf_type, owl_class)
-    o._add_obj_spo(A, rdfs_subclassof, B)
+    o._add_obj_triple_spo(A, rdfs_subclassof, B)
     
     assert isinstance(o.A, ThingClass)
     assert o.B in o.A.is_a
@@ -544,6 +544,33 @@ class Test(BaseTest, unittest.TestCase):
       class C(Thing): pass
       
     assert o.graph.get_last_update_time() != 0.0
+    
+  def test_ontology_23(self):
+    w = self.new_world()
+    o = w.get_ontology("http://test.org/test.owl")
+
+    assert set(w.general_axioms()) == set()
+    assert set(o.general_axioms()) == set()
+    
+    with o:
+      class C(Thing): pass
+      class p(ObjectProperty): pass
+      class D(Thing):
+        is_a = [p.some(C)]
+      class E(Thing): pass
+        
+    w.graph.dump()
+    assert set(w.general_axioms()) == set()
+    assert set(o.general_axioms()) == set()
+    
+    o._add_obj_triple_spo("_2", rdf_type, owl_restriction)
+    o._add_obj_triple_spo("_2", owl_onproperty, p.storid)
+    o._add_obj_triple_spo("_2", SOME, D.storid)
+    o._add_obj_triple_spo("_2", rdfs_subclassof, E.storid)
+
+    assert set(w.general_axioms()) == set([o._parse_bnode("_2")])
+    assert set(o.general_axioms()) == set([o._parse_bnode("_2")])
+    
     
     
   def test_class_1(self):

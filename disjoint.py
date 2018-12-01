@@ -73,11 +73,11 @@ class AllDisjoint(object):
     if len(self.entities) == 2:
       if   isinstance(self.entities[0], ThingClass):
         self.storid = (self.entities[0].storid, owl_disjointwith, self.entities[1].storid)
-        self.ontology._add_obj_spo(*self.storid)
+        self.ontology._add_obj_triple_spo(*self.storid)
         return
       elif isinstance(self.entities[0], PropertyClass):
         self.storid = (self.entities[0].storid, owl_propdisjointwith, self.entities[1].storid)
-        self.ontology._add_obj_spo(*self.storid)
+        self.ontology._add_obj_triple_spo(*self.storid)
         return
       # It seems that there is no 1-1 relation for individuals
       # => continue
@@ -87,16 +87,16 @@ class AllDisjoint(object):
       if not self._list_bnode:             self._list_bnode = self.ontology.world.new_blank_node()
       
       if   isinstance(self.entities[0], ThingClass):
-        self.ontology._add_obj_spo(self.storid, rdf_type, owl_alldisjointclasses)
-        self.ontology._add_obj_spo(self.storid, owl_members, self._list_bnode)
+        self.ontology._add_obj_triple_spo(self.storid, rdf_type, owl_alldisjointclasses)
+        self.ontology._add_obj_triple_spo(self.storid, owl_members, self._list_bnode)
         
       elif isinstance(self.entities[0], PropertyClass):
-        self.ontology._add_obj_spo(self.storid, rdf_type, owl_alldisjointproperties)
-        self.ontology._add_obj_spo(self.storid, owl_members, self._list_bnode)
+        self.ontology._add_obj_triple_spo(self.storid, rdf_type, owl_alldisjointproperties)
+        self.ontology._add_obj_triple_spo(self.storid, owl_members, self._list_bnode)
         
       else: # Individuals
-        self.ontology._add_obj_spo(self.storid, rdf_type, owl_alldifferent)
-        self.ontology._add_obj_spo(self.storid, owl_distinctmembers, self._list_bnode)
+        self.ontology._add_obj_triple_spo(self.storid, rdf_type, owl_alldifferent)
+        self.ontology._add_obj_triple_spo(self.storid, owl_distinctmembers, self._list_bnode)
         
       self.ontology._set_list(self._list_bnode, self.entities)
       
