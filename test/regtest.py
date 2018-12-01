@@ -57,31 +57,31 @@ class BaseTest(object):
     
   def assert_triple(self, s, p, o, d = None, world = default_world):
     if d is None:
-      if not world.has_obj_spo(s, p, o):
-        if not s.startswith("_"): s = world.unabbreviate(s)
-        p = world.unabbreviate(p)
-        if not o.startswith("_"): o = world.unabbreviate(o)
+      if not world._has_obj_triple_spo(s, p, o):
+        if not s.startswith("_"): s = world._unabbreviate(s)
+        p = world._unabbreviate(p)
+        if not o.startswith("_"): o = world._unabbreviate(o)
         print("MISSING TRIPLE", s, p, o)
         raise AssertionError
     else:
-      if not world.has_data_spod(s, p, o, d):
-        if not s.startswith("_"): s = world.unabbreviate(s)
-        p = world.unabbreviate(p)
+      if not world._has_data_triple_spod(s, p, o, d):
+        if not s.startswith("_"): s = world._unabbreviate(s)
+        p = world._unabbreviate(p)
         print("MISSING TRIPLE", s, p, o, d)
         raise AssertionError
     
   def assert_not_triple(self, s, p, o, d = None, world = default_world):
     if d is None:
-      if world.has_obj_spo(s, p, o):
-        if not s.startswith("_"): s = world.unabbreviate(s)
-        p = world.unabbreviate(p)
-        if not o.startswith("_"): o = world.unabbreviate(o)
+      if world._has_obj_triple_spo(s, p, o):
+        if not s.startswith("_"): s = world._unabbreviate(s)
+        p = world._unabbreviate(p)
+        if not o.startswith("_"): o = world._unabbreviate(o)
         print("UNEXPECTED TRIPLE", s, p, o)
         raise AssertionError
     else:
-      if world.has_data_spod(s, p, o, d):
-        if not s.startswith("_"): s = world.unabbreviate(s)
-        p = world.unabbreviate(p)
+      if world._has_data_triple_spod(s, p, o, d):
+        if not s.startswith("_"): s = world._unabbreviate(s)
+        p = world._unabbreviate(p)
         print("UNEXPECTED TRIPLE", s, p, o, d)
         raise AssertionError
       
@@ -265,11 +265,11 @@ class Test(BaseTest, unittest.TestCase):
   def test_world_7(self):
     world = self.new_world()
     o = world.get_ontology("http://test.org/t.owl")
-    A = world.abbreviate("http://test.org/t.owl#A")
-    B = world.abbreviate("http://test.org/t.owl#B")
-    o.add_obj_spo(A, rdf_type, owl_class)
+    A = world._abbreviate("http://test.org/t.owl#A")
+    B = world._abbreviate("http://test.org/t.owl#B")
+    o._add_obj_spo(A, rdf_type, owl_class)
     #missing triple (B, rdf_type, owl_class)
-    o.add_obj_spo(A, rdfs_subclassof, B)
+    o._add_obj_spo(A, rdfs_subclassof, B)
     
     assert isinstance(o.A, ThingClass)
     assert o.B in o.A.is_a
@@ -1135,14 +1135,14 @@ class Test(BaseTest, unittest.TestCase):
   def test_prop_5(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     pizza = n.Pizza()
-    assert default_world.get_data_sp_od(pizza.storid, n.price.storid) is None
+    assert default_world._get_data_triple_sp_od(pizza.storid, n.price.storid) is None
     pizza.price = 8.0
 
-    assert from_literal(*default_world.get_data_sp_od(pizza.storid, n.price.storid)) == 8.0
+    assert from_literal(*default_world._get_data_triple_sp_od(pizza.storid, n.price.storid)) == 8.0
     pizza.price = 9.0
-    assert from_literal(*default_world.get_data_sp_od(pizza.storid, n.price.storid)) == 9.0
+    assert from_literal(*default_world._get_data_triple_sp_od(pizza.storid, n.price.storid)) == 9.0
     pizza.price = None
-    assert default_world.get_data_sp_od(pizza.storid, n.price.storid) is None
+    assert default_world._get_data_triple_sp_od(pizza.storid, n.price.storid) is None
     
   def test_prop_6(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -1151,12 +1151,12 @@ class Test(BaseTest, unittest.TestCase):
     tomato = n.Tomato()
     cheese = n.Cheese()
     pizza.has_topping = [tomato]
-    assert default_world.get_obj_sp_o(pizza.storid, n.has_topping.storid) == tomato.storid
+    assert default_world._get_obj_triple_sp_o(pizza.storid, n.has_topping.storid) == tomato.storid
     pizza.has_topping.append(cheese)
     self.assert_triple(pizza.storid, n.has_topping.storid, tomato.storid)
     self.assert_triple(pizza.storid, n.has_topping.storid, cheese.storid)
     pizza.has_topping.remove(tomato)
-    assert default_world.get_obj_sp_o(pizza.storid, n.has_topping.storid) == cheese.storid
+    assert default_world._get_obj_triple_sp_o(pizza.storid, n.has_topping.storid) == cheese.storid
     
   def test_prop_7(self):
     n = self.new_ontology()
@@ -1188,14 +1188,14 @@ class Test(BaseTest, unittest.TestCase):
       class prop(DataProperty):
         range = [int]
         
-    self.assert_triple(prop.storid, rdf_range, n.abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
+    self.assert_triple(prop.storid, rdf_range, n._abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
     assert isinstance(prop.range, util.CallbackList)
     
     prop.range.append(float)
-    self.assert_triple(prop.storid, rdf_range, n.abbreviate("http://www.w3.org/2001/XMLSchema#decimal"))
+    self.assert_triple(prop.storid, rdf_range, n._abbreviate("http://www.w3.org/2001/XMLSchema#decimal"))
     
     prop.range.remove(int)
-    self.assert_not_triple(prop.storid, rdf_range, n.abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
+    self.assert_not_triple(prop.storid, rdf_range, n._abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
     
   def test_prop_10(self):
     n = self.new_ontology()
@@ -1252,7 +1252,7 @@ class Test(BaseTest, unittest.TestCase):
     c1.prop.en = "Anglais"
     
     values = set()
-    for s,p,o,d in n.get_datas_spod_spod(c1.storid, prop.storid, None): values.add((o,d))
+    for s,p,o,d in n._get_data_triples_spod_spod(c1.storid, prop.storid, None): values.add((o,d))
     assert values == { to_literal(locstr("Anglais", "en")), to_literal(locstr("French", "fr")), to_literal(locstr("Français", "fr")) }
     
   def test_prop_14(self):
@@ -1271,16 +1271,16 @@ class Test(BaseTest, unittest.TestCase):
       class prop5(prop2): pass
       
     def get_types(prop):
-      for s,p,o in n.get_objs_spo_spo(prop.storid, rdf_type, None): yield o
+      for s,p,o in n._get_obj_triples_spo_spo(prop.storid, rdf_type, None): yield o
       
     assert set(get_types(prop1)) == { owl_data_property }
     assert set(get_types(prop2)) == { owl_object_property }
-    assert set(get_types(prop3)) == { owl_object_property, n.abbreviate("http://www.w3.org/2002/07/owl#FunctionalProperty") }
+    assert set(get_types(prop3)) == { owl_object_property, n._abbreviate("http://www.w3.org/2002/07/owl#FunctionalProperty") }
     assert set(get_types(prop4)) == { owl_annotation_property }
     assert set(get_types(prop5)) == { owl_object_property }
     
     def get_subclasses(prop):
-      for s,p,o in n.get_objs_spo_spo(prop.storid, rdfs_subpropertyof, None): yield o
+      for s,p,o in n._get_obj_triples_spo_spo(prop.storid, rdfs_subpropertyof, None): yield o
       
     assert set(get_subclasses(prop1)) == set()
     assert set(get_subclasses(prop2)) == set()
@@ -1697,7 +1697,7 @@ class Test(BaseTest, unittest.TestCase):
     assert r.property == n.has_topping
     assert r.value == n.Meat
     assert r.cardinality is None
-    assert len(list(default_world.get_objs_spo_spo(r.storid, None, None))) == 3
+    assert len(list(default_world._get_obj_triples_spo_spo(r.storid, None, None))) == 3
     
   def test_construct_restriction_2(self):
     n = self.new_ontology()
@@ -1714,61 +1714,61 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P1.storid)
     self.assert_triple(bnode, ONLY, C2.storid)
-    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 3
+    assert len(list(default_world._get_triples_spod_spod(bnode, None, None, None))) == 3
     
     r.value = C3
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P1.storid)
     self.assert_triple(bnode, ONLY, C3.storid)
-    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 3
+    assert len(list(default_world._get_triples_spod_spod(bnode, None, None, None))) == 3
     
     r.property = P2
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, ONLY, C3.storid)
-    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 3
+    assert len(list(default_world._get_triples_spod_spod(bnode, None, None, None))) == 3
     
     r.type        = EXACTLY
     r.cardinality = 2
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, owl_onclass, C3.storid)
-    self.assert_triple(bnode, EXACTLY, 2, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 4
+    self.assert_triple(bnode, EXACTLY, 2, n._abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    assert len(list(default_world._get_triples_spod_spod(bnode, None, None, None))) == 4
     
     r.type        = MIN
     r.cardinality = 3
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, owl_onclass, C3.storid)
-    self.assert_triple(bnode, MIN, 3, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 4
+    self.assert_triple(bnode, MIN, 3, n._abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    assert len(list(default_world._get_triples_spod_spod(bnode, None, None, None))) == 4
     
     r.value = None
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
-    self.assert_triple(bnode, owl_min_cardinality, 3, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 3
+    self.assert_triple(bnode, owl_min_cardinality, 3, n._abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    assert len(list(default_world._get_triples_spod_spod(bnode, None, None, None))) == 3
     
     r.type = MAX
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
-    self.assert_triple(bnode, owl_max_cardinality, 3, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 3
+    self.assert_triple(bnode, owl_max_cardinality, 3, n._abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    assert len(list(default_world._get_triples_spod_spod(bnode, None, None, None))) == 3
     
     r.value = C2
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, owl_onclass, C2.storid)
-    self.assert_triple(bnode, MAX, 3, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 4
+    self.assert_triple(bnode, MAX, 3, n._abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    assert len(list(default_world._get_triples_spod_spod(bnode, None, None, None))) == 4
     
     r.type = EXACTLY
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P2.storid)
     self.assert_triple(bnode, owl_onclass, C2.storid)
-    self.assert_triple(bnode, EXACTLY, 3, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 4
+    self.assert_triple(bnode, EXACTLY, 3, n._abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    assert len(list(default_world._get_triples_spod_spod(bnode, None, None, None))) == 4
     
   def test_construct_restriction_3(self):
     n = self.new_ontology()
@@ -1796,17 +1796,17 @@ class Test(BaseTest, unittest.TestCase):
     bnode = r.storid
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P1.storid)
-    self.assert_triple(bnode, ONLY, n.abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
-    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 3
+    self.assert_triple(bnode, ONLY, n._abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
+    assert len(list(default_world._get_triples_spod_spod(bnode, None, None, None))) == 3
     
     r.value       = float
     r.type        = EXACTLY
     r.cardinality = 5
     self.assert_triple(bnode, rdf_type, owl_restriction)
     self.assert_triple(bnode, owl_onproperty, P1.storid)
-    self.assert_triple(bnode, EXACTLY, 5, n.abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
-    self.assert_triple(bnode, owl_ondatarange, n.abbreviate("http://www.w3.org/2001/XMLSchema#decimal"))
-    assert len(list(default_world.get_quads_spod_spod(bnode, None, None, None))) == 4
+    self.assert_triple(bnode, EXACTLY, 5, n._abbreviate("http://www.w3.org/2001/XMLSchema#nonNegativeInteger"))
+    self.assert_triple(bnode, owl_ondatarange, n._abbreviate("http://www.w3.org/2001/XMLSchema#decimal"))
+    assert len(list(default_world._get_triples_spod_spod(bnode, None, None, None))) == 4
     
   def test_construct_restriction_5(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -2244,41 +2244,41 @@ I took a placebo
     
     annot[c1, prop, c2].append("Test")
     annots = None
-    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
-      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n._get_obj_triples_spo_spo(None, rdf_type, owl_axiom):
+      if ((n._get_obj_triple_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n._get_triples_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, "Test") }
       
     annot[c1, prop, c2].append("Test1")
     annots = None
-    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
-      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n._get_obj_triples_spo_spo(None, rdf_type, owl_axiom):
+      if ((n._get_obj_triple_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n._get_triples_spod_spod(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, "Test"), (annot.storid, "Test1") }
       
     annot2[c1, prop, c2].append("Test2")
     annots = None
-    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
-      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n._get_obj_triples_spo_spo(None, rdf_type, owl_axiom):
+      if ((n._get_obj_triple_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n._get_triples_spod_spod(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, "Test"), (annot.storid, "Test1"), (annot2.storid, "Test2") }
     
     annot[c1, prop, c2].remove("Test")
     annots = None
-    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
-      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n._get_obj_triples_spo_spo(None, rdf_type, owl_axiom):
+      if ((n._get_obj_triple_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n._get_triples_spod_spod(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
       
     assert annots == { (annot.storid, "Test1"), (annot2.storid, "Test2") }
@@ -2298,11 +2298,11 @@ I took a placebo
     annot[c1, prop, c2].append(locstr("Un test", "fr"))
     annot[c1, prop, c2].append(locstr("A test", "en"))
     annots = None
-    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
-      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n._get_obj_triples_spo_spo(None, rdf_type, owl_axiom):
+      if ((n._get_obj_triple_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n._get_triples_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, locstr("Un test", "fr")), (annot.storid, locstr("A test", "en")) }
     
@@ -2312,41 +2312,41 @@ I took a placebo
     
     annot[c1, prop, c2].fr.append("Un second test")
     annots = None
-    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
-      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n._get_obj_triples_spo_spo(None, rdf_type, owl_axiom):
+      if ((n._get_obj_triple_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n._get_triples_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, locstr("Un test", "fr")), (annot.storid, locstr("Un second test", "fr")), (annot.storid, locstr("A test", "en")) }
     
     annot[c1, prop, c2].fr.remove("Un test")
     annots = None
-    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
-      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n._get_obj_triples_spo_spo(None, rdf_type, owl_axiom):
+      if ((n._get_obj_triple_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n._get_triples_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, locstr("Un second test", "fr")), (annot.storid, locstr("A test", "en")) }
     
     annot[c1, prop, c2].fr = "Un test 2"
     annots = None
-    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
-      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n._get_obj_triples_spo_spo(None, rdf_type, owl_axiom):
+      if ((n._get_obj_triple_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n._get_triples_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, locstr("Un test 2", "fr")), (annot.storid, locstr("A test", "en")) }
     
     annot[c1, prop, c2].fr = ["Un test 3", "Un test 4"]
     annots = None
-    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
-      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n._get_obj_triples_spo_spo(None, rdf_type, owl_axiom):
+      if ((n._get_obj_triple_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n._get_triples_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, locstr("Un test 3", "fr")), (annot.storid, locstr("Un test 4", "fr")), (annot.storid, locstr("A test", "en")) }
     
@@ -2367,21 +2367,21 @@ I took a placebo
     
     annot[c1, prop, c2] = ["Test"]
     annots = None
-    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
-      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n._get_obj_triples_spo_spo(None, rdf_type, owl_axiom):
+      if ((n._get_obj_triple_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n._get_triples_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, "Test") }
     
     annot[c1, prop, c2] = []
     annots = None
-    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
-      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n._get_obj_triples_spo_spo(None, rdf_type, owl_axiom):
+      if ((n._get_obj_triple_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n._get_triples_spod_spod(bnode, None, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots is None
     
@@ -2400,11 +2400,11 @@ I took a placebo
     annot[c1, prop, c2].en.append("A test")
     annot[c1, prop, c2].fr = "Un test"
     annots = None
-    for bnode, p, o in n.get_objs_spo_spo(None, rdf_type, owl_axiom):
-      if ((n.get_obj_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
-          (n.get_obj_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
-        annots = { (p, n._to_python(o,d)) for s,p,o,d in n.get_quads_spod_spod(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
+    for bnode, p, o in n._get_obj_triples_spo_spo(None, rdf_type, owl_axiom):
+      if ((n._get_obj_triple_sp_o(bnode, owl_annotatedsource  ) == c1.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedproperty) == prop.storid) and
+          (n._get_obj_triple_sp_o(bnode, owl_annotatedtarget  ) == c2.storid)):
+        annots = { (p, n._to_python(o,d)) for s,p,o,d in n._get_triples_spod_spod(bnode, None, None) if not p in [rdf_type, owl_annotatedsource, owl_annotatedproperty, owl_annotatedtarget] }
         break
     assert annots == { (annot.storid, locstr("Un test", "fr")), (annot.storid, locstr("A test", "en")) }
     
@@ -2421,7 +2421,7 @@ I took a placebo
     prop.comment.fr.append("FRENCH")
     
     values = set()
-    for s,p,o,d in n.get_quads_spod_spod(prop.storid, comment.storid, None, None): values.add((o,d))
+    for s,p,o,d in n._get_triples_spod_spod(prop.storid, comment.storid, None, None): values.add((o,d))
     assert values == { to_literal(locstr("ENGLISH", "en")), to_literal(locstr("FRENCH", "fr")) }
     
   def test_annotation_8(self):
@@ -2434,7 +2434,7 @@ I took a placebo
     C.annot.en = "ENGLISH"
     
     values = set()
-    for s,p,o,d in n.get_quads_spod_spod(C.storid, annot.storid, None, None): values.add((o,d))
+    for s,p,o,d in n._get_triples_spod_spod(C.storid, annot.storid, None, None): values.add((o,d))
     assert values == { to_literal(locstr("ENGLISH", "en")), to_literal(locstr("FRENCH", "fr")) }
     
   def test_annotation_9(self):
@@ -2509,9 +2509,9 @@ I took a placebo
       C.comment.append(locstr("plain literal"))
       C.comment.append(locstr("literal with lang", "en"))
       
-    self.assert_triple(C.storid, comment.storid, 8, n.abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
-    self.assert_triple(C.storid, comment.storid, "eee", n.abbreviate("http://www.w3.org/2001/XMLSchema#string"))
-    self.assert_triple(C.storid, comment.storid, "plain literal", n.abbreviate("http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral"))
+    self.assert_triple(C.storid, comment.storid, 8, n._abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
+    self.assert_triple(C.storid, comment.storid, "eee", n._abbreviate("http://www.w3.org/2001/XMLSchema#string"))
+    self.assert_triple(C.storid, comment.storid, "plain literal", n._abbreviate("http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral"))
     self.assert_triple(C.storid, comment.storid, "literal with lang", "@en")
     
   def test_annotation_14(self):
@@ -3647,7 +3647,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert type(r[0][0]) is bool
     
     
-  def test_refactor_1(self):
+  def test__refactor_1(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
@@ -3659,7 +3659,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert p.iri == "http://www.semanticweb.org/jiba/ontologies/2017/0/test#ma_pizza_2"
     assert world["http://www.semanticweb.org/jiba/ontologies/2017/0/test#ma_pizza_2"] is p
     
-  def test_refactor_2(self):
+  def test__refactor_2(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
@@ -3671,7 +3671,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert world["http://t/p"] is p
     assert n.get_namespace("http://t/").p is p
         
-  def test_refactor_3(self):
+  def test__refactor_3(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
@@ -3682,7 +3682,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert p.iri == "http://www.semanticweb.org/jiba/ontologies/2017/0/test#Pizza_2"
     assert world["http://www.semanticweb.org/jiba/ontologies/2017/0/test#Pizza_2"] is p
     
-  def test_refactor_4(self):
+  def test__refactor_4(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
@@ -3753,11 +3753,11 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     d.min_exclusive = 15
     d.max_exclusive = 20
     
-    list_bnode = world.get_obj_sp_o(d.storid, owl_withrestrictions)
+    list_bnode = world._get_obj_triple_sp_o(d.storid, owl_withrestrictions)
     l = list(n._parse_list_as_rdf(list_bnode))
     s = set()
     for i, ii in l:
-      t = world.get_datas_s_pod(i)
+      t = world._get_data_triples_s_pod(i)
       assert len(t) == 1
       p,o,d = t[0]
       o = from_literal(o,d)
@@ -3780,11 +3780,11 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
     self.assert_triple(d.storid, owl_ondatatype, _universal_datatype_2_abbrev[str], None,  world)
     
-    list_bnode = world.get_obj_sp_o(d.storid, owl_withrestrictions)
+    list_bnode = world._get_obj_triple_sp_o(d.storid, owl_withrestrictions)
     l = list(n._parse_list_as_rdf(list_bnode))
     s = set()
     for i, ii in l:
-      t = world.get_datas_s_pod(i)
+      t = world._get_data_triples_s_pod(i)
       assert len(t) == 1
       p,o,d = t[0]
       o = from_literal(o,d)
@@ -3854,20 +3854,20 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       
     P.property_chain.append(PropertyChain([P1, P2]))
     
-    bns = list(w.get_objs_sp_o(P.storid, owl_propertychain))
+    bns = list(w._get_obj_triples_sp_o(P.storid, owl_propertychain))
     assert len(bns) == 1
     assert o._parse_list(bns[0]) == [P1, P2]
     
     P.property_chain.append(PropertyChain([P3, P4]))
     
-    bns = list(w.get_objs_sp_o(P.storid, owl_propertychain))
+    bns = list(w._get_obj_triples_sp_o(P.storid, owl_propertychain))
     assert len(bns) == 2
     assert o._parse_list(bns[0]) == [P1, P2]
     assert o._parse_list(bns[1]) == [P3, P4]
     
     del P.property_chain[0]
     
-    bns = list(w.get_objs_sp_o(P.storid, owl_propertychain))
+    bns = list(w._get_obj_triples_sp_o(P.storid, owl_propertychain))
     assert len(bns) == 1
     assert o._parse_list(bns[0]) == [P3, P4]
     
@@ -4132,7 +4132,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     listened = "\n"
     def listener(o, p):
       nonlocal listened
-      listened += "%s %s\n" % (w.unabbreviate(o), w.unabbreviate(p))
+      listened += "%s %s\n" % (w._unabbreviate(o), w._unabbreviate(p))
       
     owlready2.observe.start_observing(onto)
     owlready2.observe.observe(c, listener)
@@ -4178,7 +4178,7 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     listened = set()
     def listener(o, ps):
       for p in ps:
-        listened.add("%s %s" % (w.unabbreviate(o), w.unabbreviate(p)))
+        listened.add("%s %s" % (w._unabbreviate(o), w._unabbreviate(p)))
         
     owlready2.observe.start_observing(onto)
     owlready2.observe.observe(c.storid, listener, True, w)
@@ -4220,7 +4220,7 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     listened = set()
     def listener(o, ps):
       for p in ps:
-        listened.add("%s %s" % (w.unabbreviate(o), w.unabbreviate(p)))
+        listened.add("%s %s" % (w._unabbreviate(o), w._unabbreviate(p)))
         
     owlready2.observe.start_observing(onto)
     owlready2.observe.observe(c, listener, True)

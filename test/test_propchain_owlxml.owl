@@ -19,18 +19,18 @@
     <Prefix name="oboInOwl" IRI="http://www.geneontology.org/formats/oboInOwl#"/>
     
     <Declaration>
-        <ObjectProperty abbreviatedIRI="obo:BFO_0000050"/>
+        <ObjectProperty _abbreviatedIRI="obo:BFO_0000050"/>
     </Declaration>
     <Declaration>
-        <ObjectProperty abbreviatedIRI="obo:BFO_0000066"/>
+        <ObjectProperty _abbreviatedIRI="obo:BFO_0000066"/>
     </Declaration>
     
     <SubObjectPropertyOf>
         <ObjectPropertyChain>
-            <ObjectProperty abbreviatedIRI="obo:BFO_0000050"/>
-            <ObjectProperty abbreviatedIRI="obo:BFO_0000066"/>
+            <ObjectProperty _abbreviatedIRI="obo:BFO_0000050"/>
+            <ObjectProperty _abbreviatedIRI="obo:BFO_0000066"/>
         </ObjectPropertyChain>
-        <ObjectProperty abbreviatedIRI="obo:BFO_0000066"/>
+        <ObjectProperty _abbreviatedIRI="obo:BFO_0000066"/>
     </SubObjectPropertyOf>
 </Ontology>
 

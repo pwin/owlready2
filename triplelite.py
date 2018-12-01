@@ -219,7 +219,7 @@ class Graph(BaseMainGraph):
       self.prop_fts = { storid : fts for (fts, storid) in self.execute("""SELECT * FROM prop_fts;""") }
       
     self.current_changes = self.db.total_changes
-    self.select_abbreviate_method()
+    self.select__abbreviate_method()
 
   def close(self):
     self.db.close()
@@ -232,27 +232,27 @@ class Graph(BaseMainGraph):
     self.lock.release()
   def has_write_lock(self): return self.lock_level
   
-  def select_abbreviate_method(self):
+  def select__abbreviate_method(self):
     nb = self.execute("SELECT count(*) FROM resources").fetchone()[0]
     if nb < 100000:
       iri_storid = self.execute("SELECT iri, storid FROM resources").fetchall()
-      self.  abbreviate_d = dict(iri_storid)
-      self.unabbreviate_d = dict((storid, iri) for (iri, storid) in  iri_storid)
-      self.abbreviate   = self.abbreviate_dict
-      self.unabbreviate = self.unabbreviate_dict
-      self.refactor     = self.refactor_dict
+      self.  _abbreviate_d = dict(iri_storid)
+      self._unabbreviate_d = dict((storid, iri) for (iri, storid) in  iri_storid)
+      self._abbreviate   = self._abbreviate_dict
+      self._unabbreviate = self._unabbreviate_dict
+      self._refactor     = self._refactor_dict
     else:
-      self.  abbreviate_d = None
-      self.unabbreviate_d = None
-      self.abbreviate   = self.abbreviate_sql
-      self.unabbreviate = self.unabbreviate_sql
-      self.refactor     = self.refactor_sql
+      self.  _abbreviate_d = None
+      self._unabbreviate_d = None
+      self._abbreviate   = self._abbreviate_sql
+      self._unabbreviate = self._unabbreviate_sql
+      self._refactor     = self._refactor_sql
     if self.world:
-      self.world.abbreviate   = self.abbreviate
-      self.world.unabbreviate = self.unabbreviate
+      self.world._abbreviate   = self._abbreviate
+      self.world._unabbreviate = self._unabbreviate
     for subgraph in self.onto_2_subgraph.values():
-      subgraph.onto.abbreviate   = subgraph.abbreviate   = self.abbreviate
-      subgraph.onto.unabbreviate = subgraph.unabbreviate = self.unabbreviate
+      subgraph.onto._abbreviate   = subgraph._abbreviate   = self._abbreviate
+      subgraph.onto._unabbreviate = subgraph._unabbreviate = self._unabbreviate
       
   def fix_base_iri(self, base_iri, c = None):
     if base_iri.endswith("#") or base_iri.endswith("/"): return base_iri
@@ -277,7 +277,7 @@ class Graph(BaseMainGraph):
   def ontologies_iris(self):
     for (iri,) in self.execute("SELECT iri FROM ontologies").fetchall(): yield iri
       
-  def abbreviate_sql(self, iri):
+  def _abbreviate_sql(self, iri):
     r = self.execute("SELECT storid FROM resources WHERE iri=? LIMIT 1", (iri,)).fetchone()
     if r: return r[0]
     self.current_resource += 1
@@ -285,25 +285,25 @@ class Graph(BaseMainGraph):
     self.execute("INSERT INTO resources VALUES (?,?)", (storid, iri))
     return storid
   
-  def unabbreviate_sql(self, storid):
+  def _unabbreviate_sql(self, storid):
     return self.execute("SELECT iri FROM resources WHERE storid=? LIMIT 1", (storid,)).fetchone()[0]
   
-  def abbreviate_dict(self, iri):
-    storid = self.abbreviate_d.get(iri)
+  def _abbreviate_dict(self, iri):
+    storid = self._abbreviate_d.get(iri)
     if storid is None:
       self.current_resource += 1
-      storid = self.abbreviate_d[iri] = _int_base_62(self.current_resource)
-      self.unabbreviate_d[storid] = iri
+      storid = self._abbreviate_d[iri] = _int_base_62(self.current_resource)
+      self._unabbreviate_d[storid] = iri
       self.execute("INSERT INTO resources VALUES (?,?)", (storid, iri))
     return storid
   
-  def unabbreviate_dict(self, storid):
-    return self.unabbreviate_d[storid]
+  def _unabbreviate_dict(self, storid):
+    return self._unabbreviate_d[storid]
   
   def get_storid_dict(self):
     return dict(self.execute("SELECT storid, iri FROM resources").fetchall())
   
-  def new_numbered_iri(self, prefix):
+  def _new_numbered_iri(self, prefix):
     if prefix in self.last_numbered_iri:
       i = self.last_numbered_iri[prefix] = self.last_numbered_iri[prefix] + 1
       return "%s%s" % (prefix, i)
@@ -320,14 +320,14 @@ class Graph(BaseMainGraph):
     self.last_numbered_iri[prefix] = 1
     return "%s1" % prefix
   
-  def refactor_sql(self, storid, new_iri):
+  def _refactor_sql(self, storid, new_iri):
     self.execute("UPDATE resources SET iri=? WHERE storid=?", (new_iri, storid,))
     
-  def refactor_dict(self, storid, new_iri):
+  def _refactor_dict(self, storid, new_iri):
     self.execute("UPDATE resources SET iri=? WHERE storid=?", (new_iri, storid,))
-    del self.abbreviate_d[self.unabbreviate_d[storid]]
-    self.  abbreviate_d[new_iri] = storid
-    self.unabbreviate_d[storid]  = new_iri
+    del self._abbreviate_d[self._unabbreviate_d[storid]]
+    self.  _abbreviate_d[new_iri] = storid
+    self._unabbreviate_d[storid]  = new_iri
     
   def commit(self):
     if self.current_changes != self.db.total_changes:
@@ -341,7 +341,7 @@ class Graph(BaseMainGraph):
     self.current_blank += 1
     return "_%s" % _int_base_62(self.current_blank)
   
-  def get_objs_spo_spo(self, s, p, o):
+  def _get_obj_triples_spo_spo(self, s, p, o):
     if s is None:
       if p is None:
         if o is None: cur = self.execute("SELECT s,p,o FROM objs")
@@ -358,7 +358,7 @@ class Graph(BaseMainGraph):
         else:         cur = self.execute("SELECT s,p,o FROM objs WHERE s=? AND p=? AND o=?", (s, p, o,))
     return cur.fetchall()
   
-  def get_datas_spod_spod(self, s, p, o, d):
+  def _get_data_triples_spod_spod(self, s, p, o, d):
     if s is None:
       if p is None:
         if o is None: cur = self.execute("SELECT s,p,o,d FROM datas")
@@ -391,7 +391,7 @@ class Graph(BaseMainGraph):
             cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=? AND p=? AND o=? AND d=?", (s, p, o, d,))
     return cur.fetchall()
     
-  def get_quads_spod_spod(self, s, p, o, d):
+  def _get_triples_spod_spod(self, s, p, o, d):
     if s is None:
       if p is None:
         if o is None: cur = self.execute("SELECT s,p,o,d FROM quads")
@@ -424,7 +424,7 @@ class Graph(BaseMainGraph):
             cur = self.execute("SELECT s,p,o,d FROM quads WHERE s=? AND p=? AND o=? AND d=?", (s, p, o, d,))
     return cur.fetchall()
     
-  def get_objs_cspo_cspo(self, c, s, p, o):
+  def _get_obj_triples_cspo_cspo(self, c, s, p, o):
     if c is None:
       if s is None:
         if p is None:
@@ -458,50 +458,50 @@ class Graph(BaseMainGraph):
     return cur.fetchall()
   
   
-  def get_objs_sp_co(self, s, p):
+  def _get_obj_triples_sp_co(self, s, p):
     return self.execute("SELECT c,o FROM objs WHERE s=? AND p=?", (s, p)).fetchall()
     
-  def get_quads_s_p(self, s):
+  def _get_triples_s_p(self, s):
     for (x,) in self.execute("SELECT DISTINCT p FROM quads WHERE s=?", (s,)).fetchall(): yield x
     
-  def get_objs_s_po(self, s):
+  def _get_obj_triples_s_po(self, s):
     return self.execute("SELECT p,o FROM objs WHERE s=?", (s,)).fetchall()
   
-  def get_objs_sp_o(self, s, p):
+  def _get_obj_triples_sp_o(self, s, p):
     for (x,) in self.execute("SELECT o FROM objs WHERE s=? AND p=?", (s, p)).fetchall(): yield x
     
-  def get_datas_sp_od(self, s, p):
+  def _get_data_triples_sp_od(self, s, p):
     return self.execute("SELECT o,d FROM datas WHERE s=? AND p=?", (s, p)).fetchall()
 
-  def get_quads_sp_od(self, s, p):
+  def _get_triples_sp_od(self, s, p):
     return self.execute("SELECT o,d FROM quads WHERE s=? AND p=?", (s, p)).fetchall()
     
-  def get_datas_s_pod(self, s):
+  def _get_data_triples_s_pod(self, s):
     return self.execute("SELECT p,o,d FROM datas WHERE s=?", (s,)).fetchall()
   
-  def get_quads_s_pod(self, s):
+  def _get_triples_s_pod(self, s):
     return self.execute("SELECT p,o,d FROM quads WHERE s=?", (s,)).fetchall()
     
-  def get_objs_po_s(self, p, o):
+  def _get_obj_triples_po_s(self, p, o):
     for (x,) in self.execute("SELECT s FROM objs WHERE p=? AND o=?", (p, o)).fetchall(): yield x
     
-  def get_obj_sp_o(self, s, p):
+  def _get_obj_triple_sp_o(self, s, p):
     r = self.execute("SELECT o FROM objs WHERE s=? AND p=? LIMIT 1", (s, p)).fetchone()
     if r: return r[0]
     return None
   
-  def get_quad_sp_od(self, s, p):
+  def _get_triple_sp_od(self, s, p):
     return self.execute("SELECT o,d FROM quads WHERE s=? AND p=? LIMIT 1", (s, p)).fetchone()
     
-  def get_data_sp_od(self, s, p):
+  def _get_data_triple_sp_od(self, s, p):
     return self.execute("SELECT o,d FROM datas WHERE s=? AND p=? LIMIT 1", (s, p)).fetchone()
   
-  def get_obj_po_s(self, p, o):
+  def _get_obj_triple_po_s(self, p, o):
     r = self.execute("SELECT s FROM objs WHERE p=? AND o=? LIMIT 1", (p, o)).fetchone()
     if r: return r[0]
     return None
   
-  def has_obj_spo(self, s = None, p = None, o = None):
+  def _has_obj_triple_spo(self, s = None, p = None, o = None):
     if s is None:
       if p is None:
         if o is None: cur = self.execute("SELECT s FROM objs LIMIT 1")
@@ -518,7 +518,7 @@ class Graph(BaseMainGraph):
         else:         cur = self.execute("SELECT s FROM objs WHERE s=? AND p=? AND o=? LIMIT 1", (s, p, o))
     return not cur.fetchone() is None
   
-  def has_data_spod(self, s = None, p = None, o = None, d = ""):
+  def _has_data_triple_spod(self, s = None, p = None, o = None, d = ""):
     if s is None:
       if p is None:
         if o is None: cur = self.execute("SELECT s FROM datas LIMIT 1")
@@ -535,7 +535,7 @@ class Graph(BaseMainGraph):
         else:         cur = self.execute("SELECT s FROM datas WHERE s=? AND p=? AND o=? AND d=? LIMIT 1", (s, p, o, d))
     return not cur.fetchone() is None
   
-  def _del_obj_spo(self, s, p, o):
+  def _del_obj_triple_raw_spo(self, s, p, o):
     if s is None:
       if p is None:
         if o is None: self.execute("DELETE FROM objs")
@@ -551,7 +551,7 @@ class Graph(BaseMainGraph):
         if o is None: self.execute("DELETE FROM objs WHERE s=? AND p=?", (s, p,))
         else:         self.execute("DELETE FROM objs WHERE s=? AND p=? AND o=?", (s, p, o,))
         
-  def _del_data_spod(self, s, p, o, d):
+  def _del_data_triple_raw_spodd(self, s, p, o, d):
     if s is None:
       if p is None:
         if o is None:   self.execute("DELETE FROM datas")
@@ -739,7 +739,7 @@ class Graph(BaseMainGraph):
     
     
   # Reimplemented using RECURSIVE SQL structure, for performance
-  def get_transitive_sp(self, s, p):
+  def _get_obj_triples_transitive_sp(self, s, p):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT o FROM objs WHERE s=? AND p=?
@@ -747,7 +747,7 @@ UNION ALL SELECT objs.o FROM objs, transit WHERE objs.s=transit.x AND objs.p=?)
 SELECT DISTINCT x FROM transit""", (s, p, p)).fetchall(): yield x
 
   # Reimplemented using RECURSIVE SQL structure, for performance
-  def get_transitive_po(self, p, o):
+  def _get_obj_triples_transitive_po(self, p, o):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT s FROM objs WHERE p=? AND o=?
@@ -755,7 +755,7 @@ UNION ALL SELECT objs.s FROM objs, transit WHERE objs.p=? AND objs.o=transit.x)
 SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
 
 # Slower than Python implementation
-#  def get_transitive_sym2(self, s, p):
+#  def _get_obj_triples_transitive_sym2(self, s, p):
 #    r = { s }
 #    for (s, o) in self.execute("""
 #WITH RECURSIVE transit(s,o)
@@ -801,19 +801,19 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
     previouss = []
     nexts     = []
     length    = 1
-    b         = self.get_obj_sp_o(blank, rdf_rest)
+    b         = self._get_obj_triple_sp_o(blank, rdf_rest)
     while b != rdf_nil:
       nexts.append(b)
       length += 1
-      b       = self.get_obj_sp_o(b, rdf_rest)
+      b       = self._get_obj_triple_sp_o(b, rdf_rest)
       
-    b         = self.get_obj_po_s(rdf_rest, blank)
+    b         = self._get_obj_triple_po_s(rdf_rest, blank)
     if b:
       while b:
         previouss.append(b)
         length += 1
         root    = b
-        b       = self.get_obj_po_s(rdf_rest, b)
+        b       = self._get_obj_triple_po_s(rdf_rest, b)
     else:
       root = blank
       
@@ -930,9 +930,9 @@ class SubGraph(BaseSubGraph):
     self.c      = c
     self.db     = db
     self.execute          = db.execute
-    self.abbreviate       = parent.abbreviate
-    self.unabbreviate     = parent.unabbreviate
-    self.new_numbered_iri = parent.new_numbered_iri
+    self._abbreviate       = parent._abbreviate
+    self._unabbreviate     = parent._unabbreviate
+    self._new_numbered_iri = parent._new_numbered_iri
     
     self.parent.onto_2_subgraph[onto] = self
     
@@ -959,10 +959,10 @@ class SubGraph(BaseSubGraph):
 
     # XXX
       
-    # Re-implement abbreviate() for speed
-    if self.parent.abbreviate_d is None:
+    # Re-implement _abbreviate() for speed
+    if self.parent._abbreviate_d is None:
       abbrevs = {}
-      def abbreviate(iri):
+      def _abbreviate(iri):
         storid = abbrevs.get(iri)
         if not storid is None: return storid
         r = cur.execute("SELECT storid FROM resources WHERE iri=? LIMIT 1", (iri,)).fetchone()
@@ -975,8 +975,8 @@ class SubGraph(BaseSubGraph):
         abbrevs[iri] = storid
         return storid
     else:
-      abbrevs = self.parent.abbreviate_d
-      def abbreviate(iri):
+      abbrevs = self.parent._abbreviate_d
+      def _abbreviate(iri):
         storid = abbrevs.get(iri)
         if not storid is None: return storid
         
@@ -1001,15 +1001,15 @@ class SubGraph(BaseSubGraph):
       datas.clear()
       
     def on_prepare_obj(s, p, o):
-      if not s.startswith("_"): s = abbreviate(s)
-      if not o.startswith("_"): o = abbreviate(o)
-      objs.append((s, abbreviate(p), o))
+      if not s.startswith("_"): s = _abbreviate(s)
+      if not o.startswith("_"): o = _abbreviate(o)
+      objs.append((s, _abbreviate(p), o))
       if len(objs) > 1000000: insert_objs()
       
     def on_prepare_data(s, p, o, d):
-      if not s.startswith("_"): s = abbreviate(s)
-      if d and (not d.startswith("@")): d = abbreviate(d)
-      datas.append((s, abbreviate(p), o, d))
+      if not s.startswith("_"): s = _abbreviate(s)
+      if d and (not d.startswith("@")): d = _abbreviate(d)
+      datas.append((s, _abbreviate(p), o, d))
       if len(datas) > 1000000: insert_datas()
       
       
@@ -1040,12 +1040,12 @@ class SubGraph(BaseSubGraph):
       else:
         cur.execute("UPDATE ontologies SET last_update=? WHERE c=?", (date, self.c,))
         
-      self.parent.select_abbreviate_method()
+      self.parent.select__abbreviate_method()
       
       return onto_base_iri
     
     
-    return objs, datas, on_prepare_obj, on_prepare_data, insert_objs, insert_datas, self.parent.new_blank_node, abbreviate, on_finish
+    return objs, datas, on_prepare_obj, on_prepare_data, insert_objs, insert_datas, self.parent.new_blank_node, _abbreviate, on_finish
 
 
   def context_2_user_context(self, c): return self.parent.c_2_onto[c]
@@ -1064,16 +1064,16 @@ class SubGraph(BaseSubGraph):
     self.execute("DELETE FROM datas WHERE c=?",      (self.c,))
     self.execute("DELETE FROM ontologies WHERE c=?", (self.c,))
     
-  def _set_obj_spo(self, s, p, o):
+  def _set_obj_triple_raw_spo(self, s, p, o):
     if (s is None) or (p is None) or (o is None): raise ValueError
     self.execute("DELETE FROM objs WHERE c=? AND s=? AND p=?", (self.c, s, p,))
     self.execute("INSERT INTO objs VALUES (?, ?, ?, ?)", (self.c, s, p, o))
     
-  def _add_obj_spo(self, s, p, o):
+  def _add_obj_triple_raw_spo(self, s, p, o):
     if (s is None) or (p is None) or (o is None): raise ValueError
     self.execute("INSERT INTO objs VALUES (?, ?, ?, ?)", (self.c, s, p, o))
     
-  def _del_obj_spo(self, s = None, p = None, o = None):
+  def _del_obj_triple_raw_spo(self, s = None, p = None, o = None):
     if s is None:
       if p is None:
         if o is None: self.execute("DELETE FROM objs WHERE c=?", (self.c,))
@@ -1089,17 +1089,17 @@ class SubGraph(BaseSubGraph):
         if o is None: self.execute("DELETE FROM objs WHERE c=? AND s=? AND p=?", (self.c, s, p,))
         else:         self.execute("DELETE FROM objs WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
         
-  def _set_data_spod(self, s, p, o, d):
+  def _set_data_triple_raw_spodd(self, s, p, o, d):
     if (s is None) or (p is None) or (o is None) or (d is None): raise ValueError
     self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=?", (self.c, s, p,))
     self.execute("INSERT INTO datas VALUES (?, ?, ?, ?, ?)", (self.c, s, p, o, d))
     
-  def _add_data_spod(self, s, p, o, d):
+  def _add_data_triple_raw_spodd(self, s, p, o, d):
     if (s is None) or (p is None) or (o is None) or (d is None): raise ValueError
     self.execute("INSERT INTO datas VALUES (?, ?, ?, ?, ?)", (self.c, s, p, o, d))
     
 
-  def _del_data_spod(self, s, p, o, d):
+  def _del_data_triple_raw_spodd(self, s, p, o, d):
     if s is None:
       if p is None:
         if o is None:   self.execute("DELETE FROM datas WHERE c=?", (self.c,))
@@ -1119,7 +1119,7 @@ class SubGraph(BaseSubGraph):
         elif d is None: self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
         else:           self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=? AND o=? AND d=?", (self.c, s, p, o, d,))
 
-  def has_obj_spo(self, s = None, p = None, o = None):
+  def _has_obj_triple_spo(self, s = None, p = None, o = None):
     if s is None:
       if p is None:
         if o is None: cur = self.execute("SELECT s FROM objs WHERE c=? LIMIT 1", (self.c,))
@@ -1136,7 +1136,7 @@ class SubGraph(BaseSubGraph):
         else:         cur = self.execute("SELECT s FROM objs WHERE c=? AND s=? AND p=? AND o=? LIMIT 1", (self.c, s, p, o))
     return not cur.fetchone() is None
        
-  def has_data_spod(self, s = None, p = None, o = None, d = ""):
+  def _has_data_triple_spod(self, s = None, p = None, o = None, d = ""):
     if s is None:
       if p is None:
         if o is None: cur = self.execute("SELECT s FROM datas WHERE c=? LIMIT 1", (self.c,))
@@ -1154,7 +1154,7 @@ class SubGraph(BaseSubGraph):
     return not cur.fetchone() is None
     
         
-  def get_objs_spo_spo(self, s = None, p = None, o = None):
+  def _get_obj_triples_spo_spo(self, s = None, p = None, o = None):
     if s is None:
       if p is None:
         if o is None: cur = self.execute("SELECT s,p,o FROM objs WHERE c=?", (self.c,))
@@ -1171,7 +1171,7 @@ class SubGraph(BaseSubGraph):
         else:         cur = self.execute("SELECT s,p,o FROM objs WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
     return cur.fetchall()
 
-  def get_datas_spod_spod(self, s, p, o, d = ""):
+  def _get_data_triples_spod_spod(self, s, p, o, d = ""):
     if s is None:
       if p is None:
         if o is None: cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=?", (self.c,))
@@ -1204,7 +1204,7 @@ class SubGraph(BaseSubGraph):
             cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=? AND p=? AND o=? AND d=?", (self.c, s, p, o, d,))
     return cur.fetchall()
 
-  def get_quads_spod_spod(self, s, p, o, d = ""):
+  def _get_triples_spod_spod(self, s, p, o, d = ""):
     if s is None:
       if p is None:
         if o is None: cur = self.execute("SELECT s,p,o,d FROM quads WHERE c=?", (self.c,))
@@ -1238,51 +1238,51 @@ class SubGraph(BaseSubGraph):
     return cur.fetchall()
 
   
-  def get_objs_s_po(self, s):
+  def _get_obj_triples_s_po(self, s):
     return self.execute("SELECT p,o FROM objs WHERE c=? AND s=?", (self.c, s,)).fetchall()
   
-  def get_objs_sp_o(self, s, p):
+  def _get_obj_triples_sp_o(self, s, p):
     for (x,) in self.execute("SELECT o FROM objs WHERE c=? AND s=? AND p=?", (self.c, s, p,)).fetchall(): yield x
     
-  def get_objs_sp_co(self, s, p):
+  def _get_obj_triples_sp_co(self, s, p):
     return self.execute("SELECT c,o FROM objs WHERE c=? AND s=? AND p=?", (self.c, s, p,)).fetchall()
     
-  def get_quads_sp_od(self, s, p):
+  def _get_triples_sp_od(self, s, p):
     return self.execute("SELECT o,d FROM quads WHERE c=? AND s=? AND p=?", (self.c, s, p)).fetchall()
     
-  def get_datas_sp_od(self, s, p):
+  def _get_data_triples_sp_od(self, s, p):
     return self.execute("SELECT o,d FROM datas WHERE c=? AND s=? AND p=?", (self.c, s, p,)).fetchall()
 
-  def get_datas_s_pod(self, s):
+  def _get_data_triples_s_pod(self, s):
     return self.execute("SELECT p,o,d FROM datas WHERE c=? AND s=?", (self.c, s,)).fetchall()
     
-  def get_quads_s_pod(self, s):
+  def _get_triples_s_pod(self, s):
     return self.execute("SELECT p,o,d FROM quads WHERE c=? AND s=?", (self.c, s,)).fetchall()
     
-  def get_objs_po_s(self, p, o):
+  def _get_obj_triples_po_s(self, p, o):
     for (x,) in self.execute("SELECT s FROM objs WHERE c=? AND p=? AND o=?", (self.c, p, o,)).fetchall(): yield x
     
-  def get_obj_sp_o(self, s, p):
+  def _get_obj_triple_sp_o(self, s, p):
     r = self.execute("SELECT o FROM objs WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,)).fetchone()
     if r: return r[0]
     return None
   
-  def get_quad_sp_od(self, s, p):
+  def _get_triple_sp_od(self, s, p):
     return self.execute("SELECT o,d FROM quads WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p)).fetchone()
     
-  def get_data_sp_od(self, s, p):
+  def _get_data_triple_sp_od(self, s, p):
     return self.execute("SELECT o,d FROM datas WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,)).fetchone()
   
-  def get_obj_po_s(self, p, o):
+  def _get_obj_triple_po_s(self, p, o):
     r = self.execute("SELECT s FROM objs WHERE c=? AND p=? AND o=? LIMIT 1", (self.c, p, o,)).fetchone()
     if r: return r[0]
     return None
   
-  def get_quads_s_p(self, s):
+  def _get_triples_s_p(self, s):
     for (x,) in self.execute("SELECT DISTINCT p FROM quads WHERE c=? AND s=?", (self.c, s,)).fetchall(): yield x
     
-  def get_objs_cspo_cspo(self, c, s, p, o):
-    return [(self.c, s, p, o) for (s, p, o) in self.get_objs_spo_spo(s, p, o)]
+  def _get_obj_triples_cspo_cspo(self, c, s, p, o):
+    return [(self.c, s, p, o) for (s, p, o) in self._get_obj_triples_spo_spo(s, p, o)]
   
   def search(self, prop_vals, c = None, debug = False): return self.parent.search(prop_vals, self.c, debug)
   
@@ -1299,10 +1299,10 @@ class SubGraph(BaseSubGraph):
   def _iter_triples(self, quads = False, sort_by_s = False):
     return self.parent._iter_triples(quads, sort_by_s, self.c)
   
-  def refactor(self, storid, new_iri): return self.parent.refactor(storid, new_iri)
+  def _refactor(self, storid, new_iri): return self.parent._refactor(storid, new_iri)
     
   # Reimplemented using RECURSIVE SQL structure, for performance
-  def get_transitive_sp(self, s, p):
+  def _get_obj_triples_transitive_sp(self, s, p):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT o FROM objs WHERE c=? AND s=? AND p=?
@@ -1310,14 +1310,14 @@ UNION ALL SELECT objs.o FROM objs, transit WHERE objs.c=? AND objs.s=transit.x A
 SELECT DISTINCT x FROM transit""", (self.c, s, p, self.c, p)).fetchall(): yield x
   
   # Reimplemented using RECURSIVE SQL structure, for performance
-  def get_transitive_po(self, p, o):
+  def _get_obj_triples_transitive_po(self, p, o):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT s FROM objs WHERE c=? AND p=? AND o=?
 UNION ALL SELECT objs.s FROM objs, transit WHERE objs.c=? AND objs.p=? AND objs.o=transit.x)
 SELECT DISTINCT x FROM transit""", (self.c, p, o, self.c, p)).fetchall(): yield x
 
-#  def get_transitive_sym(self, s, p):
+#  def _get_obj_triples_transitive_sym(self, s, p):
 #    r = { s }
 #    for (s, o) in self.execute("""
 #WITH RECURSIVE transit(s,o)

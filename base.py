@@ -51,7 +51,7 @@ def to_literal(o):
   
 def from_literal(o, d):
   #from owlready2 import default_world
-  #print(repr(o), repr(d), default_world.unabbreviate(d))
+  #print(repr(o), repr(d), default_world._unabbreviate(d))
   if d.startswith("@"): return locstr(o, lang = d[1:])
   if d == "": return o
   datatype, parser = _universal_abbrev_2_datatype_parser.get(d) or (None, None)

@@ -27,12 +27,12 @@ from owlready2.namespace import Ontology
 class ObservedOntology(Ontology):
   def _get_pred_value_obj(self, subject, predicate):
     if   predicate == rdf_type:
-      return list(filter(None, [self._to_python(o, default_to_none = True) for o in self.get_objs_sp_o(subject, predicate)]))
+      return list(filter(None, [self._to_python(o, default_to_none = True) for o in self._get_obj_triples_sp_o(subject, predicate)]))
     else:
-      return [self._to_python(o) for o in self.get_objs_sp_o(subject, predicate)]
+      return [self._to_python(o) for o in self._get_obj_triples_sp_o(subject, predicate)]
     
   def _get_pred_value_data(self, subject, predicate):
-    return [self._to_python(o, d) for o, d in self.get_datas_sp_od(subject, predicate)]
+    return [self._to_python(o, d) for o, d in self._get_data_triples_sp_od(subject, predicate)]
   
   def _gen_triple_method_obj(self, triple_method):
     def f(subject, predicate, object):
@@ -65,9 +65,9 @@ class ObservedOntology(Ontology):
       observation = self.world._observations.get(subject)
       
       if observation:
-        #old = self.get_quads_sp_od(subject, predicate)
+        #old = self._get_triples_sp_od(subject, predicate)
         triple_method(subject, predicate, object, datatype)
-        #new = self.get_quads_sp_od(subject, predicate)
+        #new = self._get_triples_sp_od(subject, predicate)
         observation.call(predicate) #, new, old)
       else:
         triple_method(subject, predicate, object, datatype)
@@ -79,21 +79,21 @@ def start_observing(onto):
   if not hasattr(onto.world, "_observations"): onto.world._observations = {}
   if not onto.__class__ is ObservedOntology:
     onto.__class__ = ObservedOntology
-    onto._add_obj_spo   = onto._gen_triple_method_obj(onto.graph._add_obj_spo)
-    onto._set_obj_spo   = onto._gen_triple_method_obj(onto.graph._set_obj_spo)
-    onto._del_obj_spo   = onto._gen_triple_method_obj(onto.graph._del_obj_spo)
-    onto._add_data_spod = onto._gen_triple_method_data(onto.graph._add_data_spod)
-    onto._set_data_spod = onto._gen_triple_method_data(onto.graph._set_data_spod)
-    onto._del_data_spod = onto._gen_triple_method_data(onto.graph._del_data_spod)
+    onto._add_obj_triple_raw_spo   = onto._gen_triple_method_obj(onto.graph._add_obj_triple_raw_spo)
+    onto._set_obj_triple_raw_spo   = onto._gen_triple_method_obj(onto.graph._set_obj_triple_raw_spo)
+    onto._del_obj_triple_raw_spo   = onto._gen_triple_method_obj(onto.graph._del_obj_triple_raw_spo)
+    onto._add_data_triple_raw_spodd = onto._gen_triple_method_data(onto.graph._add_data_triple_raw_spodd)
+    onto._set_data_triple_raw_spodd = onto._gen_triple_method_data(onto.graph._set_data_triple_raw_spodd)
+    onto._del_data_triple_raw_spodd = onto._gen_triple_method_data(onto.graph._del_data_triple_raw_spodd)
     
 def stop_observing(onto):
   onto.__class__ = Ontology
-  onto._add_obj_spo   = onto._add_obj_spo
-  onto._set_obj_spo   = onto._set_obj_spo
-  onto._del_obj_spo   = onto._del_obj_spo
-  onto._add_data_spod = onto._add_data_spod
-  onto._set_data_spod = onto._set_data_spod
-  onto._del_data_spod = onto._del_data_spod
+  onto._add_obj_triple_raw_spo   = onto._add_obj_triple_raw_spo
+  onto._set_obj_triple_raw_spo   = onto._set_obj_triple_raw_spo
+  onto._del_obj_triple_raw_spo   = onto._del_obj_triple_raw_spo
+  onto._add_data_triple_raw_spodd = onto._add_data_triple_raw_spodd
+  onto._set_data_triple_raw_spodd = onto._set_data_triple_raw_spodd
+  onto._del_data_triple_raw_spodd = onto._del_data_triple_raw_spodd
   
   
 

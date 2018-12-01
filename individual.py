@@ -32,7 +32,7 @@ class _EquivalentToList(CallbackList):
     if self._indirect is None:
       n = self._obj.namespace
       self._indirect = set()
-      for o in n.world.get_transitive_sym(self._obj.storid, owl_equivalentindividual):
+      for o in n.world._get_obj_triples_transitive_sym(self._obj.storid, owl_equivalentindividual):
         if o != self._obj.storid: self._indirect.add(n.ontology._to_python(o))
     yield from self._indirect
     
@@ -49,21 +49,21 @@ class ValueList(CallbackListWithLanguage):
   def transitive(self):
     n = self._obj.namespace
     if self._Prop.inverse_property:
-      for o in n.world.get_transitive_sp_indirect(self._obj.storid, [(self._Prop.storid, self._Prop.inverse_property.storid)]):
+      for o in n.world._get_obj_triples_transitive_sp_indirect(self._obj.storid, [(self._Prop.storid, self._Prop.inverse_property.storid)]):
         yield n.ontology._to_python(o)
     else:
-      for o in n.world.get_transitive_sp(self._obj.storid, self._Prop.storid):
+      for o in n.world._get_obj_triples_transitive_sp(self._obj.storid, self._Prop.storid):
         yield n.ontology._to_python(o)
         
   def transitive_symmetric(self):
     n = self._obj.namespace
-    for o in n.world.get_transitive_sym(self._obj.storid, self._Prop.storid):
+    for o in n.world._get_obj_triples_transitive_sym(self._obj.storid, self._Prop.storid):
       yield n.ontology._to_python(o)
       
   def symmetric(self):
     yield from self
     n = self._obj.namespace
-    for o in n.world.get_objs_po_s(self._Prop.storid, self._obj.storid):
+    for o in n.world._get_obj_triples_po_s(self._Prop.storid, self._obj.storid):
       yield n.ontology._to_python(o)
       
   def indirect(self):
@@ -88,7 +88,7 @@ class ValueList(CallbackListWithLanguage):
           yield from Prop[self._obj.__class__].indirect()
           
       if prop_storids:
-        for o in n.world.get_transitive_sp_indirect(self._obj.storid, prop_storids):
+        for o in n.world._get_obj_triples_transitive_sp_indirect(self._obj.storid, prop_storids):
           o = n.ontology._to_python(o)
           yield o
           yield from Prop[o.__class__].indirect()
@@ -101,34 +101,34 @@ class ValueList(CallbackListWithLanguage):
     
     if   self._Prop._owl_type == owl_object_property:
       for removed in old - new:
-        obj.namespace.ontology.del_obj_spo(obj.storid, self._Prop.storid, removed.storid)
+        obj.namespace.ontology._del_obj_triple_spod(obj.storid, self._Prop.storid, removed.storid)
         if inverse:
-          obj.namespace.ontology.del_obj_spo(removed.storid, inverse.storid, obj.storid) # Also remove inverse
+          obj.namespace.ontology._del_obj_triple_spod(removed.storid, inverse.storid, obj.storid) # Also remove inverse
           removed.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
           
       for added in new - old:
-        obj.namespace.ontology.add_obj_spo(obj.storid, self._Prop.storid, added.storid)
+        obj.namespace.ontology._add_obj_spo(obj.storid, self._Prop.storid, added.storid)
         if inverse: added.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
         
     elif self._Prop._owl_type == owl_data_property:
       for removed in old - new:
-        obj.namespace.ontology.del_data_spod(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
+        obj.namespace.ontology._del_data_triple_spoddd(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
         
       for added in new - old:
-        obj.namespace.ontology.add_data_spod(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
+        obj.namespace.ontology._add_data_spodd(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
         
     else: #self._Prop._owl_type == owl_annotation_property:
       for removed in old - new:
         if hasattr(removed, "storid"):
-          obj.namespace.ontology.del_obj_spo(obj.storid, self._Prop.storid, removed.storid)
+          obj.namespace.ontology._del_obj_triple_spod(obj.storid, self._Prop.storid, removed.storid)
         else:
-          obj.namespace.ontology.del_data_spod(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
+          obj.namespace.ontology._del_data_triple_spoddd(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
           
       for added in new - old:
         if hasattr(added, "storid"):
-          obj.namespace.ontology.add_obj_spo(obj.storid, self._Prop.storid, added.storid)
+          obj.namespace.ontology._add_obj_spo(obj.storid, self._Prop.storid, added.storid)
         else:
-          obj.namespace.ontology.add_data_spod(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
+          obj.namespace.ontology._add_data_spodd(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
           
     
 class Thing(metaclass = ThingClass):
@@ -137,7 +137,7 @@ class Thing(metaclass = ThingClass):
   def get_name(self): return self._name
   def set_name(self, name):
     self._name = name
-    self.namespace.world.refactor(self.storid, "%s%s" % (self.namespace.base_iri, name))
+    self.namespace.world._refactor(self.storid, "%s%s" % (self.namespace.base_iri, name))
   name = property(get_name, set_name)
   
   def get_iri(self): return "%s%s" % (self.namespace.base_iri, self._name)
@@ -149,7 +149,7 @@ class Thing(metaclass = ThingClass):
       splitted = new_iri.rsplit("/", 1)
       self.namespace = self.namespace.ontology.get_namespace("%s/" % splitted[0])
     self._name = splitted[1]
-    self.namespace.world.refactor(self.storid, new_iri)
+    self.namespace.world._refactor(self.storid, new_iri)
   iri = property(get_iri, set_iri)
   
   def __new__(Class, name = None, namespace = None, **kargs):
@@ -161,7 +161,7 @@ class Thing(metaclass = ThingClass):
         namespace = namespace or CURRENT_NAMESPACES[-1] or Class.namespace
       if LOADING:
         already_existing = None
-        #already_existing = namespace.world._entities.get(namespace.world.abbreviate("%s%s" % (namespace.base_iri, name)))
+        #already_existing = namespace.world._entities.get(namespace.world._abbreviate("%s%s" % (namespace.base_iri, name)))
       else:
         already_existing = namespace.world["%s%s" % (namespace.base_iri, name)]
         
@@ -173,7 +173,7 @@ class Thing(metaclass = ThingClass):
             if not C in already_existing.is_a:
               already_existing.is_a._append(C)
               if not LOADING:
-                already_existing.namespace.ontology.add_obj_spo(already_existing.storid, rdf_type, C.storid)
+                already_existing.namespace.ontology._add_obj_spo(already_existing.storid, rdf_type, C.storid)
                 
         bases = ThingClass._find_base_classes(already_existing.is_a)
         if len(bases) == 1:
@@ -196,12 +196,12 @@ class Thing(metaclass = ThingClass):
       self._name = name
     else:
       is_new = True
-      iri = self.namespace.world.new_numbered_iri("%s%s" % (self.namespace.base_iri, self.generate_default_name()))
+      iri = self.namespace.world._new_numbered_iri("%s%s" % (self.namespace.base_iri, self.generate_default_name()))
       self._name = iri[len(self.namespace.base_iri):]
       
     if is_new:
       self.__dict__["_equivalent_to"] = None
-      self.storid = self.namespace.world.abbreviate(iri)
+      self.storid = self.namespace.world._abbreviate(iri)
       self.namespace.world._entities[self.storid] = self
       if isinstance(self.__class__, FusionClass):
         self.__dict__["is_a"] = CallbackList(self.__class__.__bases__, self, Thing._instance_is_a_changed)
@@ -209,9 +209,9 @@ class Thing(metaclass = ThingClass):
         self.__dict__["is_a"] = CallbackList([self.__class__], self, Thing._instance_is_a_changed)
         
       if not LOADING:
-        self.namespace.ontology.add_obj_spo(self.storid, rdf_type, owl_named_individual)
+        self.namespace.ontology._add_obj_spo(self.storid, rdf_type, owl_named_individual)
         for parent in self.is_a:
-          self.namespace.ontology.add_obj_spo(self.storid, rdf_type, parent.storid)
+          self.namespace.ontology._add_obj_spo(self.storid, rdf_type, parent.storid)
           
         for attr, value in kargs.items(): setattr(self, attr, value)
         
@@ -226,7 +226,7 @@ class Thing(metaclass = ThingClass):
     old = set(old)
     
     for base in old - new:
-      if not LOADING: self.namespace.ontology.del_obj_spo(self.storid, rdf_type, base.storid)
+      if not LOADING: self.namespace.ontology._del_obj_triple_spod(self.storid, rdf_type, base.storid)
       if isinstance(base, ClassConstruct): base._set_ontology(None)
     bases = ThingClass._find_base_classes(self.is_a)
     if len(bases) == 1:
@@ -239,7 +239,7 @@ class Thing(metaclass = ThingClass):
       
     for base in new - old:
       if isinstance(base, ClassConstruct): base._set_ontology(self.namespace.ontology)
-      if not LOADING: self.namespace.ontology.add_obj_spo(self.storid, rdf_type, base.storid)
+      if not LOADING: self.namespace.ontology._add_obj_spo(self.storid, rdf_type, base.storid)
       
   #def __attrs__(self): # Not Python standard, but used by EditObj
   
@@ -247,7 +247,7 @@ class Thing(metaclass = ThingClass):
     if self._equivalent_to is None:
       self._equivalent_to = _EquivalentToList(
         [self.namespace.world._to_python(o, default_to_none = True)
-         for o in self.namespace.world.get_objs_sp_o(self.storid, owl_equivalentindividual)
+         for o in self.namespace.world._get_obj_triples_sp_o(self.storid, owl_equivalentindividual)
         ], self, Thing._instance_equivalent_to_changed)
     return self._equivalent_to
   
@@ -261,7 +261,7 @@ class Thing(metaclass = ThingClass):
     old = frozenset(old)
     
     for x in old - new:
-      self.namespace.ontology.del_obj_spo(self.storid, owl_equivalentindividual, x.storid)
+      self.namespace.ontology._del_obj_triple_spod(self.storid, owl_equivalentindividual, x.storid)
       if isinstance(x, ClassConstruct): x._set_ontology(None)
       else: # Invalidate it
         if x.equivalent_to._indirect:
@@ -269,7 +269,7 @@ class Thing(metaclass = ThingClass):
           x._equivalent_to._indirect = None
           
     for x in new - old:
-      self.namespace.ontology.add_obj_spo(self.storid, owl_equivalentindividual, x.storid)
+      self.namespace.ontology._add_obj_spo(self.storid, owl_equivalentindividual, x.storid)
       if isinstance(x, ClassConstruct): x._set_ontology(self.namespace.ontology)
       else: # Invalidate it
         if x.equivalent_to._indirect:
@@ -279,9 +279,9 @@ class Thing(metaclass = ThingClass):
     self._equivalent_to._indirect = None # Invalidate, because the addition / removal may add its own equivalent.
     
   def differents(self):
-    for c, s, p, o in self.namespace.world.get_objs_cspo_cspo(None, None, rdf_type, owl_alldifferent):
+    for c, s, p, o in self.namespace.world._get_obj_triples_cspo_cspo(None, None, rdf_type, owl_alldifferent):
       onto = self.namespace.world.graph.context_2_user_context(c)
-      list_bnode = self.namespace.world.get_obj_sp_o(s, owl_distinctmembers)
+      list_bnode = self.namespace.world._get_obj_triple_sp_o(s, owl_distinctmembers)
       storids = set(storid for storid, dropit in onto._parse_list_as_rdf(list_bnode))
       if self.storid in storids: yield onto._parse_bnode(s)
       
@@ -295,10 +295,10 @@ class Thing(metaclass = ThingClass):
   
   def _get_instance_prop_value(self, Prop, attr, force_list = False):
     if   Prop._owl_type == owl_object_property:
-      values = [self.namespace.ontology._to_python(o) for o in self.namespace.world.get_objs_sp_o(self.storid, Prop.storid)]
+      values = [self.namespace.ontology._to_python(o) for o in self.namespace.world._get_obj_triples_sp_o(self.storid, Prop.storid)]
       if (not force_list) and Prop.is_functional_for(self.__class__):
         if (not values) and Prop.inverse_property:
-          values = [self.namespace.ontology._to_python(s) for s in self.namespace.world.get_objs_po_s(Prop.inverse_property.storid, self.storid)]
+          values = [self.namespace.ontology._to_python(s) for s in self.namespace.world._get_obj_triples_po_s(Prop.inverse_property.storid, self.storid)]
         if   len(values) > 1:
           try:    repr_self = repr(self)
           except: repr_self = "<instance of %s>" % self.__class__
@@ -308,11 +308,11 @@ class Thing(metaclass = ThingClass):
         
       else:
         if Prop.inverse_property:
-          values.extend(self.namespace.ontology._to_python(s) for s in self.namespace.world.get_objs_po_s(Prop.inverse_property.storid, self.storid))
+          values.extend(self.namespace.ontology._to_python(s) for s in self.namespace.world._get_obj_triples_po_s(Prop.inverse_property.storid, self.storid))
         values = ValueList(values, self, Prop)
         
     elif Prop._owl_type == owl_data_property:
-      values = [self.namespace.ontology._to_python(o, d) for o, d in self.namespace.world.get_datas_sp_od(self.storid, Prop.storid)]
+      values = [self.namespace.ontology._to_python(o, d) for o, d in self.namespace.world._get_data_triples_sp_od(self.storid, Prop.storid)]
       if (not force_list) and Prop.is_functional_for(self.__class__):
         if   len(values) > 1:
           try:    repr_self = repr(self)
@@ -326,7 +326,7 @@ class Thing(metaclass = ThingClass):
         values = ValueList(values, self, Prop)
         
     else: #Prop._owl_type == owl_annotation_property:
-      values = [self.namespace.ontology._to_python(o, d) for o, d in self.namespace.world.get_quads_sp_od(self.storid, Prop.storid)]
+      values = [self.namespace.ontology._to_python(o, d) for o, d in self.namespace.world._get_triples_sp_od(self.storid, Prop.storid)]
       values = ValueList(values, self, Prop)
       
     self.__dict__[attr] = values
@@ -345,14 +345,14 @@ class Thing(metaclass = ThingClass):
             old_value = self.__dict__.get(attr, None)
             if Prop.inverse_property and (not old_value is None):
               old_value.__dict__.pop(Prop.inverse_property.python_name, None) # Remove => force reloading; XXX optimizable
-              self.namespace.ontology.del_obj_spo(old_value.storid, Prop.inverse_property.storid, self.storid) # Also remove inverse
+              self.namespace.ontology._del_obj_triple_spod(old_value.storid, Prop.inverse_property.storid, self.storid) # Also remove inverse
               
             super().__setattr__(attr, value)
             
             if value is None:
-              self.namespace.ontology.del_obj_spo(self.storid, Prop.storid, None)
+              self.namespace.ontology._del_obj_triple_spod(self.storid, Prop.storid, None)
             else:
-              self.namespace.ontology.set_obj_spo(self.storid, Prop.storid, value.storid)
+              self.namespace.ontology._set_obj_spo(self.storid, Prop.storid, value.storid)
               if Prop.inverse_property: value.__dict__.pop(Prop.inverse_property.python_name, None) # Remove => force reloading; XXX optimizable
             
           elif Prop._owl_type == owl_data_property:
@@ -361,9 +361,9 @@ class Thing(metaclass = ThingClass):
             super().__setattr__(attr, value)
             
             if value is None:
-              self.namespace.ontology.del_data_spod(self.storid, Prop.storid, None, None)
+              self.namespace.ontology._del_data_triple_spoddd(self.storid, Prop.storid, None, None)
             else:
-              self.namespace.ontology.set_data_spod(self.storid, Prop.storid, *self.namespace.ontology._to_rdf(value))
+              self.namespace.ontology._set_data_spodd(self.storid, Prop.storid, *self.namespace.ontology._to_rdf(value))
           
           #else: #Prop._owl_type == owl_annotation_property: # Annotation cannot be functional
             
@@ -392,7 +392,7 @@ class Thing(metaclass = ThingClass):
           yield Prop
           
   def get_properties(self):
-    for storid in self.namespace.world.get_quads_s_p(self.storid):
+    for storid in self.namespace.world._get_triples_s_p(self.storid):
       Prop = self.namespace.world._get_by_storid(storid)
       if not Prop is None: # None is is-a
         yield Prop
@@ -401,7 +401,7 @@ class Thing(metaclass = ThingClass):
     return set(object.__dir__(self)) | { Prop.python_name for Prop in self.get_properties() }
   
   def get_inverse_properties(self):
-    for s,p,o in self.namespace.world.get_objs_spo_spo(None, None, self.storid):
+    for s,p,o in self.namespace.world._get_obj_triples_spo_spo(None, None, self.storid):
       Prop    = self.namespace.world._get_by_storid(p)
       if not Prop is None: # None is is-a
         subject = self.namespace.world._get_by_storid(s)

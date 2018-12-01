@@ -239,7 +239,7 @@ public class CommandLine {
                             output.println("\t"+iri);
                     }
                     else
-                        output.println("\t"+prefixes.abbreviateIRI(classInSet.getIRI().toString()));
+                        output.println("\t"+prefixes._abbreviateIRI(classInSet.getIRI().toString()));
             output.flush();
         }
     }
@@ -281,7 +281,7 @@ public class CommandLine {
                             output.println("\t"+iri);
                     }
                     else
-                        output.println("\t"+prefixes.abbreviateIRI(classInSet.getIRI().toString()));
+                        output.println("\t"+prefixes._abbreviateIRI(classInSet.getIRI().toString()));
             output.flush();
         }
     }
@@ -306,7 +306,7 @@ public class CommandLine {
             if (ignoreOntologyPrefixes)
                 output.println("Classes equivalent to '"+conceptName+"':");
             else
-                output.println("Classes equivalent to '"+prefixes.abbreviateIRI(conceptName)+"':");
+                output.println("Classes equivalent to '"+prefixes._abbreviateIRI(conceptName)+"':");
             for (OWLClass classInSet : classes)
                 if (ignoreOntologyPrefixes) {
                     String iri=classInSet.getIRI().toString();
@@ -316,7 +316,7 @@ public class CommandLine {
                         output.println("\t"+iri);
                 }
                 else
-                    output.println("\t"+prefixes.abbreviateIRI(classInSet.getIRI().toString()));
+                    output.println("\t"+prefixes._abbreviateIRI(classInSet.getIRI().toString()));
             output.flush();
         }
     }
@@ -432,7 +432,7 @@ public class CommandLine {
         new Option(kDumpPrefixes,"print-prefixes",kActions,"output prefix names available for use in identifiers"),
         new Option('E',"checkEntailment",kActions,"check whether the premise (option premise) ontology entails the conclusion ontology (option conclusion)"),
 
-        new Option('N',"no-prefixes",kPrefixes,"do not abbreviate or expand identifiers using prefixes defined in input ontology"),
+        new Option('N',"no-prefixes",kPrefixes,"do not _abbreviate or expand identifiers using prefixes defined in input ontology"),
         new Option('p',"prefix",kPrefixes,true,"PN=IRI","use PN as an abbreviation for IRI in identifiers"),
         new Option(kDefaultPrefix,"prefix",kPrefixes,true,"IRI","use IRI as the default identifier prefix"),
 

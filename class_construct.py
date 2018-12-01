@@ -48,8 +48,8 @@ class ClassConstruct(object):
   def destroy(self): self._destroy_triples()
   
   def _destroy_triples(self, ontology):
-    ontology.del_obj_spo(self.storid, None, None)
-    ontology.del_data_spod(self.storid, None, None, None)
+    ontology._del_obj_triple_spod(self.storid, None, None)
+    ontology._del_data_triple_spoddd(self.storid, None, None, None)
     
   def _create_triples (self, ontology):
     pass
@@ -57,7 +57,7 @@ class ClassConstruct(object):
   def subclasses(self, only_loaded = False):
     if only_loaded:
       r = []
-      for x in self.ontology.world.get_objs_po_s(rdfs_subclassof, self.storid):
+      for x in self.ontology.world._get_obj_triples_po_s(rdfs_subclassof, self.storid):
         if not x.startswith("_"):
           r.append(self.ontology.world._entities.get(x))
       return r
@@ -65,7 +65,7 @@ class ClassConstruct(object):
     else:
       return [
         self.ontology.world._get_by_storid(x, None, ThingClass, self.ontology)
-        for x in self.ontology.world.get_objs_po_s(rdfs_subclassof, self.storid)
+        for x in self.ontology.world._get_obj_triples_po_s(rdfs_subclassof, self.storid)
         if not x.startswith("_")
       ]
   
@@ -84,7 +84,7 @@ class Not(ClassConstruct):
   
   def __getattr__(self, attr):
     if attr == "Class":
-      self.__dict__["Class"] = C = self.ontology._to_python(self.ontology.get_obj_sp_o(self.storid, owl_complementof), default_to_none = True)
+      self.__dict__["Class"] = C = self.ontology._to_python(self.ontology._get_obj_triple_sp_o(self.storid, owl_complementof), default_to_none = True)
       return C
     return super().__getattribute__(attr)
   
@@ -102,8 +102,8 @@ class Not(ClassConstruct):
     
   def _create_triples(self, ontology):
     ClassConstruct._create_triples(self, ontology)
-    ontology.set_obj_spo(self.storid, rdf_type, owl_class)
-    ontology.set_obj_spo(self.storid, owl_complementof, self.Class.storid)
+    ontology._set_obj_spo(self.storid, rdf_type, owl_class)
+    ontology._set_obj_spo(self.storid, owl_complementof, self.Class.storid)
     
   def _satisfied_by(self, x):
     return not self.Class._satisfied_by(x)
@@ -133,7 +133,7 @@ class Inverse(ClassConstruct):
     
   def _create_triples(self, ontology):
     ClassConstruct._create_triples(self, ontology)
-    ontology.set_obj_spo(self.storid, owl_inverse_property, self.property.storid)
+    ontology._set_obj_spo(self.storid, owl_inverse_property, self.property.storid)
   
   def some   (self,     value): return Restriction(self, SOME   , None, value)
   def only   (self,     value): return Restriction(self, ONLY   , None, value)
@@ -195,10 +195,10 @@ class LogicalClassConstruct(ClassConstruct):
   def _create_triples(self, ontology):
     ClassConstruct._create_triples(self, ontology)
     if self.Classes and (self.Classes[0] in _universal_datatype_2_abbrev):
-      ontology.add_obj_spo(self.storid, rdf_type, rdfs_datatype)
+      ontology._add_obj_spo(self.storid, rdf_type, rdfs_datatype)
     else:
-      ontology.add_obj_spo(self.storid, rdf_type, owl_class)
-    ontology.add_obj_spo(self.storid, self._owl_op, self._list_bnode)
+      ontology._add_obj_spo(self.storid, rdf_type, owl_class)
+    ontology._add_obj_spo(self.storid, self._owl_op, self._list_bnode)
     ontology._set_list(self._list_bnode, self.Classes)
     
   def __repr__(self):
@@ -278,33 +278,33 @@ class Restriction(ClassConstruct):
     
   def _create_triples(self, ontology):
     ClassConstruct._create_triples(self, ontology)
-    ontology.add_obj_spo(self.storid, rdf_type, owl_restriction)
-    ontology.add_obj_spo(self.storid, owl_onproperty, self.property.storid)
+    ontology._add_obj_spo(self.storid, rdf_type, owl_restriction)
+    ontology._add_obj_spo(self.storid, owl_onproperty, self.property.storid)
     if (self.type == SOME) or (self.type == ONLY) or (self.type == VALUE) or (self.type == HAS_SELF):
       o, d = ontology.world._to_rdf(self.value)
-      if d is None: ontology.add_obj_spo  (self.storid, self.type, o)
-      else:         ontology.add_data_spod(self.storid, self.type, o, d)
+      if d is None: ontology._add_obj_spo  (self.storid, self.type, o)
+      else:         ontology._add_data_spodd(self.storid, self.type, o, d)
     else:
       if self.value is None:
-        if not self.cardinality is None: ontology.add_data_spod(self.storid, _qualified_2_non_qualified[self.type], self.cardinality, _non_negative_integer)
+        if not self.cardinality is None: ontology._add_data_spodd(self.storid, _qualified_2_non_qualified[self.type], self.cardinality, _non_negative_integer)
       else:
-        if not self.cardinality is None: ontology.add_data_spod(self.storid, self.type, self.cardinality, _non_negative_integer)
+        if not self.cardinality is None: ontology._add_data_spodd(self.storid, self.type, self.cardinality, _non_negative_integer)
         o, d = ontology.world._to_rdf(self.value)
         if self.value in _universal_datatype_2_abbrev:
-          ontology.add_obj_spo(self.storid, owl_ondatarange, o)
+          ontology._add_obj_spo(self.storid, owl_ondatarange, o)
         else:
-          ontology.add_obj_spo(self.storid, owl_onclass, o)
+          ontology._add_obj_spo(self.storid, owl_onclass, o)
           
   def __getattr__(self, attr):
     if attr == "value":
       if (self.type == SOME) or (self.type == ONLY) or (self.type == HAS_SELF):
-        v = self.ontology.get_obj_sp_o(self.storid, self.type)
+        v = self.ontology._get_obj_triple_sp_o(self.storid, self.type)
         v = self.__dict__["value"] = self.ontology.world._to_python(v, None, default_to_none = True)
       elif self.type == VALUE:
-        v, d = self.ontology.get_quad_sp_od(self.storid, self.type)
+        v, d = self.ontology._get_triple_sp_od(self.storid, self.type)
         v = self.__dict__["value"] = self.ontology.world._to_python(v, d, default_to_none = True)
       else:
-        v = self.ontology.get_obj_sp_o(self.storid, owl_onclass) or self.ontology.get_obj_sp_o(self.storid, owl_ondatarange)
+        v = self.ontology._get_obj_triple_sp_o(self.storid, owl_onclass) or self.ontology._get_obj_triple_sp_o(self.storid, owl_ondatarange)
         if v is None:
           v = self.__dict__["value"] = None
         else:
@@ -386,10 +386,10 @@ class OneOf(ClassConstruct):
     if ontology and (self._list_bnode is None): self._list_bnode = ontology.world.new_blank_node()
     ClassConstruct._create_triples(self, ontology)
     if self.instances and (not hasattr(self.instances[0], "storid")):
-      ontology.set_obj_spo(self.storid, rdf_type, rdfs_datatype)
+      ontology._set_obj_spo(self.storid, rdf_type, rdfs_datatype)
     else:
-      ontology.set_obj_spo(self.storid, rdf_type, owl_class)
-    ontology.set_obj_spo(self.storid, owl_oneof, self._list_bnode)
+      ontology._set_obj_spo(self.storid, rdf_type, owl_class)
+    ontology._set_obj_spo(self.storid, owl_oneof, self._list_bnode)
     ontology._set_list(self._list_bnode, self.instances)
     
   def _satisfied_by(self, x): return x in self.instances
@@ -424,7 +424,7 @@ class ConstrainedDatatype(ClassConstruct):
     if list_bnode:
       l = ontology._parse_list_as_rdf(list_bnode)
       for bn, dropit in l:
-        for p,o,d in ontology.get_datas_s_pod(bn):
+        for p,o,d in ontology._get_data_triples_s_pod(bn):
           if p in _RDFS_FACETS:
             py_name, value_datatype, value_datatype_abbrev = _RDFS_FACETS[p]
             self.__dict__[py_name] = from_literal(o, d)
@@ -454,9 +454,9 @@ class ConstrainedDatatype(ClassConstruct):
   def _create_triples (self, ontology):
     ClassConstruct._create_triples(self, ontology)
     if self._list_bnode is None: self._list_bnode = ontology.world.new_blank_node()
-    ontology.set_obj_spo(self.storid, rdf_type, rdfs_datatype)
-    ontology.set_obj_spo(self.storid, owl_ondatatype, _universal_datatype_2_abbrev[self.base_datatype])
-    ontology.set_obj_spo(self.storid, owl_withrestrictions, self._list_bnode)
+    ontology._set_obj_spo(self.storid, rdf_type, rdfs_datatype)
+    ontology._set_obj_spo(self.storid, owl_ondatatype, _universal_datatype_2_abbrev[self.base_datatype])
+    ontology._set_obj_spo(self.storid, owl_withrestrictions, self._list_bnode)
     l = []
     for k, (rdfs_name, value_datatype, value_datatype_abbrev) in _PY_FACETS.items():
       v = getattr(self, k, None)
@@ -464,7 +464,7 @@ class ConstrainedDatatype(ClassConstruct):
         if value_datatype_abbrev == "__datatype__":
           value_datatype_abbrev = _universal_datatype_2_abbrev[self.base_datatype]
         bn = ontology.world.new_blank_node()
-        ontology.set_data_spod(bn, rdfs_name, v, value_datatype_abbrev)
+        ontology._set_data_spodd(bn, rdfs_name, v, value_datatype_abbrev)
         l.append((bn, None))
     ontology._set_list_as_rdf(self._list_bnode, l)
     

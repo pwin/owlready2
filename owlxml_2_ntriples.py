@@ -181,8 +181,8 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
   
   
   
-  def unabbreviate_IRI(abbreviated_iri):
-    prefix, name = abbreviated_iri.split(":", 1)
+  def _unabbreviate_IRI(_abbreviated_iri):
+    prefix, name = _abbreviated_iri.split(":", 1)
     return prefixes[prefix] + name
   
   def get_IRI(attrs):
@@ -191,7 +191,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       if not iri: return ontology_iri
       if   iri.startswith("#") or iri.startswith("/"): iri = ontology_iri + iri
       return iri
-    return unabbreviate_IRI(attrs["abbreviatedIRI"])
+    return _unabbreviate_IRI(attrs["_abbreviatedIRI"])
   
   def startElement(tag, attrs):
     nonlocal current_content, current_attrs, in_declaration, before_declaration, last_cardinality, in_prop_chain, ontology_iri
@@ -413,7 +413,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       objs.append(iri)
       
     elif (tag == "http://www.w3.org/2002/07/owl#AbbreviatedIRI"):
-      iri = unabbreviate_IRI(current_content)
+      iri = _unabbreviate_IRI(current_content)
       objs.append(iri)
       
     elif (tag == "http://www.w3.org/2002/07/owl#AnnotationAssertion"):

@@ -34,7 +34,7 @@ class _EquivalentToList(CallbackList):
     if self._indirect is None:
       n = self._obj.namespace
       self._indirect = set( n.ontology._to_python(o, main_type = self._obj.__class__)
-                            for o in n.world.get_transitive_sym(self._obj.storid, self._obj._owl_equivalent)
+                            for o in n.world._get_obj_triples_transitive_sym(self._obj.storid, self._obj._owl_equivalent)
                             if o != self._obj.storid )
       #self._indirect = set( n.ontology._to_python(o, main_type = self._obj.__class__)
       #                      for o in n.world.get_equivs_s_o(self._obj.storid)
@@ -51,7 +51,7 @@ class EntityClass(type):
   def get_name(Class): return Class._name
   def set_name(Class, name):
     Class._name = name
-    Class.namespace.world.refactor(Class.storid, "%s%s" % (Class.namespace.base_iri, name))
+    Class.namespace.world._refactor(Class.storid, "%s%s" % (Class.namespace.base_iri, name))
   name = property(get_name, set_name)
   
   def get_iri(Class): return "%s%s" % (Class.namespace.base_iri, Class._name)
@@ -63,7 +63,7 @@ class EntityClass(type):
       splitted = new_iri.rsplit("/", 1)
       Class.namespace = Class.namespace.ontology.get_namespace("%s/" % splitted[0])
     Class._name = splitted[1]
-    Class.namespace.world.refactor(Class.storid, new_iri)
+    Class.namespace.world._refactor(Class.storid, new_iri)
   iri = property(get_iri, set_iri)
   
   
@@ -93,7 +93,7 @@ class EntityClass(type):
     
   def __new__(MetaClass, name, superclasses, obj_dict):
     namespace = obj_dict.get("namespace") or CURRENT_NAMESPACES[-1] or superclasses[0].namespace
-    storid    = obj_dict.get("storid")    or namespace.world.abbreviate("%s%s" % (namespace.base_iri, name))
+    storid    = obj_dict.get("storid")    or namespace.world._abbreviate("%s%s" % (namespace.base_iri, name))
     
     if "is_a" in obj_dict:
       _is_a = [*superclasses, *obj_dict["is_a"]]
@@ -126,7 +126,7 @@ class EntityClass(type):
       Class = namespace.world._entities[storid] = _is_a._obj = type.__new__(MetaClass, name, superclasses, obj_dict)
           
       if not LOADING:
-        namespace.ontology.add_obj_spo(storid, rdf_type, MetaClass._owl_type)
+        namespace.ontology._add_obj_spo(storid, rdf_type, MetaClass._owl_type)
         for parent in _is_a: Class._add_is_a_triple(parent)
         
     else:
@@ -138,10 +138,10 @@ class EntityClass(type):
     return Class
   
   def _add_is_a_triple(Class, base):
-    Class.namespace.ontology.add_obj_spo(Class.storid, Class._rdfs_is_a, base.storid)
+    Class.namespace.ontology._add_obj_spo(Class.storid, Class._rdfs_is_a, base.storid)
     
   def _del_is_a_triple(Class, base):
-    Class.namespace.ontology.del_obj_spo(Class.storid, Class._rdfs_is_a, base.storid)
+    Class.namespace.ontology._del_obj_triple_spod(Class.storid, Class._rdfs_is_a, base.storid)
     
   def __init__(Class, name, bases, obj_dict):
     for k, v in obj_dict.items():
@@ -158,7 +158,7 @@ class EntityClass(type):
     if Class._equivalent_to is None:
       Class._equivalent_to = _EquivalentToList(
           [Class.namespace.world._to_python(o, main_type = Class.__class__, default_to_none = True)
-           for o in Class.namespace.world.get_objs_sp_o(Class.storid, Class._owl_equivalent)
+           for o in Class.namespace.world._get_obj_triples_sp_o(Class.storid, Class._owl_equivalent)
           ], Class, Class.__class__._class_equivalent_to_changed)
     return Class._equivalent_to
   
@@ -174,7 +174,7 @@ class EntityClass(type):
     old = frozenset(old)
     
     for x in old - new:
-      Class.namespace.ontology.del_obj_spo(Class.storid, Class._owl_equivalent, x    .storid)
+      Class.namespace.ontology._del_obj_triple_spod(Class.storid, Class._owl_equivalent, x    .storid)
       if isinstance(x, ClassConstruct): x._set_ontology(None)
       else: # Invalidate it
         if x.equivalent_to._indirect:
@@ -187,7 +187,7 @@ class EntityClass(type):
         if x.equivalent_to._indirect:
           for x2 in x.equivalent_to._indirect: x2._equivalent_to._indirect = None
           x._equivalent_to._indirect = None
-      Class.namespace.ontology.add_obj_spo(Class.storid, Class._owl_equivalent, x.storid)
+      Class.namespace.ontology._add_obj_spo(Class.storid, Class._owl_equivalent, x.storid)
       
     Class._equivalent_to._indirect = None # Invalidate, because the addition / removal may add its own equivalent.
     
@@ -227,17 +227,17 @@ class EntityClass(type):
       if not LOADING: Class._add_is_a_triple(base)
       
   def disjoints(Class):
-    for c, s, p, o in Class.namespace.world.get_objs_cspo_cspo(None, None, rdf_type, Class._owl_alldisjoint):
+    for c, s, p, o in Class.namespace.world._get_obj_triples_cspo_cspo(None, None, rdf_type, Class._owl_alldisjoint):
       onto = Class.namespace.world.graph.context_2_user_context(c)
-      list_bnode = Class.namespace.world.get_obj_sp_o(s, owl_members)
+      list_bnode = Class.namespace.world._get_obj_triple_sp_o(s, owl_members)
       storids = set(storid for storid, dropit in onto._parse_list_as_rdf(list_bnode))
       if Class.storid in storids: yield onto._parse_bnode(s)
       
-    for c, s, p, o in Class.namespace.world.get_objs_cspo_cspo(None, Class.storid, Class._owl_disjointwith, None):
+    for c, s, p, o in Class.namespace.world._get_obj_triples_cspo_cspo(None, Class.storid, Class._owl_disjointwith, None):
       with LOADING: a = AllDisjoint((s, p, o), Class.namespace.world.graph.context_2_user_context(c), None)
       yield a # Must yield outside the with statement
       
-    for c, s, p, o in Class.namespace.world.get_objs_cspo_cspo(None, None, Class._owl_disjointwith, Class.storid):
+    for c, s, p, o in Class.namespace.world._get_obj_triples_cspo_cspo(None, None, Class._owl_disjointwith, Class.storid):
       with LOADING: a = AllDisjoint((s, p, o), Class.namespace.world.graph.context_2_user_context(c), None)
       yield a
     
@@ -277,7 +277,7 @@ class EntityClass(type):
         if isinstance(equivalent, Class.__class__) and not equivalent in s:
           equivalent._fill_descendants(s, True)
           
-    for x in Class.namespace.world.get_transitive_po(Class._rdfs_is_a, Class.storid):
+    for x in Class.namespace.world._get_obj_triples_transitive_po(Class._rdfs_is_a, Class.storid):
       if not x.startswith("_"):
         if only_loaded:
           descendant = Class.namespace.world._entities.get(x)
@@ -297,9 +297,9 @@ class EntityClass(type):
         import owlready2
         world = owlready2.default_world
       r = []
-      for x in world.get_objs_po_s(rdf_type, owl_class):
+      for x in world._get_obj_triples_po_s(rdf_type, owl_class):
         if x.startswith("_"): continue
-        for y in world.get_objs_sp_o(x, Class._rdfs_is_a):
+        for y in world._get_obj_triples_sp_o(x, Class._rdfs_is_a):
           if (y == owl_thing) or y.startswith("_"): continue
           break
         else:
@@ -314,7 +314,7 @@ class EntityClass(type):
     else:
       if only_loaded:
         #r = []
-        for x in Class.namespace.world.get_objs_po_s(Class._rdfs_is_a, Class.storid):
+        for x in Class.namespace.world._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid):
           if not x.startswith("_"):
             subclass = Class.namespace.world._entities.get(x)
             if not subclass is None: yield subclass #r.append(subclass)
@@ -323,10 +323,10 @@ class EntityClass(type):
       else:
         #return [
         #  Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
-        #  for x in Class.namespace.world.get_objs_po_s(Class._rdfs_is_a, Class.storid)
+        #  for x in Class.namespace.world._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid)
         #  if not x.startswith("_")
         #]
-        for x in Class.namespace.world.get_objs_po_s(Class._rdfs_is_a, Class.storid):
+        for x in Class.namespace.world._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid):
           if not x.startswith("_"):
             yield Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
       
@@ -337,12 +337,12 @@ class EntityClass(type):
         return construct
       except:
         for relation in [rdf_first, rdf_rest, owl_complementof, owl_unionof, owl_intersectionof, owl_onclass]:
-          s2 = Class.namespace.world.get_obj_po_s(relation, s)
+          s2 = Class.namespace.world._get_obj_triple_po_s(relation, s)
           if not s2 is None:
             return _top_bn(s2)
           
     if Prop: Prop = Prop.storid
-    for c,s,p,o in Class.namespace.world.get_objs_cspo_cspo(None, None, Prop, Class.storid):
+    for c,s,p,o in Class.namespace.world._get_obj_triples_cspo_cspo(None, None, Prop, Class.storid):
       if s.startswith("_"):
         
         onto = Class.namespace.world.graph.context_2_user_context(c)
@@ -357,7 +357,7 @@ def issubclass_owlready(Class, Parent_or_tuple):
     if not isinstance(Parent_or_tuple, tuple): Parent_or_tuple = (Parent_or_tuple,)
     parent_storids = { Parent.storid for Parent in Parent_or_tuple }
     
-    Class_parents = set(Class.namespace.world.get_transitive_sp(Class.storid, Class._rdfs_is_a))
+    Class_parents = set(Class.namespace.world._get_obj_triples_transitive_sp(Class.storid, Class._rdfs_is_a))
     Class_parents.add(Class.storid)
     if not parent_storids.isdisjoint(Class_parents): return True
     
@@ -398,8 +398,8 @@ class ThingClass(EntityClass):
     if Class.namespace is owl:
       import owlready2
       world = world or owlready2.default_world
-      return [world._get_by_storid(s, None, Thing) for s in world.get_objs_po_s(rdf_type, Class.storid)]
-    return [Class.namespace.world._get_by_storid(s, None, Thing) for s in Class.namespace.world.get_objs_po_s(rdf_type, Class.storid)]
+      return [world._get_by_storid(s, None, Thing) for s in world._get_obj_triples_po_s(rdf_type, Class.storid)]
+    return [Class.namespace.world._get_by_storid(s, None, Thing) for s in Class.namespace.world._get_obj_triples_po_s(rdf_type, Class.storid)]
   
   def get_class_properties(Class):
     for construct in itertools.chain(Class.is_a, Class.equivalent_to.indirect()):
@@ -429,7 +429,7 @@ class ThingClass(EntityClass):
       attr = "__%s" % attr
       values = Class.__dict__.get(attr)
       if values is None:
-        values = ValueList((Class.namespace.ontology._to_python(o, d) for o,d in Class.namespace.world.get_quads_sp_od(Class.storid, Prop.storid)), Class, Prop)
+        values = ValueList((Class.namespace.ontology._to_python(o, d) for o,d in Class.namespace.world._get_triples_sp_od(Class.storid, Prop.storid)), Class, Prop)
         type.__setattr__(Class, attr, values)
       return values
     

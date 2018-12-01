@@ -86,7 +86,7 @@ HermiT 1.2.4
   node sets in case the next node in the property hierarchy has only inverses), 
   improved property instance retrieval, new disjunction ordering strategy, negative 
   object property assertion encoding no longer requires nominals, command line 
-  outputs full IRIs instead of abbreviated ones with HermiT's prefixes, apply changes 
+  outputs full IRIs instead of _abbreviated ones with HermiT's prefixes, apply changes 
   in non-buffering mode only when needed for a query, data values are stored also 
   with their lexical form, new data property classification
 HermiT 1.2.5

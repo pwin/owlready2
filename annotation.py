@@ -35,16 +35,16 @@ from owlready2.prop      import _CLASS_PROPS
     
 #   def search_bnode(self):
 #     if self.target_d is None:
-#       for bnode in self.namespace.get_objs_po_s(rdf_type, owl_axiom):
-#         for p, o in self.get_objs_s_po(bnode):
+#       for bnode in self.namespace._get_obj_triples_po_s(rdf_type, owl_axiom):
+#         for p, o in self._get_obj_triples_s_po(bnode):
 #           if   (p == owl_annotatedsource)   and (o != self.source):   break
 #           elif (p == owl_annotatedproperty) and (o != self.property): break
 #           elif (p == owl_annotatedtarget)   and (o != self.target):   break
 #       else:
 #         return bnode
 #     else:
-#       for bnode in self.namespace.get_objs_po_s(rdf_type, owl_axiom):
-#         for p, o, d in self.get_quads_s_pod(bnode):
+#       for bnode in self.namespace._get_obj_triples_po_s(rdf_type, owl_axiom):
+#         for p, o, d in self._get_triples_s_pod(bnode):
 #           if   (p == owl_annotatedsource)   and (o != self.source):   break
 #           elif (p == owl_annotatedproperty) and (o != self.property): break
 #           elif (p == owl_annotatedtarget)   and (o != self.target):   break
@@ -67,10 +67,10 @@ class _AnnotList(CallbackListWithLanguage):
     
     # Add before, in order to avoid destroying the axiom and then recreating, if all annotations are modified
     for added in new - old:
-      x = obj.namespace.ontology.add_annotation_axiom(obj.storid, self._property, self._target, self._target_d, self._annot, *obj.namespace.ontology._to_rdf(added))
+      x = obj.namespace.ontology._add_annotation_axiom(obj.storid, self._property, self._target, self._target_d, self._annot, *obj.namespace.ontology._to_rdf(added))
       
     for removed in old - new:
-      obj.namespace.ontology.del_annotation_axiom    (obj.storid, self._property, self._target, self._target_d, self._annot, *obj.namespace.ontology._to_rdf(removed))
+      obj.namespace.ontology._del_annotation_axiom    (obj.storid, self._property, self._target, self._target_d, self._annot, *obj.namespace.ontology._to_rdf(removed))
     
     
 class AnnotationPropertyClass(PropertyClass):
@@ -89,8 +89,8 @@ class AnnotationPropertyClass(PropertyClass):
       if hasattr(property, "storid"): property = property.storid
       target, target_d = world._to_rdf(target)
       l = []
-      for bnode in world.get_annotation_axioms(source, property, target, target_d):
-        for o, d in world.get_quads_sp_od(bnode, Annot.storid):
+      for bnode in world._get_annotation_axioms(source, property, target, target_d):
+        for o, d in world._get_triples_sp_od(bnode, Annot.storid):
           l.append(world._to_python(o, d))
           
       return _AnnotList(l, source_orig, property, target, target_d, Annot.storid)

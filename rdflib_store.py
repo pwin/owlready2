@@ -48,15 +48,15 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     
   def _rdflib_2_owlready(self, spo):
     s,p,o = spo
-    if   isinstance(s, rdflib.term.URIRef ): s = self.triplelite.abbreviate(str(s))
+    if   isinstance(s, rdflib.term.URIRef ): s = self.triplelite._abbreviate(str(s))
     elif isinstance(s, rdflib.term.BNode  ): s = str(s)
-    if   isinstance(p, rdflib.term.URIRef ): p = self.triplelite.abbreviate(str(p))
-    if   isinstance(o, rdflib.term.URIRef ): o = self.triplelite.abbreviate(str(o)); d = None
+    if   isinstance(p, rdflib.term.URIRef ): p = self.triplelite._abbreviate(str(p))
+    if   isinstance(o, rdflib.term.URIRef ): o = self.triplelite._abbreviate(str(o)); d = None
     elif isinstance(o, rdflib.term.BNode  ): o = str(o); d = None
     elif isinstance(o, rdflib.term.Literal):
       if o.language is None:
         if o.datatype:
-          d = self.triplelite.abbreviate(str(o.datatype))
+          d = self.triplelite._abbreviate(str(o.datatype))
           if   isinstance(o.value, bool):         o = str(o)
           elif isinstance(o.value, (int, float)): o = o.value
           else:                                   o = str(o)
@@ -72,45 +72,45 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
   
   def _owlready_2_rdflib(self, s,p,o,d = None):
     if   s.startswith("_"): s = BNode(s)
-    else:                   s = URIRef(self.triplelite.unabbreviate(s))
-    p = URIRef(self.triplelite.unabbreviate(p))
+    else:                   s = URIRef(self.triplelite._unabbreviate(s))
+    p = URIRef(self.triplelite._unabbreviate(p))
     if d is None:
       if o.startswith("_"): o = BNode(o)
-      else:                 o = URIRef(self.triplelite.unabbreviate(o))
+      else:                 o = URIRef(self.triplelite._unabbreviate(o))
     else:
       if   d.startswith("@"): o = Literal(o, lang = d[1:])
       elif d == "":           o = Literal(o)
-      else:                   o = Literal(o, datatype = URIRef(self.triplelite.unabbreviate(d)))
+      else:                   o = Literal(o, datatype = URIRef(self.triplelite._unabbreviate(d)))
     return s,p,o
   
   def add(self, xxx_todo_changeme, context, quoted = False):
     s,p,o,d = self._rdflib_2_owlready(xxx_todo_changeme)
 
     if d is None:
-      context.triplelite._add_obj_spo(s,p,o)
+      context.triplelite._add_obj_triple_raw_spo(s,p,o)
     else:
-      context.triplelite._add_data_spod(s,p,o,d)
+      context.triplelite._add_data_triple_raw_spodd(s,p,o,d)
     #super().add(xxx_todo_changeme, context, quoted)
     
   def remove(self, xxx_todo_changeme, context = None):
     s,p,o,d = self._rdflib_2_owlready(xxx_todo_changeme)
     if d is None:
-      context.triplelite._del_obj_spo(s,p,o)
+      context.triplelite._del_obj_triple_raw_spo(s,p,o)
     else:
-      context.triplelite._del_data_spod(s,p,o,d)
+      context.triplelite._del_data_triple_raw_spodd(s,p,o,d)
     #super().remove(xxx_todo_changeme, context, quoted)
     
   def triples(self, triple_pattern, context = None):
     rs,rp,ro,rd = self._rdflib_2_owlready(triple_pattern)
     
     if   rd is None:
-      for s,p,o,d in context.triplelite.get_quads_spod_spod(rs,rp,ro, None):
+      for s,p,o,d in context.triplelite._get_triples_spod_spod(rs,rp,ro, None):
         yield self._owlready_2_rdflib(s,p,o,d), context
     elif rd is None:
-      for s,p,o in context.triplelite.get_objs_spo_spo(rs,rp,ro):
+      for s,p,o in context.triplelite._get_obj_triples_spo_spo(rs,rp,ro):
         yield self._owlready_2_rdflib(s,p,o,None), context
     else:
-      for s,p,o,d in context.triplelite.get_datas_spod_spod(rs,rp,ro, None):
+      for s,p,o,d in context.triplelite._get_data_triples_spod_spod(rs,rp,ro, None):
         yield self._owlready_2_rdflib(s,p,o,d), context
         
   def __len__(self, context = None):
@@ -138,7 +138,7 @@ class TripleLiteRDFlibGraph(rdflib.Graph):
     elif isinstance(o, rdflib.term.Literal):
       if o.language is None:
         if o.datatype:
-          d = self.triplelite.abbreviate(str(o.datatype))
+          d = self.triplelite._abbreviate(str(o.datatype))
           o = o.value
         else:
           d = ""

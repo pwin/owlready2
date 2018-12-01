@@ -132,7 +132,7 @@ def sync_reasoner_hermit(x = None, debug = 1, keep_tmp_file = False):
   new_equivs  = defaultdict(list)
   entity_2_type = {}
   for relation, concept_iris in _HERMIT_RESULT_REGEXP.findall(output):
-    concept_storids = [ontology.abbreviate(x) for x in concept_iris[1:-1].split("> <")]
+    concept_storids = [ontology._abbreviate(x) for x in concept_iris[1:-1].split("> <")]
     owl_relation = _HERMIT_2_OWL[relation]
     
     if  relation in _IS_A_RELATIONS:
@@ -212,7 +212,7 @@ def sync_reasoner_pellet(x = None, debug = 1, keep_tmp_file = False):
     line2 = line.lstrip()
     depth = len(line) - len(line2)
     splitted = line2.split(" - ", 1)
-    class_storids = [ontology.abbreviate(class_iri) for class_iri in splitted[0].split(" = ")]
+    class_storids = [ontology._abbreviate(class_iri) for class_iri in splitted[0].split(" = ")]
     
     if len(class_storids) > 1:
       for class_storid1 in class_storids:
@@ -233,7 +233,7 @@ def sync_reasoner_pellet(x = None, debug = 1, keep_tmp_file = False):
     if len(splitted) == 2:
       ind_iris = splitted[1][1:-1].split(", ")
       for ind_iri in ind_iris:
-        ind_storid = ontology.abbreviate(ind_iri)
+        ind_storid = ontology._abbreviate(ind_iri)
         entity_2_type[ind_storid] = "individual"
         new_parents[ind_storid].extend(class_storids)
         
@@ -253,8 +253,8 @@ def _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, en
   for child_storid, parent_storids in new_parents.items():
     for parent_storid in parent_storids:
       owl_relation = _TYPE_2_IS_A[entity_2_type[child_storid]]
-      if not ontology.world.has_obj_spo(child_storid, owl_relation, parent_storid):
-        ontology.add_obj_spo(child_storid, owl_relation, parent_storid)
+      if not ontology.world._has_obj_triple_spo(child_storid, owl_relation, parent_storid):
+        ontology._add_obj_spo(child_storid, owl_relation, parent_storid)
         
     child = world._entities.get(child_storid)
     if not child is None:
@@ -269,8 +269,8 @@ def _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, en
   for concept1_storid, concept2_storids in new_equivs.items():
     for concept2_storid in concept2_storids:
       owl_relation = _TYPE_2_EQUIVALENT_TO[entity_2_type[concept1_storid]]
-      if not ontology.world.has_obj_spo(concept1_storid, owl_relation, concept2_storid):
-        ontology.add_obj_spo(concept1_storid, owl_relation, concept2_storid)
+      if not ontology.world._has_obj_triple_spo(concept1_storid, owl_relation, concept2_storid):
+        ontology._add_obj_spo(concept1_storid, owl_relation, concept2_storid)
         
       if concept2_storid == owl_nothing:
         concept1 = world._entities.get(concept1_storid)

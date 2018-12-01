@@ -171,9 +171,9 @@ def parse_owlxml(object f, object on_prepare_triple = None, object new_blank = N
   
   
   
-  def unabbreviate_IRI(str abbreviated_iri):
+  def _unabbreviate_IRI(str _abbreviated_iri):
     cdef str prefix, name
-    prefix, name = abbreviated_iri.split(":", 1)
+    prefix, name = _abbreviated_iri.split(":", 1)
     return prefixes[prefix] + name
   
   def get_IRI(dict attrs):
@@ -184,7 +184,7 @@ def parse_owlxml(object f, object on_prepare_triple = None, object new_blank = N
       if not iri: return ontology_iri
       if   iri.startswith("#") or iri.startswith("/"): iri = ontology_iri + iri
       return iri
-    return unabbreviate_IRI(attrs["abbreviatedIRI"])
+    return _unabbreviate_IRI(attrs["_abbreviatedIRI"])
   
   def startElement(str tag, dict attrs):
     nonlocal current_content, current_attrs, in_declaration, before_declaration, last_cardinality, in_prop_chain, ontology_iri
@@ -384,7 +384,7 @@ def parse_owlxml(object f, object on_prepare_triple = None, object new_blank = N
       objs.append(iri)
       
     elif (tag == "http://www.w3.org/2002/07/owl#AbbreviatedIRI"):
-      iri = unabbreviate_IRI(current_content)
+      iri = _unabbreviate_IRI(current_content)
       objs.append(iri)
       
     elif (tag == "http://www.w3.org/2002/07/owl#AnnotationAssertion"):

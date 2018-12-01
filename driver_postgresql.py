@@ -87,22 +87,22 @@ class Graph(BaseMainGraph):
       version, self.current_blank, self.current_resource = self.fetchone()
       
       
-    self.execute("""PREPARE abbreviate1    AS SELECT storid FROM resources WHERE iri=$1 LIMIT 1;""")
-    self.execute("""PREPARE abbreviate2    AS INSERT INTO resources VALUES ($1,$2);""")
-    self.execute("""PREPARE unabbreviate   AS SELECT iri FROM resources WHERE storid=$1 LIMIT 1;""")
-    self.execute("""PREPARE get_quads_sp   AS SELECT o,c FROM quads WHERE s=$1 AND p=$2;""")
+    self.execute("""PREPARE _abbreviate1    AS SELECT storid FROM resources WHERE iri=$1 LIMIT 1;""")
+    self.execute("""PREPARE _abbreviate2    AS INSERT INTO resources VALUES ($1,$2);""")
+    self.execute("""PREPARE _unabbreviate   AS SELECT iri FROM resources WHERE storid=$1 LIMIT 1;""")
+    self.execute("""PREPARE _get_triples_sp   AS SELECT o,c FROM quads WHERE s=$1 AND p=$2;""")
     
     self.execute("""PREPARE get_triples_s  AS SELECT p,o FROM quads WHERE s=$1;""")
     self.execute("""PREPARE get_triples_sp AS SELECT o FROM quads WHERE s=$1 AND p=$2;""")
     self.execute("""PREPARE get_triples_po AS SELECT s FROM quads WHERE p=$1 AND o=$2;""")
     self.execute("""PREPARE get_triple_sp  AS SELECT o FROM quads WHERE s=$1 AND p=$2 LIMIT 1;""")
     self.execute("""PREPARE get_triple_po  AS SELECT s FROM quads WHERE p=$1 AND o=$2 LIMIT 1;""")
-    self.execute("""PREPARE get_transitive_sp AS
+    self.execute("""PREPARE _get_obj_triples_transitive_sp AS
 WITH RECURSIVE transit(x)
 AS (      SELECT o FROM quads WHERE s=$1 AND p=$2
 UNION ALL SELECT quads.o FROM quads, transit WHERE quads.s=transit.x AND quads.p=$2)
 SELECT DISTINCT x FROM transit;""")
-    self.execute("""PREPARE get_transitive_po AS
+    self.execute("""PREPARE _get_obj_triples_transitive_po AS
 WITH RECURSIVE transit(x)
 AS (      SELECT s FROM quads WHERE p=$1 AND o=$2
 UNION ALL SELECT quads.s FROM quads, transit WHERE quads.p=$1 AND quads.o=transit.x)
@@ -113,12 +113,12 @@ SELECT DISTINCT x FROM transit;""")
     self.execute("""PREPARE get_triples_poc AS SELECT s FROM quads WHERE c=$1 AND p=$2 AND o=$3;""")
     self.execute("""PREPARE get_triple_spc  AS SELECT o FROM quads WHERE c=$1 AND s=$2 AND p=$3 LIMIT 1;""")
     self.execute("""PREPARE get_triple_poc  AS SELECT s FROM quads WHERE c=$1 AND p=$2 AND o=$3 LIMIT 1;""")
-    self.execute("""PREPARE get_transitive_spc AS
+    self.execute("""PREPARE _get_obj_triples_transitive_spc AS
 WITH RECURSIVE transit(x)
 AS (      SELECT o FROM quads WHERE s=$1 AND p=$2 AND c=$3
 UNION ALL SELECT quads.o FROM quads, transit WHERE quads.s=transit.x AND quads.p=$2 AND quads.c=$3)
 SELECT DISTINCT x FROM transit;""")
-    self.execute("""PREPARE get_transitive_poc AS
+    self.execute("""PREPARE _get_obj_triples_transitive_poc AS
 WITH RECURSIVE transit(x)
 AS (      SELECT s FROM quads WHERE p=$1 AND o=$2 AND c=$3
 UNION ALL SELECT quads.s FROM quads, transit WHERE quads.p=$1 AND quads.o=transit.x AND quads.c=$3)
@@ -166,35 +166,35 @@ SELECT DISTINCT x FROM transit;""")
     self.execute("SELECT iri, storid FROM resources")
     return dict(self.fetchall())
      
-  def abbreviate(self, iri):
+  def _abbreviate(self, iri):
     ##self.execute("SELECT storid FROM resources WHERE iri=%s LIMIT 1", (iri,))
-    #self.execute("EXECUTE abbreviate1(%s)", (iri,))
+    #self.execute("EXECUTE _abbreviate1(%s)", (iri,))
     #r = self.fetchone()
     #if r: return r[0]
     #self.current_resource += 1
     #storid = _int_base_62(self.current_resource)
     ##self.execute("INSERT INTO resources VALUES (%s,%s)", (storid, iri))
-    #self.execute("EXECUTE abbreviate2(%s,%s)", (storid, iri))
+    #self.execute("EXECUTE _abbreviate2(%s,%s)", (storid, iri))
     #return storid
     
     with self.cursor() as cur:
-      cur.execute("EXECUTE abbreviate1(%s)", (iri,))
+      cur.execute("EXECUTE _abbreviate1(%s)", (iri,))
       r = cur.fetchone()
       if r: return r[0]
       self.current_resource += 1
       storid = _int_base_62(self.current_resource)
-      cur.execute("EXECUTE abbreviate2(%s,%s)", (storid, iri))
+      cur.execute("EXECUTE _abbreviate2(%s,%s)", (storid, iri))
       return storid
     
-  def unabbreviate(self, storid):
+  def _unabbreviate(self, storid):
     #self.execute("SELECT iri FROM resources WHERE storid=%s LIMIT 1", (storid,))
-    #self.execute("EXECUTE unabbreviate(%s)", (storid,))
+    #self.execute("EXECUTE _unabbreviate(%s)", (storid,))
     #return self.fetchone()[0]
     with self.cursor() as cur:
-      cur.execute("EXECUTE unabbreviate(%s)", (storid,))
+      cur.execute("EXECUTE _unabbreviate(%s)", (storid,))
       return cur.fetchone()[0]
   
-  def new_numbered_iri(self, prefix):
+  def _new_numbered_iri(self, prefix):
     if prefix in self.last_numbered_iri:
       i = self.last_numbered_iri[prefix] = self.last_numbered_iri[prefix] + 1
       return "%s%s" % (prefix, i)
@@ -211,7 +211,7 @@ SELECT DISTINCT x FROM transit;""")
     self.last_numbered_iri[prefix] = 1
     return "%s1" % prefix
   
-  def refactor(self, storid, new_iri):
+  def _refactor(self, storid, new_iri):
     self.execute("UPDATE resources SET iri=%s WHERE storid=%s", (new_iri, storid,))
     
     
@@ -296,12 +296,12 @@ SELECT DISTINCT x FROM transit;""")
           else:         self.execute("SELECT s,p,o,c FROM quads WHERE c=%s AND s=%s AND p=%s AND o=%s", (c, s, p, o,))
     return self.fetchall()
   
-  def get_quads_sp(self, s, p):
+  def _get_triples_sp(self, s, p):
     #self.execute("SELECT o,c FROM quads WHERE s=%s AND p=%s", (s, p))
-    #self.execute("EXECUTE get_quads_sp(%s,%s)", (s, p))
+    #self.execute("EXECUTE _get_triples_sp(%s,%s)", (s, p))
     #return self.fetchall()
     with self.cursor() as cur:
-      cur.execute("EXECUTE get_quads_sp(%s,%s)", (s, p))
+      cur.execute("EXECUTE _get_triples_sp(%s,%s)", (s, p))
       return cur.fetchall()
     
   def get_pred(self, s):
@@ -507,24 +507,24 @@ EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR ("
 
   
   # Reimplemented using RECURSIVE SQL structure, for performance
-  def get_transitive_sp(self, s, p):
+  def _get_obj_triples_transitive_sp(self, s, p):
 #    for (x,) in self.execute("""
 #WITH RECURSIVE transit(x)
 #AS (      SELECT o FROM quads WHERE s=%s AND p=%s
 #UNION ALL SELECT quads.o FROM quads, transit WHERE quads.s=transit.x AND quads.p=%s)
 #SELECT DISTINCT x FROM transit""", (s, p, p)).fetchall(): yield x
     with self.cursor() as cur:
-      cur.execute("EXECUTE get_transitive_sp(%s,%s)", (s, p))
+      cur.execute("EXECUTE _get_obj_triples_transitive_sp(%s,%s)", (s, p))
       for (x,) in cur: yield x
     
   # Reimplemented using RECURSIVE SQL structure, for performance
-  def get_transitive_po(self, p, o):
+  def _get_obj_triples_transitive_po(self, p, o):
     with self.cursor() as cur:
-      cur.execute("EXECUTE get_transitive_po(%s,%s)", (p, o))
+      cur.execute("EXECUTE _get_obj_triples_transitive_po(%s,%s)", (p, o))
       for (x,) in cur: yield x
 
 # Slower than Python implementation
-#   def get_transitive_sym2(self, s, p):
+#   def _get_obj_triples_transitive_sym2(self, s, p):
 #     r = { s }
 #     self.execute("""
 # WITH RECURSIVE transit(s,o)
@@ -648,9 +648,9 @@ class SubGraph(BaseSubGraph):
     self.execute  = self.sql.execute
     self.fetchone = self.sql.fetchone
     self.fetchall = self.sql.fetchall
-    self.abbreviate       = parent.abbreviate
-    self.unabbreviate     = parent.unabbreviate
-    self.new_numbered_iri = parent.new_numbered_iri
+    self._abbreviate       = parent._abbreviate
+    self._unabbreviate     = parent._unabbreviate
+    self._new_numbered_iri = parent._new_numbered_iri
     
     self.parent.onto_2_subgraph[onto] = self
     
@@ -662,10 +662,10 @@ class SubGraph(BaseSubGraph):
 
     t0  = time.time()
     
-    # def abbreviate(iri): # Re-implement for speed
+    # def _abbreviate(iri): # Re-implement for speed
     #   storid = abbrevs.get(iri)
     #   if not storid is None: return storid
-    #   self.execute("EXECUTE abbreviate1(%s)", (iri,))
+    #   self.execute("EXECUTE _abbreviate1(%s)", (iri,))
     #   r = self.fetchone()
     #   if r:
     #     abbrevs[iri] = r[0]
@@ -676,7 +676,7 @@ class SubGraph(BaseSubGraph):
     #   abbrevs[iri] = storid
     #   return storid
     
-    def abbreviate(iri): # Re-implement for speed
+    def _abbreviate(iri): # Re-implement for speed
       storid = abbrevs.get(iri)
       if storid is None:
         self.parent.current_resource += 1
@@ -689,9 +689,9 @@ class SubGraph(BaseSubGraph):
     def on_prepare_triple(s, p, o):
       entities.add(s)
       
-      if not s.startswith("_"): s = abbreviate(s)
-      p = abbreviate(p)
-      if not (o.startswith("_") or o.startswith('"')): o = abbreviate(o)
+      if not s.startswith("_"): s = _abbreviate(s)
+      p = _abbreviate(p)
+      if not (o.startswith("_") or o.startswith('"')): o = _abbreviate(o)
       
       values.append((s,p,o))
       
@@ -699,7 +699,7 @@ class SubGraph(BaseSubGraph):
       lang = attrs.get("http://www.w3.org/XML/1998/namespacelang")
       if lang: return '"%s"@%s' % (value, lang)
       datatype = attrs.get(datatype_attr)
-      if datatype: return '"%s"%s' % (value, abbreviate(datatype))
+      if datatype: return '"%s"%s' % (value, _abbreviate(datatype))
       return '"%s"' % (value)
     
     def on_finish():
@@ -773,7 +773,7 @@ CREATE INDEX index_quads_o ON quads(o);""")
 
       return onto_base_iri
       
-    return on_prepare_triple, self.parent.new_blank_node, new_literal, abbreviate, on_finish
+    return on_prepare_triple, self.parent.new_blank_node, new_literal, _abbreviate, on_finish
 
 
   def context_2_user_context(self, c): return self.parent.c_2_onto[c]
@@ -920,16 +920,16 @@ CREATE INDEX index_quads_o ON quads(o);""")
   
   
   # Reimplemented using RECURSIVE SQL structure, for performance
-  def get_transitive_sp(self, s, p):
-    self.execute("EXECUTE get_transitive_spc(%s,%s)", (s, p, c))
+  def _get_obj_triples_transitive_sp(self, s, p):
+    self.execute("EXECUTE _get_obj_triples_transitive_spc(%s,%s)", (s, p, c))
     for (x,) in self.fetchall(): yield x
     
   # Reimplemented using RECURSIVE SQL structure, for performance
-  def get_transitive_po(self, p, o):
-    self.execute("EXECUTE get_transitive_poc(%s,%s)", (p, o, c))
+  def _get_obj_triples_transitive_po(self, p, o):
+    self.execute("EXECUTE _get_obj_triples_transitive_poc(%s,%s)", (p, o, c))
     for (x,) in self.fetchall(): yield x
 
-#  def get_transitive_sym(self, s, p):
+#  def _get_obj_triples_transitive_sym(self, s, p):
 #    r = { s }
 #    for (s, o) in self.execute("""
 #WITH RECURSIVE transit(s,o)
