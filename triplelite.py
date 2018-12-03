@@ -696,6 +696,10 @@ class Graph(BaseMainGraph):
     
   # Reimplemented using RECURSIVE SQL structure, for performance
   def _get_obj_triples_transitive_sp(self, s, p):
+    #print(self._unabbreviate(s), self._unabbreviate(p))
+    #if self._unabbreviate(s) == "http://wikidata.dbpedia.org/ontology/Person":
+    #  if self._unabbreviate(p) == "http://www.w3.org/2000/01/rdf-schema#subClassOf":
+    #    oirorejf
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT o FROM objs WHERE s=? AND p=?

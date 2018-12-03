@@ -349,7 +349,6 @@ class EntityClass(type):
         construct = _top_bn(s)
         if not construct is None:
           yield construct
-
           
 def issubclass_owlready(Class, Parent_or_tuple):
   if issubclass_python(Class, Parent_or_tuple): return True

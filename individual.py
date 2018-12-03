@@ -411,20 +411,27 @@ class Thing(metaclass = ThingClass):
 
 class Nothing(Thing): pass
 
-
 class FusionClass(ThingClass):
   ontology = anonymous
   
+  _CACHES         = {}
   _FUSION_CLASSES = {}
   
   @staticmethod
-  def _get_fusion_class(Classes):
-    Classes = _keep_most_specific(Classes)
+  def _get_fusion_class(Classes0):
+    key = frozenset(Classes0)
+    Class = FusionClass._CACHES.get(key)
+    if Class: return Class
+    
+    Classes = _keep_most_specific(Classes0)
+    if len(Classes) == 1:
+      FusionClass._CACHES[key] = Class = tuple(Classes)[0]
+      return Class
+    
     Classes = tuple(sorted(Classes, key = lambda Class: Class.__name__))
-    if len(Classes) == 1: return Classes[0]
     if Classes in FusionClass._FUSION_CLASSES: return FusionClass._FUSION_CLASSES[Classes]
     name = "_AND_".join(Class.__name__ for Class in Classes)
     with anonymous: # Force triple insertion into anonymous
-      fusion_class = FusionClass._FUSION_CLASSES[Classes] = FusionClass(name, Classes, { "namespace" : anonymous })
+      fusion_class = FusionClass._FUSION_CLASSES[Classes] = FusionClass._CACHES[key] = FusionClass(name, Classes, { "namespace" : anonymous })
     return fusion_class
 
