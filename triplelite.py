@@ -170,6 +170,7 @@ class Graph(BaseMainGraph):
       self.db.commit()
       
     else:
+      self.indexed = True
       if clone:
         s = "\n".join(clone.db.iterdump())
         self.db.cursor().executescript(s)
@@ -250,7 +251,7 @@ class Graph(BaseMainGraph):
         self.db.executemany("INSERT INTO objs2 VALUES (?,?,?,?)", l)
         
         l = []
-        for c,s,p,o, in self.execute("""SELECT c,s,p,o,d FROM datas"""):
+        for c,s,p,o,d in self.execute("""SELECT c,s,p,o,d FROM datas"""):
           s = _base_62_2_int(s)
           p = _base_62_2_int(p)
           if   not d:  d = 0
@@ -282,16 +283,17 @@ class Graph(BaseMainGraph):
         self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
         self.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
         
-        prop_fts  = { storid : fts for (fts, storid) in self.execute("""SELECT * FROM prop_fts;""") }
-        prop_fts2 = { _base_62_2_int(storid) : fts for (fts, storid) in prop_fts.items() }
+        prop_fts  = { storid : fts for (fts, storid) in self.execute("""SELECT fts, storid FROM prop_fts;""") }
+        prop_fts2 = { _base_62_2_int(storid) : fts for (storid, fts) in prop_fts.items() }
         for fts in prop_fts.values():
           self.execute("""DROP TABLE fts_%s""" % fts)
-          self.execute("""DROP TRIGGER fts_%s_after_insert""" % fts)
-          self.execute("""DROP TRIGGER fts_%s_after_delete""" % fts)
-          self.execute("""DROP TRIGGER fts_%s_after_update""" % fts)
+          self.execute("""DROP TRIGGER IF EXISTS fts_%s_after_insert""" % fts)
+          self.execute("""DROP TRIGGER IF EXISTS fts_%s_after_delete""" % fts)
+          self.execute("""DROP TRIGGER IF EXISTS fts_%s_after_update""" % fts)
           
         self.execute("""DROP TABLE prop_fts""")
         self.execute("""CREATE TABLE prop_fts(storid INTEGER)""")
+        self.prop_fts = set()
         for storid in prop_fts2: self.enable_full_text_search(storid)
         
         self.execute("""UPDATE store SET version=5""")
