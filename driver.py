@@ -239,18 +239,18 @@ def _save(f, format, graph):
     _unabbreviate = lru_cache(None)(graph._unabbreviate)
     
     for s,p,o,d in graph._iter_triples():
-      if   s.startswith("_"): s = "_:%s" % s[1:]
-      else:                   s = "<%s>" % _unabbreviate(s)
+      #print(repr((s,p,o,d)))
+      if   s < 0: s = "_:%s" % (-s)
+      else:       s = "<%s>" % _unabbreviate(s)
       p = "<%s>" % _unabbreviate(p)
       if d is None:
-        if o.startswith("_"): o = "_:%s" % o[1:]
-        else:                 o = "<%s>" % _unabbreviate(o)
+        if o < 0: o = "_:%s" % (-o)
+        else:     o = "<%s>" % _unabbreviate(o)
       else:
         if isinstance(o, str):  o = o.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
-        #else:                   o = str(o)
-        if   d.startswith("@"): o = '"%s"%s' % (o, d)
-        elif d == "":           o = '"%s"' % o
-        else:                   o = '"%s"^^<%s>' % (o, _unabbreviate(d)) # Un_abbreviate datatype's iri
+        if   isinstance(d, str) and d.startswith("@"): o = '"%s"%s' % (o, d)
+        elif d == 0:                                   o = '"%s"' % o
+        else:                                          o = '"%s"^^<%s>' % (o, _unabbreviate(d)) # Unabbreviate datatype's iri
         
       f.write(("%s %s %s .\n" % (s, p, o)).encode("utf8"))
       
@@ -258,21 +258,19 @@ def _save(f, format, graph):
     _unabbreviate = lru_cache(None)(graph._unabbreviate)
     
     c_2_iri = { c : iri for c, iri in graph._iter_ontology_iri() }
-    print(c_2_iri)
     
     for c,s,p,o,d in graph._iter_triples(True):
-      if   s.startswith("_"): s = "_:%s" % s[1:]
-      else:                   s = "<%s>" % _unabbreviate(s)
+      if   s < 0: s = "_:%s" % (-s)
+      else:       s = "<%s>" % _unabbreviate(s)
       p = "<%s>" % _unabbreviate(p)
       if d is None:
-        if o.startswith("_"): o = "_:%s" % o[1:]
-        else:                 o = "<%s>" % _unabbreviate(o)
+        if o < 0: o = "_:%s" % (-o)
+        else:     o = "<%s>" % _unabbreviate(o)
       else:
         if isinstance(o, str):  o = o.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
-        #else:                   o = str(o)
-        if   d.startswith("@"): o = '"%s"%s' % (o, d)
-        elif l:                 o = '"%s"^^<%s>' % (o, _unabbreviate(d)) # Un_abbreviate datatype's iri
-        else:                   o = '"%s"' % o
+        if   isinstance(d, str) and d.startswith("@"): o = '"%s"%s' % (o, d)
+        elif d == 0:                                   o = '"%s"' % o
+        else:                                          o = '"%s"^^<%s>' % (o, _unabbreviate(d)) # Unabbreviate datatype's iri
         
       f.write(("<%s> %s %s %s .\n" % (c_2_iri[c], s, p, o)).encode("utf8"))
       
@@ -373,17 +371,17 @@ def _save(f, format, graph):
     def purge():
       nonlocal s_lines, current_s, type
       
-      if current_s.startswith("_"):
+      if current_s < 0:
         l = bn_2_inner_list[current_s]
-        current_s = ""
+        current_s = 0
       else:
         l = liness.get(type) or lines[-1]
         
       if s_lines:
-        if current_s.startswith("_"):
+        if current_s < 0:
           l.append("""<%s rdf:nodeID="%s">""" % (type, current_s))
           
-        elif current_s:
+        elif current_s > 0:
           current_s = _unabbreviate(current_s)
           l.append("""<%s rdf:about="%s">""" % (type, current_s))
           
@@ -396,10 +394,10 @@ def _save(f, format, graph):
         l.append("""</%s>""" % type)
         
       else:
-        if current_s.startswith("_"):
+        if current_s < 0:
           l.append("""<%s rdf:nodeID="%s"/>""" % (type, current_s))
           
-        elif current_s:
+        elif current_s > 0:
           current_s = _unabbreviate(current_s)
           l.append("""<%s rdf:about="%s"/>""" % (type, current_s))
           
@@ -418,7 +416,7 @@ def _save(f, format, graph):
         current_s = s
         type = "rdf:Description"
         
-      if (p == rdf_type) and (type == "rdf:Description") and (not o.startswith("_")):
+      if (p == rdf_type) and (type == "rdf:Description") and (not o < 0):
         t = abbrev(_unabbreviate(o))
         if not t in bad_types:
           type = t
@@ -430,21 +428,19 @@ def _save(f, format, graph):
       
       if  not d is None:
         if isinstance(o, str):  o = o.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        if   d.startswith("@"): s_lines.append("""  <%s xml:lang="%s">%s</%s>""" % (p, d[1:], o, p))
-        elif d:                 s_lines.append("""  <%s rdf:datatype="%s">%s</%s>""" % (p, _unabbreviate(d), o, p))
-        else:                   s_lines.append("""  <%s>%s</%s>""" % (p, o, p))
+        if   isinstance(d, str) and d.startswith("@"): s_lines.append("""  <%s xml:lang="%s">%s</%s>""" % (p, d[1:], o, p))
+        elif d:                                        s_lines.append("""  <%s rdf:datatype="%s">%s</%s>""" % (p, _unabbreviate(d), o, p))
+        else:                                          s_lines.append("""  <%s>%s</%s>""" % (p, o, p))
         
-      elif o.startswith('_'):
+      elif o < 0:
           if p in tags_with_list:
             s_lines.append("""  <%s rdf:parseType="Collection">""" % p)
             for i in parse_list(o):
-              if i.startswith("_"):
+              if i < 0:
                 l = bn_2_inner_list[i]
                 inner_lists_used.add(id(l))
                 s_lines.append(l)
-              elif i.startswith('"'):
-                pass
-              else:
+              elif isinstance(i, int):
                 i = _unabbreviate(i)
                 s_lines.append("""    <rdf:Description rdf:about="%s"/>""" % i)
           else:

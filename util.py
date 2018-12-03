@@ -17,9 +17,9 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-def _int_base_62(i):
-  if i == 0: return ""
-  return _int_base_62(i // 62) + "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"[i % 62]
+#def _int_base_62(i):
+#  if i == 0: return ""
+#  return _int_base_62(i // 62) + "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"[i % 62]
   
   
 class FTS(str):

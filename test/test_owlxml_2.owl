@@ -36,7 +36,7 @@
         <DataSomeValuesFrom>
             <DataProperty IRI="#P"/>
             <DatatypeRestriction>
-                <Datatype _abbreviatedIRI="xsd:float"/>
+                <Datatype abbreviatedIRI="xsd:float"/>
                 <FacetRestriction facet="&xsd;minInclusive">
                     <Literal datatypeIRI="&xsd;float">100.0</Literal>
                 </FacetRestriction>
@@ -52,7 +52,7 @@
             <ObjectInverseOf>
                 <ObjectProperty IRI="#P2"/>
             </ObjectInverseOf>
-            <Class _abbreviatedIRI="owl:Thing"/>
+            <Class abbreviatedIRI="owl:Thing"/>
         </ObjectSomeValuesFrom>
     </SubClassOf>
 </Ontology>

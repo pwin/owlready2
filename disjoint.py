@@ -31,8 +31,8 @@ class AllDisjoint(object):
     #   * a blank node, when at least 3 entities are involved
     #   * a triple, when only 2 entities, e.g. (entity1.storid, owl_disjointwith, entity2.storid)
     
-    if   isinstance(entities, str):
-      assert isinstance(bnode, str)
+    if   isinstance(entities, int):
+      assert isinstance(bnode, int)
       self.storid      = bnode
       self._list_bnode = entities
     elif isinstance(entities, tuple):
@@ -46,7 +46,7 @@ class AllDisjoint(object):
     
   def __getattr__(self, attr):
     if attr == "entities":
-      if isinstance(self.storid, str):
+      if isinstance(self.storid, int):
         r = self.ontology._parse_list(self._list_bnode)
       else:
         r = [self.ontology.world._get_by_storid(self.storid[0]), self.ontology.world._get_by_storid(self.storid[2])]
@@ -61,7 +61,7 @@ class AllDisjoint(object):
       self._create_triples ()
       
   def _destroy_triples(self):
-    if   isinstance(self.storid, str):
+    if   isinstance(self.storid, int):
       self.ontology._del_obj_triple_spod(self.storid, None, None)
       self.ontology._del_list(self._list_bnode)
     elif isinstance(self.storid, tuple):
@@ -83,7 +83,7 @@ class AllDisjoint(object):
       # => continue
     
     if len(self.entities) >= 2:
-      if not isinstance(self.storid, str): self.storid      = self.ontology.world.new_blank_node()
+      if not isinstance(self.storid, int): self.storid      = self.ontology.world.new_blank_node()
       if not self._list_bnode:             self._list_bnode = self.ontology.world.new_blank_node()
       
       if   isinstance(self.entities[0], ThingClass):

@@ -191,7 +191,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       if not iri: return ontology_iri
       if   iri.startswith("#") or iri.startswith("/"): iri = ontology_iri + iri
       return iri
-    return _unabbreviate_IRI(attrs["_abbreviatedIRI"])
+    return _unabbreviate_IRI(attrs["abbreviatedIRI"])
   
   def startElement(tag, attrs):
     nonlocal current_content, current_attrs, in_declaration, before_declaration, last_cardinality, in_prop_chain, ontology_iri
@@ -282,7 +282,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
     elif (tag == "http://www.w3.org/2002/07/owl#EquivalentClasses") or (tag == "http://www.w3.org/2002/07/owl#EquivalentObjectProperties") or (tag == "http://www.w3.org/2002/07/owl#EquivalentDataProperties"):
       o1 = objs.pop()
       o2 = objs.pop()
-      if o1.startswith("_"): o1, o2 = o2, o1 # Swap in order to have blank node at third position -- rapper seems to do that
+      if (isinstance(o1, int) and (o1 < 0)) or (isinstance(o1, str) and o1.startswith("_")): o1, o2 = o2, o1 # Swap in order to have blank node at third position -- rapper seems to do that
       on_prepare_obj(o1, equivs[tag], o2)
       if annots: purge_annotations((o1, equivs[tag], o2))
       
@@ -362,7 +362,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       if len(values) == 2: # Qualified
         tag = qual_card_restrs[tag]
         on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onProperty", values[-2])
-        if objs[-1].startswith("http://www.w3.org/2001/XMLSchema"):
+        if isinstance(objs[-1], str) and objs[-1].startswith("http://www.w3.org/2001/XMLSchema"):
           on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onDataRange", values[-1])
         else:
           on_prepare_obj(iri, "http://www.w3.org/2002/07/owl#onClass", values[-1])
@@ -392,7 +392,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       start    = _rindex(objs)
       list_iri = new_list(objs[start + 1 : ])
       iri      = new_blank()
-      if objs[start + 1 : ][0].startswith("http://www.w3.org/2001/XMLSchema"):
+      if isinstance(objs[start + 1 : ][0], str) and objs[start + 1 : ][0].startswith("http://www.w3.org/2001/XMLSchema"):
         on_prepare_obj(iri, rdf_type, "http://www.w3.org/2000/01/rdf-schema#Datatype")
       else:
         on_prepare_obj(iri, rdf_type, "http://www.w3.org/2002/07/owl#Class")

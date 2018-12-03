@@ -24,7 +24,6 @@ from xml.sax.saxutils import escape
 import datetime
 
 from owlready2.util import *
-from owlready2.util import _int_base_62
 
 #_HERE = os.path.dirname(__file__)
 
@@ -52,10 +51,10 @@ def to_literal(o):
 def from_literal(o, d):
   #from owlready2 import default_world
   #print(repr(o), repr(d), default_world._unabbreviate(d))
-  if d.startswith("@"): return locstr(o, lang = d[1:])
-  if d == "": return o
+  if isinstance(d, str) and d.startswith("@"): return locstr(o, lang = d[1:])
+  if d == 0: return o
   datatype, parser = _universal_abbrev_2_datatype_parser.get(d) or (None, None)
-  if d is None: raise ValueError("Cannot read literal of datatype '%s'!" % d)
+  if parser is None: raise ValueError("Cannot read literal of datatype '%s'!" % repr(d))
   return parser(o)
 
 _universal_abbrev_2_iri = {}
@@ -63,7 +62,7 @@ _universal_iri_2_abbrev = {}
 _next_abb = 1
 def _universal_abbrev(iri):
   global _next_abb
-  abb = _int_base_62(_next_abb)
+  abb = _next_abb
   _next_abb += 1
   _universal_abbrev_2_iri[abb] = iri
   _universal_iri_2_abbrev[iri] = abb

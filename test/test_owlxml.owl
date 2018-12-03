@@ -93,7 +93,7 @@
     </SubClassOf>
     <SubClassOf>
         <Annotation>
-            <AnnotationProperty _abbreviatedIRI="rdfs:comment"/>
+            <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
             <Literal xml:lang="en" datatypeIRI="&rdf;PlainLiteral">Test</Literal>
         </Annotation>
         <Class IRI="#DC"/>
@@ -144,12 +144,12 @@
     <DataPropertyRange>
         <DataProperty IRI="#d2"/>
         <DataUnionOf>
-            <Datatype _abbreviatedIRI="xsd:float"/>
-            <Datatype _abbreviatedIRI="xsd:int"/>
+            <Datatype abbreviatedIRI="xsd:float"/>
+            <Datatype abbreviatedIRI="xsd:int"/>
         </DataUnionOf>
     </DataPropertyRange>
     <AnnotationAssertion>
-        <AnnotationProperty _abbreviatedIRI="rdfs:comment"/>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>#d2</IRI>
         <Literal xml:lang="en" datatypeIRI="&rdf;PlainLiteral">Test2</Literal>
     </AnnotationAssertion>

@@ -71,16 +71,16 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     return s,p,o,d
   
   def _owlready_2_rdflib(self, s,p,o,d = None):
-    if   s.startswith("_"): s = BNode(s)
+    if   s < 0: s = BNode(s)
     else:                   s = URIRef(self.triplelite._unabbreviate(s))
     p = URIRef(self.triplelite._unabbreviate(p))
     if d is None:
-      if o.startswith("_"): o = BNode(o)
+      if o < 0: o = BNode(o)
       else:                 o = URIRef(self.triplelite._unabbreviate(o))
     else:
-      if   d.startswith("@"): o = Literal(o, lang = d[1:])
-      elif d == "":           o = Literal(o)
-      else:                   o = Literal(o, datatype = URIRef(self.triplelite._unabbreviate(d)))
+      if   isinstance(d, str) and d.startswith("@"): o = Literal(o, lang = d[1:])
+      elif d == "":                                  o = Literal(o)
+      else:                                          o = Literal(o, datatype = URIRef(self.triplelite._unabbreviate(d)))
     return s,p,o
   
   def add(self, xxx_todo_changeme, context, quoted = False):

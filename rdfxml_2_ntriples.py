@@ -28,7 +28,15 @@ except:
 INT_DATATYPES   = { "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#byte", "http://www.w3.org/2001/XMLSchema#short", "http://www.w3.org/2001/XMLSchema#int", "http://www.w3.org/2001/XMLSchema#long", "http://www.w3.org/2001/XMLSchema#unsignedByte", "http://www.w3.org/2001/XMLSchema#unsignedShort", "http://www.w3.org/2001/XMLSchema#unsignedInt", "http://www.w3.org/2001/XMLSchema#unsignedLong", "http://www.w3.org/2001/XMLSchema#negativeInteger", "http://www.w3.org/2001/XMLSchema#nonNegativeInteger", "http://www.w3.org/2001/XMLSchema#positiveInteger" }
 FLOAT_DATATYPES = { "http://www.w3.org/2001/XMLSchema#decimal", "http://www.w3.org/2001/XMLSchema#double", "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2002/07/owl#real" }
 
-  
+
+def is_bn(x):
+  if isinstance(x, int): return x < 0
+  return x.startswith("_")
+
+def is_fake_bn(x):
+  if isinstance(x, str): return x.startswith("_ ")
+  return False
+
 def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, default_base = ""):
   parser = xml.parsers.expat.ParserCreate(None, "")
   try:
@@ -63,14 +71,14 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
     def on_prepare_obj(s,p,o):
       nonlocal nb_triple
       nb_triple += 1
-      if not s.startswith("_"): s = "<%s>" % s
-      if not o.startswith("_"): o = "<%s>" % o
+      if not is_bn(s): s = "<%s>" % s
+      if not is_bn(o): o = "<%s>" % o
       print("%s %s %s ." % (s,"<%s>" % p,o))
       
     def on_prepare_data(s,p,o,d):
       nonlocal nb_triple
       nb_triple += 1
-      if not s.startswith("_"): s = "<%s>" % s
+      if not is_bn(s): s = "<%s>" % s
       
       o = o.replace('"', '\\"').replace("\n", "\\n")
       if d and d.startswith("@"):
@@ -115,7 +123,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
   def add_to_bn(bn, type, rel, value, d = ""):
     if type == "COL":
       value = tuple(frozenset(bns[v])
-                    if v.startswith("_") and (not v in known_nodes)
+                    if is_bn(v) and (not v in known_nodes)
                     else v
                     for v in value)
       bns[bn].add((type, rel) + value)
@@ -123,7 +131,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       if type == "DAT":
         bns[bn].add((type, rel, value, d))
       else:
-        if value.startswith("_") and (not value in known_nodes): value = frozenset(bns[value])
+        if is_bn(value) and (not value in known_nodes): value = frozenset(bns[value])
         bns[bn].add((type, rel, value))
         
   def startNamespace(prefix, uri):
@@ -202,9 +210,9 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
           else:                       iri = urllib.parse.urljoin(xml_dir, iri)
           
       if tag != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Description":
-        if not iri.startswith("_ "):
+        if not is_fake_bn(iri):
           on_prepare_obj(iri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
-        if iri.startswith("_"):
+        if is_bn(iri):
           add_to_bn(iri, "REL", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", tag)
           
       if stack[-1][0] == "Collection":
@@ -227,7 +235,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       if   tag == "http://www.w3.org/2002/07/owl#annotatedSource":
         dont_create_unnamed_bn = False
         axiom_annotation_sources[iri] = value
-        if isinstance(value, str) and value.startswith("_ "):
+        if is_fake_bn(value):
           triples_with_unnamed_bn[iri].insert(0, (tag, value, parser.CurrentLineNumber, parser.CurrentColumnNumber))
           
           tag_is_predicate = not tag_is_predicate
@@ -239,7 +247,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       elif tag == "http://www.w3.org/2002/07/owl#annotatedTarget":
         dont_create_unnamed_bn = False
         axiom_annotation_targets[iri] = value
-        if isinstance(value, str) and value.startswith("_ "):
+        if is_fake_bn(value):
           triples_with_unnamed_bn[iri].append((tag, value, parser.CurrentLineNumber, parser.CurrentColumnNumber))
           
           tag_is_predicate = not tag_is_predicate
@@ -247,13 +255,13 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
         
       
       if   parse_type == "Resource":
-        if not iri.startswith("_ "):
+        if not is_fake_bn(iri):
           on_prepare_obj(iri, tag, value)
           
-        if iri.startswith("_"):
+        if is_bn(iri):
           add_to_bn(iri, "REL", tag, value)
             
-        if value.startswith("_"):
+        if is_bn(value):
           add_to_bn(value, "INV", tag, iri)
           
           
@@ -267,15 +275,15 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
         else:
           d = "@%s" % d
           
-        if not iri.startswith("_ "):
+        if not is_fake_bn(iri):
           on_prepare_data(iri, tag, o, d)
-        if iri.startswith("_"):
+        if is_bn(iri):
           add_to_bn(iri, "DAT", tag, o, d)
           
       elif parse_type == "Collection":
-        if not iri.startswith("_ "):
+        if not is_fake_bn(iri):
           on_prepare_obj(iri, tag, new_list(value))
-        if iri.startswith("_"):
+        if is_bn(iri):
           add_to_bn(iri, "COL", tag, value)
           
           
@@ -307,7 +315,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
   if triples_with_unnamed_bn:
     content_2_bns = defaultdict(list)
     for bn, content in bns.items():
-      if not bn.startswith("_ "):
+      if not is_fake_bn(bn):
         content_2_bns[frozenset(content)].append(bn)
         
     def rebuild_bn(content):
@@ -316,19 +324,19 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       for i in content:
         if   i[0] == "REL":
           drop, p, o = i
-          if not isinstance(o, str): o = rebuild_bn(o)
+          if not isinstance(o, (str, int)): o = rebuild_bn(o)
           on_prepare_obj(bn, p, o)
         elif i[0] == "DAT":
           drop, p, o, d = i
-          if not isinstance(o, str): o = rebuild_bn(o)
+          if not isinstance(o, (str, int)): o = rebuild_bn(o)
           on_prepare_data(bn, p, o, d)
         elif i[0] == "INV":
           drop, p, o = i
-          if not isinstance(o, str): o = rebuild_bn(o)
+          if not isinstance(o, (str, int)): o = rebuild_bn(o)
           on_prepare_obj(o, p, bn)
         elif i[0] == "COL":
           drop, p, *l = i
-          l = [(isinstance(x, str) and x) or rebuild_bn(x) for x in l]
+          l = [(isinstance(x, (str, int)) and x) or rebuild_bn(x) for x in l]
           o = new_list(l)
           on_prepare_obj(bn, p, o)
         else:
@@ -342,12 +350,12 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
           content = bns[o]
           if p == "http://www.w3.org/2002/07/owl#annotatedSource":
             target = axiom_annotation_targets[axiom_iri]
-            if target.startswith("_"): target = frozenset(bns[target])
+            if is_bn(target): target = frozenset(bns[target])
             candidates_bn = content_2_bns[frozenset(content | { ("REL", axiom_annotation_props[axiom_iri], target) })]
             
           else:
             source = axiom_annotation_sources[axiom_iri]
-            if source.startswith("_"):
+            if is_bn(source):
               source = frozenset(bns[source] | { ("REL", axiom_annotation_props[axiom_iri], target) })
             candidates_bn = (content_2_bns[frozenset(content | { ("INV", axiom_annotation_props[axiom_iri], source) })] or
                              content_2_bns[frozenset(content)])

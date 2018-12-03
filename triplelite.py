@@ -25,7 +25,7 @@ import owlready2
 from owlready2.base import *
 from owlready2.driver import BaseMainGraph, BaseSubGraph
 from owlready2.driver import _guess_format, _save
-from owlready2.util import _int_base_62, FTS
+from owlready2.util import FTS
 from owlready2.base import _universal_abbrev_2_iri
 
 def all_combinations(l):
@@ -124,12 +124,12 @@ class Graph(BaseMainGraph):
     if initialize_db:
       self.current_blank    = 0
       self.current_resource = 300 # 300 first values are reserved
-      self.prop_fts         = {}
+      self.prop_fts         = set()
       
       self.execute("""CREATE TABLE store (version INTEGER, current_blank INTEGER, current_resource INTEGER)""")
-      self.execute("""INSERT INTO store VALUES (4, 0, 300)""")
-      self.execute("""CREATE TABLE objs (c INTEGER, s TEXT, p TEXT, o TEXT)""")
-      self.execute("""CREATE TABLE datas (c INTEGER, s TEXT, p TEXT, o BLOB, d TEXT)""")
+      self.execute("""INSERT INTO store VALUES (5, 0, 300)""")
+      self.execute("""CREATE TABLE objs (c INTEGER, s INTEGER, p INTEGER, o INTEGER)""")
+      self.execute("""CREATE TABLE datas (c INTEGER, s INTEGER, p INTEGER, o BLOB, d INTEGER)""")
       self.execute("""CREATE VIEW quads (c,s,p,o,d) AS SELECT c,s,p,o,NULL FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
       
 #       self.execute("""CREATE TABLE equivs (rowid INTEGER, c INTEGER, s TEXT, o TEXT)""")
@@ -155,17 +155,18 @@ class Graph(BaseMainGraph):
       
       self.execute("""CREATE TABLE ontologies (c INTEGER PRIMARY KEY, iri TEXT, last_update DOUBLE)""")
       self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
-      self.execute("""CREATE TABLE prop_fts (fts INTEGER PRIMARY KEY, storid TEXT)""")
+      self.execute("""CREATE TABLE prop_fts (storid INTEGER)""")
       try:
-        self.execute("""CREATE TABLE resources (storid TEXT PRIMARY KEY, iri TEXT) WITHOUT ROWID""")
+        self.execute("""CREATE TABLE resources (storid INTEGER PRIMARY KEY, iri TEXT) WITHOUT ROWID""")
       except sqlite3.OperationalError: # Old SQLite3 does not support WITHOUT ROWID -- here it is just an optimization
-        self.execute("""CREATE TABLE resources (storid TEXT PRIMARY KEY, iri TEXT)""")
+        self.execute("""CREATE TABLE resources (storid INTEGER PRIMARY KEY, iri TEXT)""")
       self.db.executemany("INSERT INTO resources VALUES (?,?)", _universal_abbrev_2_iri.items())
-      self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
-      self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
-      self.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
-      self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
-      self.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
+      #self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
+      #self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
+      #self.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
+      #self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
+      #self.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
+      self.set_indexed(True)
       self.db.commit()
       
     else:
@@ -208,6 +209,7 @@ class Graph(BaseMainGraph):
         self.execute("""DROP TABLE quads""")
         self.execute("""DROP INDEX IF EXISTS index_quads_s """)
         self.execute("""DROP INDEX IF EXISTS index_quads_o""")
+        self.execute("""CREATE VIEW quads (c,s,p,o,d) AS SELECT c,s,p,o,NULL FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
         self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
         self.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
         self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
@@ -216,11 +218,111 @@ class Graph(BaseMainGraph):
         self.execute("""UPDATE store SET version=4""")
         self.db.commit()
         
-      self.prop_fts = { storid : fts for (fts, storid) in self.execute("""SELECT * FROM prop_fts;""") }
+      if version == 4:
+        print("* Owlready2 * Converting quadstore to internal format 5 (this can take a while)...", file = sys.stderr)
+        self.execute("""CREATE TABLE objs2 (c INTEGER, s INTEGER, p INTEGER, o INTEGER)""")
+        self.execute("""CREATE TABLE datas2 (c INTEGER, s INTEGER, p INTEGER, o BLOB, d INTEGER)""")
+        
+        _BASE_62 = { c : i for (i, c) in enumerate("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") }
+        def _base_62_2_int(storid):
+          if storid.startswith("_"): sgn = -1; storid = storid[1:]
+          else:                      sgn =  1
+          r = 0
+          for (i, c) in enumerate(storid):
+            r += _BASE_62[c] * (62 ** (len(storid) - i - 1))
+          return sgn * r
+        
+        try:
+          self.execute("""CREATE TABLE resources2 (storid INTEGER PRIMARY KEY, iri TEXT) WITHOUT ROWID""")
+        except sqlite3.OperationalError: # Old SQLite3 does not support WITHOUT ROWID -- here it is just an optimization
+          self.execute("""CREATE TABLE resources2 (storid INTEGER PRIMARY KEY, iri TEXT)""")
+        l = []
+        for storid, iri in self.execute("""SELECT storid, iri FROM resources"""):
+          l.append((_base_62_2_int(storid), iri))
+        self.db.executemany("INSERT INTO resources2 VALUES (?,?)", l)
+        
+        l = []
+        for c,s,p,o in self.execute("""SELECT c,s,p,o FROM objs"""):
+          s = _base_62_2_int(s)
+          p = _base_62_2_int(p)
+          o = _base_62_2_int(o)
+          l.append((c,s,p,o))
+        self.db.executemany("INSERT INTO objs2 VALUES (?,?,?,?)", l)
+        
+        l = []
+        for c,s,p,o, in self.execute("""SELECT c,s,p,o,d FROM datas"""):
+          s = _base_62_2_int(s)
+          p = _base_62_2_int(p)
+          if   not d:  d = 0
+          elif d.startswith("@"): pass
+          else:        d = _base_62_2_int(d)
+          l.append((c,s,p,o,d))
+        self.db.executemany("INSERT INTO datas2 VALUES (?,?,?,?,?)", l)
+        
+        self.execute("""DROP INDEX IF EXISTS index_resources_iri""")
+        self.execute("""DROP INDEX IF EXISTS index_quads_s""")
+        self.execute("""DROP INDEX IF EXISTS index_quads_o""")
+        self.execute("""DROP INDEX IF EXISTS index_objs_sp""")
+        self.execute("""DROP INDEX IF EXISTS index_objs_po""")
+        self.execute("""DROP INDEX IF EXISTS index_datas_sp""")
+        self.execute("""DROP INDEX IF EXISTS index_datas_po""")
+        self.execute("""DROP VIEW IF EXISTS quads""")
+        self.execute("""DROP TABLE resources""")
+        self.execute("""DROP TABLE objs""")
+        self.execute("""DROP TABLE datas""")
+        
+        self.execute("""ALTER TABLE resources2 RENAME TO resources""")
+        self.execute("""ALTER TABLE objs2 RENAME TO objs""")
+        self.execute("""ALTER TABLE datas2 RENAME TO datas""")
+        self.execute("""CREATE VIEW quads (c,s,p,o,d) AS SELECT c,s,p,o,NULL FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
+        
+        self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
+        self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
+        self.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
+        self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
+        self.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
+        
+        prop_fts  = { storid : fts for (fts, storid) in self.execute("""SELECT * FROM prop_fts;""") }
+        prop_fts2 = { _base_62_2_int(storid) : fts for (fts, storid) in prop_fts.items() }
+        for fts in prop_fts.values():
+          self.execute("""DROP TABLE fts_%s""" % fts)
+          self.execute("""DROP TRIGGER fts_%s_after_insert""" % fts)
+          self.execute("""DROP TRIGGER fts_%s_after_delete""" % fts)
+          self.execute("""DROP TRIGGER fts_%s_after_update""" % fts)
+          
+        self.execute("""DROP TABLE prop_fts""")
+        self.execute("""CREATE TABLE prop_fts(storid INTEGER)""")
+        for storid in prop_fts2: self.enable_full_text_search(storid)
+        
+        self.execute("""UPDATE store SET version=5""")
+        self.db.commit()
+
+        
+        
+      self.prop_fts = { storid for (storid,) in self.execute("""SELECT storid FROM prop_fts;""") }
       
     self.current_changes = self.db.total_changes
     self.select__abbreviate_method()
 
+
+    
+  def set_indexed(self, indexed):
+    self.indexed = indexed
+    if indexed:
+      #self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
+      self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
+      self.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
+      self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
+      self.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
+      for onto in self.world.ontologies.values():
+        onto._load_properties()
+    else:
+      #self.execute("""DROP INDEX IF EXISTS index_resources_iri""")
+      self.execute("""DROP INDEX IF EXISTS index_objs_sp""")
+      self.execute("""DROP INDEX IF EXISTS index_objs_po""")
+      self.execute("""DROP INDEX IF EXISTS index_datas_sp""")
+      self.execute("""DROP INDEX IF EXISTS index_datas_po""")
+      
   def close(self):
     self.db.close()
 
@@ -281,7 +383,7 @@ class Graph(BaseMainGraph):
     r = self.execute("SELECT storid FROM resources WHERE iri=? LIMIT 1", (iri,)).fetchone()
     if r: return r[0]
     self.current_resource += 1
-    storid = _int_base_62(self.current_resource)
+    storid = self.current_resource
     self.execute("INSERT INTO resources VALUES (?,?)", (storid, iri))
     return storid
   
@@ -292,7 +394,7 @@ class Graph(BaseMainGraph):
     storid = self._abbreviate_d.get(iri)
     if storid is None:
       self.current_resource += 1
-      storid = self._abbreviate_d[iri] = _int_base_62(self.current_resource)
+      storid = self._abbreviate_d[iri] = self.current_resource
       self._unabbreviate_d[storid] = iri
       self.execute("INSERT INTO resources VALUES (?,?)", (storid, iri))
     return storid
@@ -339,7 +441,7 @@ class Graph(BaseMainGraph):
 
   def new_blank_node(self):
     self.current_blank += 1
-    return "_%s" % _int_base_62(self.current_blank)
+    return -self.current_blank
   
   def _get_obj_triples_spo_spo(self, s, p, o):
     if s is None:
@@ -571,154 +673,6 @@ class Graph(BaseMainGraph):
         elif d is None: self.execute("DELETE FROM datas WHERE s=? AND p=? AND o=?", (s, p, o,))
         else:           self.execute("DELETE FROM datas WHERE s=? AND p=? AND o=? AND d=?", (s, p, o, d,))
         
-        
-#   def search(self, prop_vals, c = None, debug = False):
-#     tables       = []
-#     conditions   = []
-#     params       = []
-#     alternatives = []
-#     excepts      = []
-#     i = 0
-    
-#     for k, v, d in prop_vals:
-#       if v is None:
-#         excepts.append(k)
-#         continue
-      
-#       i += 1
-#       if d is None:
-#         tables.append("objs q%s" % i)
-#       else:
-#         tables.append("datas q%s" % i)
-        
-#       if not c is None:
-#         conditions  .append("q%s.c = ?" % i)
-#         params      .append(c)
-        
-#       if   k == " iri":
-#         if i > 1: conditions.append("q%s.s = q1.s" % i)
-#         tables    .append("resources")
-#         conditions.append("resources.storid = q%s.s" % i)
-#         if "*" in v: conditions.append("resources.iri GLOB ?")
-#         else:        conditions.append("resources.iri = ?")
-#         params.append(v)
-        
-#       elif k == " is_a":
-#         if i > 1: conditions.append("q%s.s = q1.s" % i)
-#         conditions.append("(q%s.p = '%s' OR q%s.p = '%s') AND q%s.o IN (%s)" % (i, rdf_type, i, rdfs_subclassof, i, ",".join("?" for i in v)))
-#         params    .extend(v)
-        
-#       elif k == " type":
-#         if i > 1: conditions.append("q%s.s = q1.s" % i)
-#         conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdf_type, i, ",".join("?" for i in v)))
-#         params    .extend(v)
-        
-#       elif k == " subclass_of":
-#         if i > 1: conditions.append("q%s.s = q1.s" % i)
-#         conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdfs_subclassof, i, ",".join("?" for i in v)))
-#         params    .extend(v)
-        
-#       elif isinstance(k, tuple): # Prop with inverse
-#         if i == 1: # Does not work if it is the FIRST => add a dumb first.
-#           i += 1
-#           tables.append("objs q%s" % i)
-#           if not c is None:
-#             conditions  .append("q%s.c = ?" % i)
-#             params      .append(c)
-            
-#         if v == "*":
-#           cond1 = "q%s.s = q1.s AND q%s.p = ?" % (i, i)
-#           cond2 = "q%s.o = q1.s AND q%s.p = ?" % (i, i)
-#           params1 = [k[0]]
-#           params2 = [k[1]]
-#         else:
-#           cond1 = "q%s.s = q1.s AND q%s.p = ? AND q%s.o = ?" % (i, i, i)
-#           cond2 = "q%s.o = q1.s AND q%s.p = ? AND q%s.s = ?" % (i, i, i)
-#           params1 = [k[0], v]
-#           params2 = [k[1], v]
-#         alternatives.append(((cond1, params1), (cond2, params2)))
-        
-#       else: # Prop without inverse
-#         if i > 1: conditions.append("q%s.s = q1.s" % i)
-#         if isinstance(v, FTS):
-#           fts = self.prop_fts[k]
-#           tables    .append("fts_%s" % fts)
-#           conditions.append("q%s.rowid = fts_%s.rowid" % (i, fts))
-#           conditions.append("fts_%s MATCH ?" % fts)
-#           params    .append(v)
-#           if v.lang != "":
-#             conditions.append("fts_%s.d = ?" % (fts,))
-#             params    .append("@%s" % v.lang)
-            
-#         elif isinstance(v, NumS):
-#           for operator, value in v.operators_and_values:
-#             conditions.append("q%s.p = ?" % i)
-#             params    .append(k)
-#             conditions.append("q%s.o %s ?" % (i, operator))
-#             params    .append(value)
-#         else:
-#           conditions.append("q%s.p = ?" % i)
-#           params    .append(k)
-#           if isinstance(v, str) and ("*" in v):
-#             if   v == "*":
-#               conditions.append("q%s.o GLOB '*'" % i)
-#             else:
-#               conditions.append("q%s.o GLOB ?" % i)
-#               params    .append(v)
-#           else:
-#             conditions.append("q%s.o = ?" % i)
-#             params    .append(v)
-#             if d and (d != "*"):
-#               conditions.append("q%s.d = ?" % i)
-#               params    .append(d)
-              
-            
-#     if alternatives:
-#       conditions0 = conditions
-#       params0     = params
-#       params      = []
-#       reqs        = []
-#       for combination in all_combinations(alternatives):
-#         combination_conditions, combination_paramss = zip(*combination)
-#         req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions0 + list(combination_conditions)))
-#         reqs.append(req)
-#         params.extend(params0)
-#         for combination_params in combination_paramss: params.extend(combination_params)
-#       req = "SELECT DISTINCT * FROM (\n%s\n)" % "\nUNION\n".join(reqs)
-      
-#     else:
-#       req = "SELECT DISTINCT q1.s from %s WHERE %s" % (", ".join(tables), " AND ".join(conditions))
-      
-      
-#     if excepts:
-#       conditions = []
-#       for except_p in excepts:
-#         if isinstance(except_p, tuple): # Prop with inverse
-#           conditions.append("objs.s = candidates.s AND objs.p = ?")
-#           params    .append(except_p[0])
-#           conditions.append("objs.o = candidates.s AND objs.p = ?")
-#           params    .append(except_p[1])
-#           req = """
-# WITH candidates(s) AS (%s)
-# SELECT s FROM candidates
-# EXCEPT SELECT candidates.s FROM candidates, objs WHERE (%s)""" % (req, ") OR (".join(conditions))
-          
-#         else: # No inverse
-#           conditions.append("quads.s = candidates.s AND quads.p = ?")
-#           params    .append(except_p)
-#           req = """
-# WITH candidates(s) AS (%s)
-# SELECT s FROM candidates
-# EXCEPT SELECT candidates.s FROM candidates, quads WHERE (%s)""" % (req, ") OR (".join(conditions))
-    
-#     if debug:   
-#       print("search debug:")
-#       print("  prop_vals = ", prop_vals)
-#       print("  req       = ", req)
-#       print("  params    = ", params)
-      
-#     return self.execute(req, params).fetchall()
-  
   def _punned_entities(self):
     from owlready2.base import rdf_type, owl_class, owl_named_individual
     cur = self.execute("SELECT q1.s FROM objs q1, objs q2 WHERE q1.s=q2.s AND q1.p=? AND q2.p=? AND q1.o=? AND q2.o=?", (rdf_type, rdf_type, owl_class, owl_named_individual))
@@ -769,7 +723,7 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
 
   def _destroy_collect_storids(self, destroyed_storids, modified_relations, storid):
     for (blank_using,) in list(self.execute("""SELECT s FROM quads WHERE o=? AND p IN (
-    '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s') AND substr(s, 1, 1)='_'""" % (
+    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) AND s < 0""" % (
       SOME,
       ONLY,
       VALUE,
@@ -786,7 +740,7 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
         destroyed_storids.add(blank_using)
         self._destroy_collect_storids(destroyed_storids, modified_relations, blank_using)
         
-    for (c, blank_using) in list(self.execute("""SELECT c, s FROM objs WHERE o=? AND p='%s' AND substr(s, 1, 1)='_'""" % (
+    for (c, blank_using) in list(self.execute("""SELECT c, s FROM objs WHERE o=? AND p=%s AND s < 0""" % (
       rdf_first,
     ), (storid,))):
       list_user, root, previouss, nexts, length = self._rdf_list_analyze(blank_using)
@@ -835,7 +789,6 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
       destroyer(storid)
       
     for storid in destroyed_storids:
-      #self.execute("SELECT s,p,o FROM quads WHERE s=? OR o=?", (self.c, storid, storid))
       self.execute("DELETE FROM objs  WHERE s=? OR o=?", (storid, storid))
       self.execute("DELETE FROM datas WHERE s=?", (storid,))
       
@@ -883,46 +836,41 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
       
     return cursor
       
-  def get_fts_prop_storid(self): return self.prop_fts.keys()
+  def get_fts_prop_storid(self): return self.prop_fts
   
   def enable_full_text_search(self, prop_storid):
-    fts = 1
-    while True:
-      if not self.execute("""SELECT storid FROM prop_fts WHERE fts=?""", (str(fts),)).fetchall():
-        fts = str(fts)
-        break
-      fts += 1
-      
-    self.prop_fts[prop_storid] = fts
+    self.prop_fts.add(prop_storid)
     
-    self.execute("""INSERT INTO prop_fts VALUES (?, ?)""", (fts, prop_storid));
+    self.execute("""INSERT INTO prop_fts VALUES (?)""", (prop_storid,));
     
-    self.execute("""CREATE VIRTUAL TABLE fts_%s USING fts5(o, d, content=datas, content_rowid=rowid)""" % fts)
-    self.execute("""INSERT INTO fts_%s(rowid, o) SELECT rowid, o FROM datas WHERE p='%s'""" % (fts, prop_storid))
+    self.execute("""CREATE VIRTUAL TABLE fts_%s USING fts5(o, d, content=datas, content_rowid=rowid)""" % prop_storid)
+    self.execute("""INSERT INTO fts_%s(rowid, o) SELECT rowid, o FROM datas WHERE p=%s""" % (prop_storid, prop_storid))
     
     self.db.cursor().executescript("""
-CREATE TRIGGER fts_%s_after_insert AFTER INSERT ON datas WHEN new.p='%s' BEGIN
+CREATE TRIGGER fts_%s_after_insert AFTER INSERT ON datas WHEN new.p=%s BEGIN
   INSERT INTO fts_%s(rowid, o) VALUES (new.rowid, new.o);
 END;
-CREATE TRIGGER fts_%s_after_delete AFTER DELETE ON datas WHEN old.p='%s' BEGIN
+CREATE TRIGGER fts_%s_after_delete AFTER DELETE ON datas WHEN old.p=%s BEGIN
   INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', old.rowid, old.o);
 END;
-CREATE TRIGGER fts_%s_after_update AFTER UPDATE ON datas WHEN new.p='%s' BEGIN
+CREATE TRIGGER fts_%s_after_update AFTER UPDATE ON datas WHEN new.p=%s BEGIN
   INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', new.rowid, new.o);
   INSERT INTO fts_%s(rowid, o) VALUES (new.rowid, new.o);
-END;""" % (fts, prop_storid, fts,   fts, prop_storid, fts, fts,   fts, prop_storid, fts, fts, fts))
+END;""" % (prop_storid, prop_storid, prop_storid,   prop_storid, prop_storid, prop_storid, prop_storid,   prop_storid, prop_storid, prop_storid, prop_storid, prop_storid))
   
   def disable_full_text_search(self, prop_storid):
-    if not isinstance(prop_storid, str): prop_storid = prop_storid.storid
-    fts = self.prop_fts[prop_storid]
-    del self.prop_fts[prop_storid]
+    if not isinstance(prop_storid, int): prop_storid = prop_storid.storid
+    self.prop_fts.discard(prop_storid)
     
-    self.execute("""DELETE FROM prop_fts WHERE fts = ?""", (fts,));
-    self.execute("""DROP TABLE fts_%s""" % fts)
-    self.execute("""DROP TRIGGER fts_%s_after_insert""" % fts)
-    self.execute("""DROP TRIGGER fts_%s_after_delete""" % fts)
-    self.execute("""DROP TRIGGER fts_%s_after_update""" % fts)
+    self.execute("""DELETE FROM prop_fts WHERE storid = ?""", (prop_storid,))
+    self.execute("""DROP TABLE fts_%s""" % prop_storid)
+    self.execute("""DROP TRIGGER fts_%s_after_insert""" % prop_storid)
+    self.execute("""DROP TRIGGER fts_%s_after_delete""" % prop_storid)
+    self.execute("""DROP TRIGGER fts_%s_after_update""" % prop_storid)
     
+
+
+
     
 class SubGraph(BaseSubGraph):
   def __init__(self, parent, onto, c, db):
@@ -956,7 +904,7 @@ class SubGraph(BaseSubGraph):
       reindex = True
     else:
       reindex = False
-
+      
     # XXX
       
     # Re-implement _abbreviate() for speed
@@ -970,7 +918,7 @@ class SubGraph(BaseSubGraph):
           abbrevs[iri] = r[0]
           return r[0]
         self.parent.current_resource += 1
-        storid = _int_base_62(self.parent.current_resource)
+        storid = self.parent.current_resource
         new_abbrevs.append((storid, iri))
         abbrevs[iri] = storid
         return storid
@@ -981,14 +929,14 @@ class SubGraph(BaseSubGraph):
         if not storid is None: return storid
         
         self.parent.current_resource += 1
-        storid = _int_base_62(self.parent.current_resource)
+        storid = self.parent.current_resource
         new_abbrevs.append((storid, iri))
         abbrevs[iri] = storid
         return storid
       
     def insert_objs():
       nonlocal objs, new_abbrevs
-      if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(objs), self.onto.base_iri), file = sys.stderr)
+      if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s object triples from ontology %s ..." % (len(objs), self.onto.base_iri), file = sys.stderr)
       cur.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
       cur.executemany("INSERT INTO objs VALUES (%s,?,?,?)" % self.c, objs)
       objs        .clear()
@@ -996,20 +944,20 @@ class SubGraph(BaseSubGraph):
       
     def insert_datas():
       nonlocal datas, new_abbrevs
-      if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s triples from ontology %s ..." % (len(datas), self.onto.base_iri), file = sys.stderr)
+      if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s data triples from ontology %s ..." % (len(datas), self.onto.base_iri), file = sys.stderr)
       cur.executemany("INSERT INTO datas VALUES (%s,?,?,?,?)" % self.c, datas)
       datas.clear()
       
     def on_prepare_obj(s, p, o):
-      if not s.startswith("_"): s = _abbreviate(s)
-      if not o.startswith("_"): o = _abbreviate(o)
+      if isinstance(s, str): s = _abbreviate(s)
+      if isinstance(o, str): o = _abbreviate(o)
       objs.append((s, _abbreviate(p), o))
       if len(objs) > 1000000: insert_objs()
       
     def on_prepare_data(s, p, o, d):
-      if not s.startswith("_"): s = _abbreviate(s)
+      if isinstance(s, str): s = _abbreviate(s)
       if d and (not d.startswith("@")): d = _abbreviate(d)
-      datas.append((s, _abbreviate(p), o, d))
+      datas.append((s, _abbreviate(p), o, d or 0))
       if len(datas) > 1000000: insert_datas()
       
       
@@ -1022,13 +970,15 @@ class SubGraph(BaseSubGraph):
       
       if reindex:
         cur.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
-        cur.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
-        cur.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
-        cur.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
-        cur.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
-
-        
+        if self.parent.indexed:
+          cur.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
+          cur.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
+          cur.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
+          cur.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
+          
+      t0 = time.time()
       onto_base_iri = cur.execute("SELECT resources.iri FROM objs, resources WHERE objs.c=? AND objs.o=? AND resources.storid=objs.s LIMIT 1", (self.c, owl_ontology)).fetchone()
+      print("XXX", time.time() - t0)
       if onto_base_iri: onto_base_iri = onto_base_iri[0]
       else:             onto_base_iri = ""
       
@@ -1381,31 +1331,31 @@ class _SearchList(LazyList):
       elif k == " is_a":
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
         if isinstance(v, _SearchList):
-          self.conditions.append("(q%s.p = '%s' OR q%s.p = '%s') AND q%s.o = q%s.s" % (i, rdf_type, i, rdfs_subclassof, i, v.target))
+          self.conditions.append("(q%s.p = %s OR q%s.p = %s) AND q%s.o = q%s.s" % (i, rdf_type, i, rdfs_subclassof, i, v.target))
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
         else:
-          self.conditions.append("(q%s.p = '%s' OR q%s.p = '%s') AND q%s.o IN (%s)" % (i, rdf_type, i, rdfs_subclassof, i, ",".join("?" for i in v)))
+          self.conditions.append("(q%s.p = %s OR q%s.p = %s) AND q%s.o IN (%s)" % (i, rdf_type, i, rdfs_subclassof, i, ",".join("?" for i in v)))
           self.params    .extend(v)
           
       elif k == " type":
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
         if isinstance(v, _SearchList):
-          self.conditions.append("q%s.p = '%s' AND q%s.o = q%s.s" % (i, rdf_type, i, v.target))
+          self.conditions.append("q%s.p = %s AND q%s.o = q%s.s" % (i, rdf_type, i, v.target))
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
         else:
-          self.conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdf_type, i, ",".join("?" for i in v)))
+          self.conditions.append("q%s.p = %s AND q%s.o IN (%s)" % (i, rdf_type, i, ",".join("?" for i in v)))
           self.params    .extend(v)
           
       elif k == " subclass_of":
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
         if isinstance(v, _SearchList):
-          self.conditions.append("q%s.p = '%s' AND q%s.o = q%s.s" % (i, rdfs_subclassof, i, v.target))
+          self.conditions.append("q%s.p = %s AND q%s.o = q%s.s" % (i, rdfs_subclassof, i, v.target))
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
         else:
-          self.conditions.append("q%s.p = '%s' AND q%s.o IN (%s)" % (i, rdfs_subclassof, i, ",".join("?" for i in v)))
+          self.conditions.append("q%s.p = %s AND q%s.o IN (%s)" % (i, rdfs_subclassof, i, ",".join("?" for i in v)))
           self.params    .extend(v)
           
       elif isinstance(k, tuple): # Prop with inverse
@@ -1416,7 +1366,7 @@ class _SearchList(LazyList):
           if not c is None:
             self.conditions  .append("q%s.c = ?" % i)
             self.params      .append(c)
-
+            
         if   v == "*":
           cond1 = "q%s.s = q%s.s AND q%s.p = ?" % (i, self.target, i)
           cond2 = "q%s.o = q%s.s AND q%s.p = ?" % (i, self.target, i)
@@ -1439,13 +1389,12 @@ class _SearchList(LazyList):
       else: # Prop without inverse
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
         if isinstance(v, FTS):
-          fts = world.graph.prop_fts[k]
-          self.tables    .append("fts_%s" % fts)
-          self.conditions.append("q%s.rowid = fts_%s.rowid" % (i, fts))
-          self.conditions.append("fts_%s MATCH ?" % fts)
+          self.tables    .append("fts_%s" % k)
+          self.conditions.append("q%s.rowid = fts_%s.rowid" % (i, k))
+          self.conditions.append("fts_%s MATCH ?" % k)
           self.params    .append(v)
           if v.lang != "":
-            self.conditions.append("fts_%s.d = ?" % (fts,))
+            self.conditions.append("fts_%s.d = ?" % (k,))
             self.params    .append("@%s" % v.lang)
             
         else:

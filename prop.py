@@ -322,7 +322,7 @@ _TYPE_PROPS  = { FunctionalProperty, InverseFunctionalProperty, TransitiveProper
 
 class PropertyChain(object):
   def __init__(self, Properties, ontology = None):
-    if isinstance(Properties, str):
+    if isinstance(Properties, int):
       self.storid = Properties
     else:
       self.storid = None

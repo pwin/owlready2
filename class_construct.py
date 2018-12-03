@@ -58,7 +58,7 @@ class ClassConstruct(object):
     if only_loaded:
       r = []
       for x in self.ontology.world._get_obj_triples_po_s(rdfs_subclassof, self.storid):
-        if not x.startswith("_"):
+        if not x < 0:
           r.append(self.ontology.world._entities.get(x))
       return r
     
@@ -66,7 +66,7 @@ class ClassConstruct(object):
       return [
         self.ontology.world._get_by_storid(x, None, ThingClass, self.ontology)
         for x in self.ontology.world._get_obj_triples_po_s(rdfs_subclassof, self.storid)
-        if not x.startswith("_")
+        if not x < 0
       ]
   
 
@@ -147,7 +147,7 @@ class Inverse(ClassConstruct):
 
 class LogicalClassConstruct(ClassConstruct):
   def __init__(self, Classes, ontology = None, bnode = None):
-    if isinstance(Classes, str):
+    if isinstance(Classes, int):
       self._list_bnode = Classes
     else:
       self._list_bnode = None
@@ -351,7 +351,7 @@ class Restriction(ClassConstruct):
       
 class OneOf(ClassConstruct):
   def __init__(self, instances, ontology = None, bnode = None):
-    if isinstance(instances, str):
+    if isinstance(instances, int):
       self._list_bnode = instances
     else:
       self._list_bnode = None

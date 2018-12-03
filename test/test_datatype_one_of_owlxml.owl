@@ -46,7 +46,7 @@
     </ClassAssertion>
     <DataPropertyAssertion>
         <Annotation>
-            <AnnotationProperty _abbreviatedIRI="rdfs:comment"/>
+            <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
             <Literal datatypeIRI="&rdf;PlainLiteral">Annotation on a triple with a datatype value.</Literal>
         </Annotation>
         <DataProperty IRI="#p"/>
@@ -55,7 +55,7 @@
     </DataPropertyAssertion>
     <DataPropertyRange>
         <DataProperty IRI="#p"/>
-        <Datatype _abbreviatedIRI="xsd:integer"/>
+        <Datatype abbreviatedIRI="xsd:integer"/>
     </DataPropertyRange>
 </Ontology>
 

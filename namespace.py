@@ -126,16 +126,16 @@ class _GraphManager(object):
     if CURRENT_NAMESPACES[-1] is None: self._del_obj_triple_raw_spo(s, p, o)
     else:   CURRENT_NAMESPACES[-1].ontology._del_obj_triple_raw_spo(s, p, o)
     if _LOG_LEVEL > 1:
-      if not s.startswith("_"): s = self._unabbreviate(s)
+      if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
-      if o and not (o.startswith("_") or o.startswith('"')): o = self._unabbreviate(o)
+      if o and not (o < 0 or o.startswith('"')): o = self._unabbreviate(o)
       print("* Owlready2 * DEL TRIPLE", s, p, o, file = sys.stderr)
       
   def _del_data_triple_spoddd(self, s = None, p = None, o = None, d = None):
     if CURRENT_NAMESPACES[-1] is None: self._del_data_triple_raw_spodd(s, p, o, d)
     else:   CURRENT_NAMESPACES[-1].ontology._del_data_triple_raw_spodd(s, p, o, d)
     if _LOG_LEVEL > 1:
-      if not s.startswith("_"): s = self._unabbreviate(s)
+      if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
       if d and (not d.startswith("@")): d = self._unabbreviate(d)
       print("* Owlready2 * DEL TRIPLE", s, p, o, d, file = sys.stderr)
@@ -156,7 +156,7 @@ class _GraphManager(object):
       
   def _to_python(self, o, d = None, main_type = None, main_onto = None, default_to_none = False):
     if d is None:
-      if   o.startswith("_"): return self._parse_bnode(o)
+      if   o < 0: return self._parse_bnode(o)
       if   o in _universal_abbrev_2_datatype: return _universal_abbrev_2_datatype[o] 
       else: return self.world._get_by_storid(o, None, main_type, main_onto, None, default_to_none)
     else: return from_literal(o, d)
@@ -170,26 +170,26 @@ class _GraphManager(object):
   
   def classes(self):
     for s in self._get_obj_triples_po_s(rdf_type, owl_class):
-      if not s.startswith("_"): yield self.world._get_by_storid(s)
+      if not s < 0: yield self.world._get_by_storid(s)
       
   def inconsistent_classes(self):
     for s in self._get_obj_triples_transitive_sym(owl_nothing, owl_equivalentclass):
-      if not s.startswith("_"): yield self.world._get_by_storid(s)
+      if not s < 0: yield self.world._get_by_storid(s)
       
   def data_properties(self):
     for s in self._get_obj_triples_po_s(rdf_type, owl_data_property):
-      if not s.startswith("_"): yield self.world._get_by_storid(s)
+      if not s < 0: yield self.world._get_by_storid(s)
   def object_properties(self):
     for s in self._get_obj_triples_po_s(rdf_type, owl_object_property):
-      if not s.startswith("_"): yield self.world._get_by_storid(s)
+      if not s < 0: yield self.world._get_by_storid(s)
   def annotation_properties(self):
     for s in self._get_obj_triples_po_s(rdf_type, owl_annotation_property):
-      if not s.startswith("_"): yield self.world._get_by_storid(s)
+      if not s < 0: yield self.world._get_by_storid(s)
   def properties(self): return itertools.chain(self.data_properties(), self.object_properties(), self.annotation_properties())
   
   def individuals(self):
     for s in self._get_obj_triples_po_s(rdf_type, owl_named_individual):
-      if not s.startswith("_"):
+      if not s < 0:
         i = self.world._get_by_storid(s)
         if isinstance(i, Thing):
           yield i
@@ -218,52 +218,10 @@ class _GraphManager(object):
     for s in itertools.chain(self._get_obj_triples_po_s(rdf_type, owl_restriction),
                              self._get_obj_triples_po_s(rdf_type, owl_class),
                              ):
-      if s.startswith("_"):
+      if s < 0:
         sub = self._get_obj_triple_po_s(rdfs_subclassof, s)
         if sub is None: yield self._parse_bnode(s)
         
-  # def search(self, _use_str_as_loc_str = True, debug = False, **kargs):
-  #   prop_vals = []
-  #   for k, v0 in kargs.items():
-  #     if not isinstance(v0, list): v0 = (v0,)
-  #     for v in v0:
-  #       if   k == "iri":
-  #         prop_vals.append((" iri", v, None))
-  #       elif (k == "is_a") or (k == "subclass_of") or (k == "type"):
-  #         v2 = [child.storid for child in v.descendants()]
-  #         prop_vals.append((" %s" % k, v2, None))
-  #       else:
-  #         d = None
-  #         k2 = self.world._props.get(k)
-  #         if k2 is None:
-  #           k2 = _universal_iri_2_abbrev.get(k) or k
-  #         else:
-  #           if k2.inverse_property:
-  #             k2 = (k2.storid, k2.inverse.storid)
-  #           else:
-  #             k2 = k2.storid
-  #         if v is None:
-  #           v2 = None
-  #         else:
-  #           if   isinstance(v, FTS):  v2 = v; d = "*"
-  #           elif isinstance(v, NumS): v2 = v; d = "*"
-  #           else:
-  #             v2, d = self.world._to_rdf(v)
-  #             if not d is None: prop_type = 2
-  #             if isinstance(v2, int) or isinstance(v2, float) or (_use_str_as_loc_str and (d == "Y")): # A string, which can be associated to a language in RDF
-  #               d = "*"
-  #         prop_vals.append((k2, v2, d))
-          
-  #   r = self.graph.search(prop_vals, debug = debug)
-  #   return [self.world._get_by_storid(o) for (o,) in r if not o.startswith("_")]
-
-  # def search_one(self, **kargs):
-  #   r = self.search(**kargs)
-  #   if r: return r[0]
-  #   return None
-
-  
-  
   def search(self, _use_str_as_loc_str = True, debug = False, **kargs):
     from owlready2.triplelite import _SearchList
     
@@ -295,13 +253,12 @@ class _GraphManager(object):
             elif isinstance(v, _SearchList): v2 = v
             else:
               v2, d = self.world._to_rdf(v)
-              if not d is None: prop_type = 2
-              if isinstance(v2, int) or isinstance(v2, float) or (_use_str_as_loc_str and (d == "Y")): # A string, which can be associated to a language in RDF
+              if ((not d is None) and (isinstance(v2, (int, float)))) or (_use_str_as_loc_str and (d == 60)): # A string, which can be associated to a language in RDF
                 d = "*"
           prop_vals.append((k2, v2, d))
           
     #r = self.graph.search(prop_vals, debug = debug)
-    #return self.world._get_by_storid(o) for (o,) in r if not o.startswith("_")]
+    #return self.world._get_by_storid(o) for (o,) in r if not o < 0]
     return _SearchList(self.world, prop_vals)
     
   def search_one(self, **kargs): return self.search(**kargs).first()
@@ -448,7 +405,7 @@ class World(_GraphManager):
           if main_type is None: main_type = Thing
         else:
           if not main_type: main_type = Thing
-          if obj.startswith("_"): is_a_bnodes.append((self.graph.context_2_user_context(graph), obj))
+          if obj < 0: is_a_bnodes.append((self.graph.context_2_user_context(graph), obj))
           else:
             Class = self._get_by_storid(obj, None, ThingClass, main_onto)
             if isinstance(Class, EntityClass): types.append(Class)
@@ -461,14 +418,14 @@ class World(_GraphManager):
       if main_type and (not main_type is Thing):
         if not trace is None:
             if storid in trace:
-              s = "\n  ".join([(i if i.startswith("_") else self._unabbreviate(i)) for i in trace[trace.index(storid):]])
+              s = "\n  ".join([(i if i < 0 else self._unabbreviate(i)) for i in trace[trace.index(storid):]])
               print("* Owlready2 * Warning: ignoring cyclic subclass of/subproperty of, involving:\n  %s\n" % s, file = sys.stderr)
               return None
             trace = (*trace, storid)
             
         is_a_entities = []
         for graph, obj in self._get_obj_triples_sp_co(storid, main_type._rdfs_is_a):
-          if obj.startswith("_"): is_a_bnodes.append((self.graph.context_2_user_context(graph), obj))
+          if obj < 0: is_a_bnodes.append((self.graph.context_2_user_context(graph), obj))
           else:
             obj2 = self._entities.get(obj)
             if obj2 is None: obj2 = self._load_by_storid(obj, None, main_type, main_onto, default_to_none, trace)
@@ -661,9 +618,9 @@ class Ontology(Namespace, _GraphManager):
       if self.world.graph: self.world.graph.release_write_lock()
       
     self.world.graph.release_write_lock()
-      
+    
     # Search for property names
-    self._load_properties()
+    if self.world.graph.indexed: self._load_properties()
     
     # Load imported ontologies
     imported_ontologies = [self.world.get_ontology(self._unabbreviate(abbrev_iri)).load() for abbrev_iri in self.world._get_obj_triples_sp_o(self.storid, owl_imports)]
@@ -683,6 +640,7 @@ class Ontology(Namespace, _GraphManager):
   
   def _load_properties(self):
     props = []
+    #for i in self.graph.execute("select * from quads").fetchall(): print(i)
     for prop_storid in itertools.chain(self._get_obj_triples_po_s(rdf_type, owl_object_property), self._get_obj_triples_po_s(rdf_type, owl_data_property), self._get_obj_triples_po_s(rdf_type, owl_annotation_property)):
       Prop = self.world._get_by_storid(prop_storid)
       python_name_d = self.world._get_data_triple_sp_od(prop_storid, owlready_python_name)
@@ -722,25 +680,25 @@ class Ontology(Namespace, _GraphManager):
     if CURRENT_NAMESPACES[-1] is None: self._add_obj_triple_raw_spo(s, p, o)
     else:   CURRENT_NAMESPACES[-1].ontology._add_obj_triple_raw_spo(s, p, o)
     if _LOG_LEVEL > 1:
-      if not s.startswith("_"): s = self._unabbreviate(s)
+      if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
-      if o and not (o.startswith("_") or o.startswith('"')): o = self._unabbreviate(o)
+      if o > 0: o = self._unabbreviate(o)
       print("* Owlready2 * ADD TRIPLE", s, p, o, file = sys.stderr)
       
   def _set_obj_triple_spo(self, s, p, o):
     if CURRENT_NAMESPACES[-1] is None: self._set_obj_triple_raw_spo(s, p, o)
     else:   CURRENT_NAMESPACES[-1].ontology._set_obj_triple_raw_spo(s, p, o)
     if _LOG_LEVEL > 1:
-      if not s.startswith("_"): s = self._unabbreviate(s)
+      if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
-      if o and not (o.startswith("_") or o.startswith('"')): o = self._unabbreviate(o)
+      if o > 0: o = self._unabbreviate(o)
       print("* Owlready2 * SET TRIPLE", s, p, o, file = sys.stderr)
       
   def _add_data_triple_spoddd(self, s, p, o, d):
     if CURRENT_NAMESPACES[-1] is None: self._add_data_triple_raw_spodd(s, p, o, d)
     else:   CURRENT_NAMESPACES[-1].ontology._add_data_triple_raw_spodd(s, p, o, d)
     if _LOG_LEVEL > 1:
-      if not s.startswith("_"): s = self._unabbreviate(s)
+      if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
       if d and (not d.startswith("@")): d = self._unabbreviate(d)
       print("* Owlready2 * ADD TRIPLE", s, p, o, d, file = sys.stderr)
@@ -749,7 +707,7 @@ class Ontology(Namespace, _GraphManager):
     if CURRENT_NAMESPACES[-1] is None: self._set_data_triple_raw_spodd(s, p, o, d)
     else:   CURRENT_NAMESPACES[-1].ontology._set_data_triple_raw_spodd(s, p, o, d)
     if _LOG_LEVEL > 1:
-      if not s.startswith("_"): s = self._unabbreviate(s)
+      if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
       if d and (not d.startswith("@")): d = self._unabbreviate(d)
       print("* Owlready2 * SET TRIPLE", s, p, o, d, file = sys.stderr)

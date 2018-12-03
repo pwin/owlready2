@@ -58,14 +58,14 @@ class BaseTest(object):
   def assert_triple(self, s, p, o, d = None, world = default_world):
     if d is None:
       if not world._has_obj_triple_spo(s, p, o):
-        if not s.startswith("_"): s = world._unabbreviate(s)
+        if s > 0: s = world._unabbreviate(s)
         p = world._unabbreviate(p)
-        if not o.startswith("_"): o = world._unabbreviate(o)
+        if o > 0: o = world._unabbreviate(o)
         print("MISSING TRIPLE", s, p, o)
         raise AssertionError
     else:
       if not world._has_data_triple_spod(s, p, o, d):
-        if not s.startswith("_"): s = world._unabbreviate(s)
+        if s > 0: s = world._unabbreviate(s)
         p = world._unabbreviate(p)
         print("MISSING TRIPLE", s, p, o, d)
         raise AssertionError
@@ -73,14 +73,14 @@ class BaseTest(object):
   def assert_not_triple(self, s, p, o, d = None, world = default_world):
     if d is None:
       if world._has_obj_triple_spo(s, p, o):
-        if not s.startswith("_"): s = world._unabbreviate(s)
+        if s > 0: s = world._unabbreviate(s)
         p = world._unabbreviate(p)
-        if not o.startswith("_"): o = world._unabbreviate(o)
+        if o > 0: o = world._unabbreviate(o)
         print("UNEXPECTED TRIPLE", s, p, o)
         raise AssertionError
     else:
       if world._has_data_triple_spod(s, p, o, d):
-        if not s.startswith("_"): s = world._unabbreviate(s)
+        if s > 0: s = world._unabbreviate(s)
         p = world._unabbreviate(p)
         print("UNEXPECTED TRIPLE", s, p, o, d)
         raise AssertionError
@@ -157,7 +157,7 @@ class Test(BaseTest, unittest.TestCase):
     Pizza = None
     import gc
     gc.collect(); gc.collect()
-    assert str(iri) in default_world._entities
+    assert iri in default_world._entities
     assert n.Pizza
     
   def test_namespace_4(self):
@@ -170,7 +170,7 @@ class Test(BaseTest, unittest.TestCase):
     owlready2.namespace._cache = [None] * 1000
     import gc
     gc.collect(); gc.collect(); gc.collect()
-    assert not str(iri) in default_world._entities
+    assert not iri in default_world._entities
     assert not n.Vegetable is None
     
   def test_namespace_5(self):
@@ -515,8 +515,6 @@ class Test(BaseTest, unittest.TestCase):
     
     self.assert_triple(o.storid, comment.storid, *to_literal("com1"), world = w)
     self.assert_triple(o.storid, comment.storid, *to_literal("com2"), world = w)
-
-    o.save("/tmp/t.owl")
     
   def test_ontology_20(self):
     w = self.new_world()
@@ -558,18 +556,17 @@ class Test(BaseTest, unittest.TestCase):
       class D(Thing):
         is_a = [p.some(C)]
       class E(Thing): pass
-        
-    w.graph.dump()
+      
     assert set(w.general_axioms()) == set()
     assert set(o.general_axioms()) == set()
     
-    o._add_obj_triple_spo("_2", rdf_type, owl_restriction)
-    o._add_obj_triple_spo("_2", owl_onproperty, p.storid)
-    o._add_obj_triple_spo("_2", SOME, D.storid)
-    o._add_obj_triple_spo("_2", rdfs_subclassof, E.storid)
+    o._add_obj_triple_spo(-2, rdf_type, owl_restriction)
+    o._add_obj_triple_spo(-2, owl_onproperty, p.storid)
+    o._add_obj_triple_spo(-2, SOME, D.storid)
+    o._add_obj_triple_spo(-2, rdfs_subclassof, E.storid)
 
-    assert set(w.general_axioms()) == set([o._parse_bnode("_2")])
-    assert set(o.general_axioms()) == set([o._parse_bnode("_2")])
+    assert set(w.general_axioms()) == set([o._parse_bnode(-2)])
+    assert set(o.general_axioms()) == set([o._parse_bnode(-2)])
     
     
     
@@ -1946,6 +1943,7 @@ class Test(BaseTest, unittest.TestCase):
     world   = self.new_world()
     onto    = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl").load()
     results = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning_reasoning.owl")
+
     with results:
       sync_reasoner(world, debug = 0)
       
@@ -2994,9 +2992,9 @@ I took a placebo
       nonlocal triples1
       if not s.startswith("_"): s = "<%s>" % s
       p = "<%s>" % p
-      if   d.startswith("@"): o = '"%s"%s' % (o, d)
-      elif d:                 o = '"%s"^^<%s>' % (o, d)
-      else:                   o = '"%s"' % o
+      if   isinstance(d, str) and d.startswith("@"): o = '"%s"%s' % (o, d)
+      elif d:                                        o = '"%s"^^<%s>' % (o, d)
+      else:                                          o = '"%s"' % o
       triples1 += "%s %s %s .\n" % (s,p,o)
     #owlready2.driver.parse_owlxml(os.path.join(HERE, "test_owlxml.owl"), on_prepare_triple, on_prepare_data)
     
@@ -3076,9 +3074,9 @@ I took a placebo
       nonlocal triples1
       if not s.startswith("_"): s = "<%s>" % s
       p = "<%s>" % p
-      if   d.startswith("@"): o = '"%s"%s' % (o, d)
-      elif d:                 o = '"%s"^^<%s>' % (o, d)
-      else:                   o = '"%s"' % o
+      if   isinstance(d, str) and d.startswith("@"): o = '"%s"%s' % (o, d)
+      elif d:                                        o = '"%s"^^<%s>' % (o, d)
+      else:                                          o = '"%s"' % o
       triples1 += "%s %s %s .\n" % (s,p,o)
     
     f = open(os.path.join(HERE, "test_owlxml_2.ntriples"), "rb")
@@ -3087,8 +3085,8 @@ I took a placebo
     
     triples1 = ""
     owlready2.owlxml_2_ntriples.parse(os.path.join(HERE, "test_owlxml_2.owl"), on_prepare_triple, on_prepare_data)
-
-    self.assert_ntriples_equivalent(triples1, triples2)
+    
+    self.assert_ntriples_equivalent(triples2, triples1)
     
   def test_format_9(self):
     world = self.new_world()
@@ -3159,9 +3157,9 @@ I took a placebo
       nonlocal triples1
       if not s.startswith("_"): s = "<%s>" % s
       p = "<%s>" % p
-      if   d.startswith("@"): o = '"%s"%s' % (o, d)
-      elif d:                 o = '"%s"^^<%s>' % (o, d)
-      else:                   o = '"%s"' % o
+      if   isinstance(d, str) and d.startswith("@"): o = '"%s"%s' % (o, d)
+      elif d:                                        o = '"%s"^^<%s>' % (o, d)
+      else:                                          o = '"%s"' % o
       triples1 += "%s %s %s .\n" % (s,p,o)
     #owlready2.driver.parse_owlxml(os.path.join(HERE, "test_propchain_owlxml.owl"), on_prepare_triple, on_prepare_data)
     
@@ -3237,31 +3235,31 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
     import subprocess
     rapper = subprocess.Popen(["rapper", "-q", "-g", os.path.join(HERE, "test_ns.owl")], stdout = subprocess.PIPE)
-    triples1 = rapper.stdout.read().decode("unicode-escape")
+    triples2 = rapper.stdout.read().decode("unicode-escape")
     rapper.stdout.close()
     rapper.wait()
     
-    triples2 = ""
+    triples1 = ""
     def on_prepare_triple(s,p,o):
-      nonlocal triples2
+      nonlocal triples1
       if not s.startswith("_"): s = "<%s>" % s
       p = "<%s>" % p
       if not o.startswith("_"): o = "<%s>" % o
-      triples2 += "%s %s %s .\n" % (s,p,o)
+      triples1 += "%s %s %s .\n" % (s,p,o)
     def on_prepare_data(s,p,o,d):
-      nonlocal triples2
+      nonlocal triples1
       if not s.startswith("_"): s = "<%s>" % s
       p = "<%s>" % p
-      if   d.startswith("@"): o = '"%s"%s' % (o, d)
-      elif d:                 o = '"%s"^^<%s>' % (o, d)
-      else:                   o = '"%s"' % o
-      triples2 += "%s %s %s .\n" % (s,p,o)
+      if   isinstance(d, str) and d.startswith("@"): o = '"%s"%s' % (o, d)
+      elif d:                                        o = '"%s"^^<%s>' % (o, d)
+      else:                                          o = '"%s"' % o
+      triples1 += "%s %s %s .\n" % (s,p,o)
     #owlready2.driver.parse_rdfxml(os.path.join(HERE, "test_ns.owl"), on_prepare_triple, on_prepare_data)
     
     #self.assert_ntriples_equivalent(triples1, triples2)
     
     
-    triples2 = ""
+    triples1 = ""
     owlready2.rdfxml_2_ntriples.parse(os.path.join(HERE, "test_ns.owl"), on_prepare_triple, on_prepare_data)
     
     self.assert_ntriples_equivalent(triples1, triples2)
@@ -3307,21 +3305,21 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
     self.assert_ntriples_equivalent(triples1, triples2)
     
-  def test_format_23(self):
+  def test_format_24(self):
     world = self.new_world()
     world.set_backend(filename = os.path.join(HERE, "test_quadstore_slash.sqlite3"))
     onto = world.get_ontology("http://test.org/test_slash/")
     assert onto.C is not None
     world.close()
     
-  def test_format_24(self):
+  def test_format_25(self):
     world = self.new_world()
     world.set_backend(filename = os.path.join(HERE, "test_quadstore_slash.sqlite3"))
     onto = world.get_ontology("http://test.org/test_slash")
     assert onto.C is not None
     world.close()
     
-  def test_format_25(self):
+  def test_format_26(self):
     world = self.new_world()
     onto = world.get_ontology("http://test.org/test.org#")
     self.assert_triple(onto.storid, rdf_type, owl_ontology, None, world)
@@ -3332,7 +3330,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     self.assert_triple(onto.storid, rdf_type, owl_ontology, None, world)
     assert len(world.graph) == 2
     
-  def test_format_26(self):
+  def test_format_27(self):
     # Verify that Cython PYX version is used
     import owlready2_optimized
     
@@ -3390,7 +3388,6 @@ multiple lines with " and ’ and \ and & and < and > and é."""
   def test_search_5(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
-    
     n.Tomato()
     
     l = n.search(type = n.Tomato, topping_of = n.ma_pizza)
@@ -3939,15 +3936,8 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     with o:
       class C(Thing): pass
       class D(C):     pass
-      
-    #w.graph.dump()
-    #print(len(w.graph))
     
     destroy_entity(C)
-    
-    #w.graph.dump()
-    #print(len(w.graph))
-    #print(D.is_a)
     
     assert D.is_a == [Thing]
     assert o.C is None
@@ -4272,7 +4262,7 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     owlready2.observe.scan_collapsed_changes()
     assert not listened
     
-  def test_observe_4(self):
+  def disabled_test_observe_4(self):
     import owlready2.observe
     
     w = self.new_world()
@@ -4300,7 +4290,7 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     
     assert list(l) == [c1, c2, c3]
     
-  def test_observe_5(self):
+  def disabled_test_observe_5(self):
     import owlready2.observe
     
     w = self.new_world()
@@ -4329,7 +4319,7 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     
     assert list(l) == [c1, c2, c3]
     
-  def test_observe_6(self):
+  def disabled_test_observe_6(self):
     import owlready2.observe
     
     w = self.new_world()

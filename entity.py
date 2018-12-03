@@ -278,7 +278,7 @@ class EntityClass(type):
           equivalent._fill_descendants(s, True)
           
     for x in Class.namespace.world._get_obj_triples_transitive_po(Class._rdfs_is_a, Class.storid):
-      if not x.startswith("_"):
+      if not x < 0:
         if only_loaded:
           descendant = Class.namespace.world._entities.get(x)
           if descendant is None: continue
@@ -298,9 +298,9 @@ class EntityClass(type):
         world = owlready2.default_world
       r = []
       for x in world._get_obj_triples_po_s(rdf_type, owl_class):
-        if x.startswith("_"): continue
+        if x < 0: continue
         for y in world._get_obj_triples_sp_o(x, Class._rdfs_is_a):
-          if (y == owl_thing) or y.startswith("_"): continue
+          if (y == owl_thing) or y < 0: continue
           break
         else:
           if only_loaded:
@@ -315,7 +315,7 @@ class EntityClass(type):
       if only_loaded:
         #r = []
         for x in Class.namespace.world._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid):
-          if not x.startswith("_"):
+          if not x < 0:
             subclass = Class.namespace.world._entities.get(x)
             if not subclass is None: yield subclass #r.append(subclass)
         #return r
@@ -324,10 +324,10 @@ class EntityClass(type):
         #return [
         #  Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
         #  for x in Class.namespace.world._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid)
-        #  if not x.startswith("_")
+        #  if not x < 0
         #]
         for x in Class.namespace.world._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid):
-          if not x.startswith("_"):
+          if not x < 0:
             yield Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
       
   def constructs(Class, Prop = None):
@@ -343,7 +343,7 @@ class EntityClass(type):
           
     if Prop: Prop = Prop.storid
     for c,s,p,o in Class.namespace.world._get_obj_triples_cspo_cspo(None, None, Prop, Class.storid):
-      if s.startswith("_"):
+      if s < 0:
         
         onto = Class.namespace.world.graph.context_2_user_context(c)
         construct = _top_bn(s)
