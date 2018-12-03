@@ -980,7 +980,6 @@ class SubGraph(BaseSubGraph):
           
       t0 = time.time()
       onto_base_iri = cur.execute("SELECT resources.iri FROM objs, resources WHERE objs.c=? AND objs.o=? AND resources.storid=objs.s LIMIT 1", (self.c, owl_ontology)).fetchone()
-      print("XXX", time.time() - t0)
       if onto_base_iri: onto_base_iri = onto_base_iri[0]
       else:             onto_base_iri = ""
       
