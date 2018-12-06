@@ -53,22 +53,6 @@ access simultaneously the same Owlready2 quadstore, you can disable the exclusiv
 
 
 
-Persistent world: storing the quadstore in a PostgresQL database
-----------------------------------------------------------------
-
-PostgresQL can be used as an alternative to SQLite3. However, the the interest is limited since performances are lower.
-
-To use a PostgresQL database, you first need to create the database (using the createdb command).
-
-Then, you can set the PostgresQL backend as follows:
-
-::
-
-   >>> default_world.set_backend("postgresql", user = "USERNAME", password = "PASS", dbname = "DATABASE_NAME", host = "HOST", port = PORT)
-
-
-
-
 Using several isolated Worlds
 -----------------------------
 

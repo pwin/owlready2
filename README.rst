@@ -273,6 +273,7 @@ version 2 - 0.12
 * Nested searches
 * Synchronization for multithreading support
 * Add Class.inverse_restrictions() and Class.direct_instances()
+* Drop PostgresQL support (little interest: more complex and slower than Sqlite3)
 * Bugfixes:
   - Fix call to _get_by_storid2
   - Fix rdfs_subclassof in doc
