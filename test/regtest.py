@@ -3319,9 +3319,12 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     self.assert_ntriples_equivalent(triples1, triples2)
     
   def test_format_24(self):
+    quadstore = os.path.join(HERE, "test_quadstore_slash.sqlite3")
+    assert os.path.exists(quadstore)
     world = self.new_world()
-    world.set_backend(filename = os.path.join(HERE, "test_quadstore_slash.sqlite3"))
-    onto = world.get_ontology("http://test.org/test_slash/")
+    world.set_backend(filename = quadstore)
+    onto = world.get_ontology("http://test.org/test_slash/").load()
+    onto.graph.dump()
     assert onto.C is not None
     world.close()
     

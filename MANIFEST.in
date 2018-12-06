@@ -38,5 +38,6 @@ include test/Save.java
 include test/Save.class
 include test/test_mixed.py
 include test/test_parser.py
+include test/test_quadstore_slash.sqlite3
 include test/*.ntriples
 include test/*.owl
