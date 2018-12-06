@@ -80,7 +80,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       nb_triple += 1
       if not is_bn(s): s = "<%s>" % s
       
-      o = o.replace('"', '\\"').replace("\n", "\\n")
+      if isinstance(o, str): o = o.replace('"', '\\"').replace("\n", "\\n")
       if d and d.startswith("@"):
         print('%s %s "%s"%s .' % (s,"<%s>" % p,o,d))
       elif d:

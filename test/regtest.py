@@ -568,7 +568,20 @@ class Test(BaseTest, unittest.TestCase):
     assert set(w.general_axioms()) == set([o._parse_bnode(-2)])
     assert set(o.general_axioms()) == set([o._parse_bnode(-2)])
     
+  def test_ontology_24(self):
+    world = self.new_world()
+    filename = os.path.abspath(os.path.join(os.path.dirname(__file__), "test.owl"))
+    onto = world.get_ontology("file://" + filename).load()
     
+    r = set(onto.get_triples(onto.Pizza.storid))
+    assert r == {(305, 39, '"Comment on Pizza"@en'), (305, 6, 11)}
+    
+    r = set(onto.get_triples(None, rdf_type, onto.Pizza.storid))
+    assert r == {(319, 6, 305)}
+    
+    r = set(onto.get_triples(None, None, '"9.9"^^<http://www.w3.org/2001/XMLSchema#float>'))
+    assert r == {(319, 310, 9.9, 58)}
+
     
   def test_class_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

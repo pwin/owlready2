@@ -96,6 +96,31 @@ class _GraphManager(object):
   #def get_equivs_s_o(self, s): return [s]
   def _get_triples_sp_od(self, s, p): return []
   
+  def get_triples(self, s = None, p = None, o = None):
+    if   isinstance(o, int):
+      return self._get_obj_triples_spo_spo(s, p, o)
+    elif isinstance(o, str):
+      from owlready2.driver import INT_DATATYPES, FLOAT_DATATYPES
+      o, d = o.rsplit('"', 1)
+      o = o[1:]
+      if   d.startswith("@"): pass
+      elif d.startswith("^"):
+        d = d[3:-1]
+        if   d in INT_DATATYPES:   o = int  (o)
+        elif d in FLOAT_DATATYPES: o = float(o)
+        d = self._abbreviate(d)
+      else:                   d = 0
+      print((s, p, o, d))
+      return self._get_data_triples_spod_spod(s, p, o, d)
+    else:
+      r = []
+      for s,p,o,d in self._get_triples_spod_spod(s, p, None, None):
+        if   d == 0:             o = '"%s"'       %  o
+        elif isinstance(d, int): o = '"%s"^^<%s>' % (o, self._unabbreviate(d))
+        elif isinstance(d, str): o = '"%s"%s'     % (o, d)
+        r.append((s,p,o))
+      return r
+    
   def _refactor(self, storid, new_iri): pass
   
   def _get_annotation_axioms(self, source, property, target, target_d):
@@ -540,6 +565,8 @@ class Ontology(Namespace, _GraphManager):
     self.world.graph.acquire_write_lock()
     del self.world.ontologies[self.base_iri]
     self.graph.destroy()
+    for entity in list(self.world._entities.values()):
+      if entity.namespace.ontology is self: del self.world._entities[entity.storid]
     self.world.graph.release_write_lock()
     
   def get_imported_ontologies(self): return self._imported_ontologies
