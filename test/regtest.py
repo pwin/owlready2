@@ -272,7 +272,18 @@ class Test(BaseTest, unittest.TestCase):
     o._add_obj_triple_spo(A, rdfs_subclassof, B)
     
     assert isinstance(o.A, ThingClass)
-    assert o.B in o.A.is_a
+    assert o.B in o.A.is_a    
+    
+  def test_world_8(self):
+    world = self.new_world()
+    o1 = world.get_ontology("http://test.org/t1.owl")
+    with o1:
+      class A(Thing): pass
+      
+    world.set_backend(filename = self.new_tmp_file())
+    o2 = world.get_ontology("http://test.org/t2.owl")
+    with o2:
+      class B(Thing): pass
     
     
   def test_ontology_1(self):

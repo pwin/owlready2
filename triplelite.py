@@ -171,6 +171,11 @@ class Graph(BaseMainGraph):
         self.db.cursor().executescript(s)
         
       version, self.current_blank, self.current_resource = self.execute("SELECT version, current_blank, current_resource FROM store").fetchone()
+
+      if clone:
+        self.current_blank    = clone.current_blank
+        self.current_resource = clone.current_resource
+      
       if version == 1:
         print("* Owlready2 * Converting quadstore to internal format 2...", file = sys.stderr)
         self.execute("""CREATE TABLE ontology_alias (iri TEXT, alias TEXT)""")
