@@ -704,7 +704,6 @@ class Graph(BaseMainGraph):
     
     
   def _get_obj_triples_transitive_sp(self, s, p):
-    print("sp", s, p)
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT o FROM objs WHERE s=? AND p=?
@@ -714,7 +713,6 @@ SELECT DISTINCT x FROM transit""", (s, p, p)).fetchall(): yield x
 
     
   def _get_obj_triples_transitive_po(self, p, o):
-    print("po", p, o)
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT s FROM objs WHERE p=? AND o=?
