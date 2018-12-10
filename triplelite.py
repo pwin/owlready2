@@ -127,7 +127,7 @@ class Graph(BaseMainGraph):
       self.prop_fts         = set()
       
       self.execute("""CREATE TABLE store (version INTEGER, current_blank INTEGER, current_resource INTEGER)""")
-      self.execute("""INSERT INTO store VALUES (5, 0, 300)""")
+      self.execute("""INSERT INTO store VALUES (6, 0, 300)""")
       self.execute("""CREATE TABLE objs (c INTEGER, s INTEGER, p INTEGER, o INTEGER)""")
       self.execute("""CREATE TABLE datas (c INTEGER, s INTEGER, p INTEGER, o BLOB, d INTEGER)""")
       self.execute("""CREATE VIEW quads (c,s,p,o,d) AS SELECT c,s,p,o,NULL FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
@@ -161,11 +161,6 @@ class Graph(BaseMainGraph):
       except sqlite3.OperationalError: # Old SQLite3 does not support WITHOUT ROWID -- here it is just an optimization
         self.execute("""CREATE TABLE resources (storid INTEGER PRIMARY KEY, iri TEXT)""")
       self.db.executemany("INSERT INTO resources VALUES (?,?)", _universal_abbrev_2_iri.items())
-      #self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
-      #self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
-      #self.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
-      #self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
-      #self.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
       self.set_indexed(True)
       self.db.commit()
       
@@ -299,6 +294,15 @@ class Graph(BaseMainGraph):
         self.execute("""UPDATE store SET version=5""")
         self.db.commit()
 
+      if version == 5:
+        print("* Owlready2 * Converting quadstore to internal format 6 (this can take a while)...", file = sys.stderr)
+        self.execute("""DROP INDEX IF EXISTS index_objs_po""")
+        self.execute("""DROP INDEX IF EXISTS index_datas_po""")
+        self.execute("""CREATE INDEX index_objs_op ON objs(o,p)""")
+        self.execute("""CREATE INDEX index_datas_op ON datas(o,p)""")
+        
+        self.execute("""UPDATE store SET version=6""")
+        self.db.commit()
         
         
       self.prop_fts = { storid for (storid,) in self.execute("""SELECT storid FROM prop_fts;""") }
@@ -315,7 +319,7 @@ class Graph(BaseMainGraph):
       self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
       self.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
       self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
-      self.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
+      self.execute("""CREATE INDEX index_datas_op ON datas(o,p)""")
       for onto in self.world.ontologies.values():
         onto._load_properties()
     else:
@@ -323,7 +327,7 @@ class Graph(BaseMainGraph):
       self.execute("""DROP INDEX IF EXISTS index_objs_sp""")
       self.execute("""DROP INDEX IF EXISTS index_objs_po""")
       self.execute("""DROP INDEX IF EXISTS index_datas_sp""")
-      self.execute("""DROP INDEX IF EXISTS index_datas_po""")
+      self.execute("""DROP INDEX IF EXISTS index_datas_op""")
       
   def close(self):
     self.db.close()
@@ -694,19 +698,15 @@ class Graph(BaseMainGraph):
 #SELECT DISTINCT x FROM transit""", (s,)).fetchall(): yield x
     
     
-  # Reimplemented using RECURSIVE SQL structure, for performance
   def _get_obj_triples_transitive_sp(self, s, p):
-    #print(self._unabbreviate(s), self._unabbreviate(p))
-    #if self._unabbreviate(s) == "http://wikidata.dbpedia.org/ontology/Person":
-    #  if self._unabbreviate(p) == "http://www.w3.org/2000/01/rdf-schema#subClassOf":
-    #    oirorejf
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT o FROM objs WHERE s=? AND p=?
 UNION ALL SELECT objs.o FROM objs, transit WHERE objs.s=transit.x AND objs.p=?)
 SELECT DISTINCT x FROM transit""", (s, p, p)).fetchall(): yield x
 
-  # Reimplemented using RECURSIVE SQL structure, for performance
+
+    
   def _get_obj_triples_transitive_po(self, p, o):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
@@ -1256,7 +1256,6 @@ class SubGraph(BaseSubGraph):
   
   def _refactor(self, storid, new_iri): return self.parent._refactor(storid, new_iri)
     
-  # Reimplemented using RECURSIVE SQL structure, for performance
   def _get_obj_triples_transitive_sp(self, s, p):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
@@ -1264,7 +1263,6 @@ AS (      SELECT o FROM objs WHERE c=? AND s=? AND p=?
 UNION ALL SELECT objs.o FROM objs, transit WHERE objs.c=? AND objs.s=transit.x AND objs.p=?)
 SELECT DISTINCT x FROM transit""", (self.c, s, p, self.c, p)).fetchall(): yield x
   
-  # Reimplemented using RECURSIVE SQL structure, for performance
   def _get_obj_triples_transitive_po(self, p, o):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
