@@ -322,7 +322,7 @@ class Graph(BaseMainGraph):
     if indexed:
       #self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
       self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
-      self.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
+      self.execute("""CREATE INDEX index_objs_op ON objs(o,p)""")
       self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
       self.execute("""CREATE INDEX index_datas_op ON datas(o,p)""")
       for onto in self.world.ontologies.values():
@@ -330,7 +330,7 @@ class Graph(BaseMainGraph):
     else:
       #self.execute("""DROP INDEX IF EXISTS index_resources_iri""")
       self.execute("""DROP INDEX IF EXISTS index_objs_sp""")
-      self.execute("""DROP INDEX IF EXISTS index_objs_po""")
+      self.execute("""DROP INDEX IF EXISTS index_objs_op""")
       self.execute("""DROP INDEX IF EXISTS index_datas_sp""")
       self.execute("""DROP INDEX IF EXISTS index_datas_op""")
       
@@ -704,6 +704,7 @@ class Graph(BaseMainGraph):
     
     
   def _get_obj_triples_transitive_sp(self, s, p):
+    print("sp", s, p)
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT o FROM objs WHERE s=? AND p=?
@@ -713,6 +714,7 @@ SELECT DISTINCT x FROM transit""", (s, p, p)).fetchall(): yield x
 
     
   def _get_obj_triples_transitive_po(self, p, o):
+    print("po", p, o)
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
 AS (      SELECT s FROM objs WHERE p=? AND o=?
@@ -909,9 +911,9 @@ class SubGraph(BaseSubGraph):
     if cur.execute("""SELECT COUNT() FROM ontologies""").fetchone()[0] < 2:
       cur.execute("""DROP INDEX IF EXISTS index_resources_iri""")
       cur.execute("""DROP INDEX IF EXISTS index_objs_sp""")
-      cur.execute("""DROP INDEX IF EXISTS index_objs_po""")
+      cur.execute("""DROP INDEX IF EXISTS index_objs_op""")
       cur.execute("""DROP INDEX IF EXISTS index_datas_sp""")
-      cur.execute("""DROP INDEX IF EXISTS index_datas_po""")
+      cur.execute("""DROP INDEX IF EXISTS index_datas_op""")
       reindex = True
     else:
       reindex = False
@@ -983,9 +985,9 @@ class SubGraph(BaseSubGraph):
         cur.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
         if self.parent.indexed:
           cur.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
-          cur.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
+          cur.execute("""CREATE INDEX index_objs_op ON objs(o,p)""")
           cur.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
-          cur.execute("""CREATE INDEX index_datas_po ON datas(p,o)""")
+          cur.execute("""CREATE INDEX index_datas_op ON datas(o,p)""")
           
       t0 = time.time()
       onto_base_iri = cur.execute("SELECT resources.iri FROM objs, resources WHERE objs.c=? AND objs.o=? AND resources.storid=objs.s LIMIT 1", (self.c, owl_ontology)).fetchone()
