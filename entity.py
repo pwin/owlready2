@@ -130,8 +130,8 @@ class EntityClass(type):
         for parent in _is_a: Class._add_is_a_triple(parent)
         
     else:
-      if Class.is_a != _is_a: Class.is_a.extend([i for i in _is_a if not i in Class.is_a])
-      
+      if (Class.is_a != _is_a) and (_is_a != (Thing,)): Class.is_a.extend([i for i in _is_a if not i in Class.is_a])
+    
     if equivalent_to:
       if isinstance(equivalent_to, list): Class.equivalent_to.extend(equivalent_to)
       

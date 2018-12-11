@@ -847,6 +847,18 @@ class Test(BaseTest, unittest.TestCase):
       
     self.assert_triple(MyClass.storid, comment.storid, *to_literal("abc"), world = world)
     
+  def test_class_22(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test.owl")
+    
+    with onto:
+      class Parent(Thing): pass
+      class MyClass(Parent): label   = ["MyClass"]
+      class MyClass(Thing): comment = ["abc"]
+      
+    print(MyClass.is_a)
+    assert MyClass.is_a == [Parent]
+    
     
   def test_individual_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
