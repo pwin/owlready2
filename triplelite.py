@@ -65,7 +65,10 @@ class Graph(BaseMainGraph):
   def __init__(self, filename, clone = None, exclusive = True, world = None, profiling = False):
     exists        = os.path.exists(filename) and os.path.getsize(filename) # BEFORE creating db!
     initialize_db = (clone is None) and ((filename == ":memory:") or (not exists))
-    
+
+    if clone and (filename != ":memory:"):
+      if exists: raise ValueError("Cannot save existent quadstore in '%s': File already exists! Use a new filename for saving quadstore or, for opening an already existent quadstore, do not create any triple before calling set_backend()." % filename)
+      
     self.db = sqlite3.connect(filename, check_same_thread = False)
     if exclusive: self.db.execute("""PRAGMA locking_mode = EXCLUSIVE""")
     else:         self.db.execute("""PRAGMA locking_mode = NORMAL""")
