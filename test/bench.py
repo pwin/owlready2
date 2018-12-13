@@ -1,7 +1,9 @@
 # python ./owlready2/test/bench.py > /dev/null
 
-#Load time 8.630512237548828 s.
-#List class time 14.550585746765137 s.
+# python ./owlready2/test/bench.py -f > /dev/null
+
+#Load time 8.170996904373169 s.
+#List class time 13.709956169128418 s.
 
 import sys, time#, cProfile
 

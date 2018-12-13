@@ -283,6 +283,16 @@ version 2 - 0.12
   - Fix boolean in RDFlib / SPARQL
   - Fix bug when destroying an AnnotationProperty
 
+version 2 - 0.13
+****************
+
+* Bugfixes:
+  - Fix performance regression due to suboptimal index in the quadstore
+  - Fix error in World cloning
+  - Fix the addition of Thing in class's parent when redefining a class with Thing as the only parent
+  - Add error message when creating an existent quadstore 
+
+
 Links
 -----
 
