@@ -195,7 +195,7 @@ class PropertyClass(EntityClass):
   def get_python_name(Prop):
     return Prop._python_name
   def set_python_name(Prop, python_name):
-    if not LOADING: Prop.namespace.ontology._set_data_triple_spoddd(Prop.storid, owlready_python_name, *to_literal(python_name))
+    if not LOADING: Prop.namespace.ontology._set_data_triple_spod(Prop.storid, owlready_python_name, *to_literal(python_name))
     del Prop.namespace.world._props[Prop._python_name]
     Prop.namespace.world._props[python_name] = Prop
     Prop._python_name = python_name
@@ -383,13 +383,13 @@ def destroy_entity(e):
     elif e._owl_type == owl_data_property:
       for s,p,o,d in e.namespace.world._get_data_triples_spod_spod(None, e.storid, None, None):
         modified_entities.add(s)
-      e.namespace.world._del_data_triple_spoddd(None, e.storid, None, None)
+      e.namespace.world._del_data_triple_spod(None, e.storid, None, None)
       
     else: #e._owl_type == owl_annotation_property:
       for s,p,o,d in e.namespace.world._get_triples_spod_spod(None, e.storid, None, None):
         modified_entities.add(s)
-      e.namespace.world._del_obj_triple_spod  (None, e.storid, None)
-      e.namespace.world._del_data_triple_spoddd(None, e.storid, None, None)
+      e.namespace.world._del_obj_triple_spod (None, e.storid, None)
+      e.namespace.world._del_data_triple_spod(None, e.storid, None, None)
       
     for s in modified_entities:
       s = e.namespace.world._entities.get(s)

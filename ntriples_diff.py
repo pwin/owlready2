@@ -97,6 +97,7 @@ def canonize(nt):
   triples = []
   blanks  = {}
   l       = 0
+  nt = nt.replace("/>", ">") # Owlready remove trailing /
   for line in nt.split("\n"):
     if not line: continue
     l += 1

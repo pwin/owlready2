@@ -172,6 +172,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
             elif   iri.startswith("#"): iri = xml_base + iri
             elif   iri.startswith("/"): iri = xml_dir  + iri[1:]
             else:                       iri = urllib.parse.urljoin(xml_dir, iri)
+          if iri.endswith("/"): iri = iri[:-1]
           stack.append(["Resource", iri])
           
         else:
@@ -194,6 +195,8 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       if iri is None:
         iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#ID", None)
         if iri: iri = "#%s" % iri
+      else:
+        if iri.endswith("/"): iri = iri[:-1]
       if iri is None:
         iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#nodeID")
         if iri:

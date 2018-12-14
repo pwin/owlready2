@@ -206,12 +206,13 @@ def parse_rdfxml(object f, list objs, list datas, object insert_objs, object ins
           
       else:
         iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#resource")
-        if iri:
+        if not iri is None:
           if not ":" in iri:
             if not iri:                 iri = xml_base
             elif   iri.startswith("#"): iri = xml_base + iri
             elif   iri.startswith("/"): iri = xml_dir  + iri[1:]
             else:                       iri = urljoin(xml_dir, iri)
+          if iri.endswith("/"): iri = iri[:-1]
           stack.append(["Resource", _abbreviate(iri)])
           
         else:
@@ -248,6 +249,7 @@ def parse_rdfxml(object f, list objs, list datas, object insert_objs, object ins
           elif   iri.startswith("#"): iri = xml_base + iri
           elif   iri.startswith("/"): iri = xml_dir  + iri[1:]
           else:                       iri = urljoin(xml_dir, iri)
+        if iri.endswith("/"): iri = iri[:-1]
         iri2 = _abbreviate(iri)
           
       if tag != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Description":
@@ -555,6 +557,8 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
       iri = attrs["IRI"]
       if not iri: return ontology_iri
       if   iri.startswith("#") or iri.startswith("/"): iri = ontology_iri_str + iri
+      if iri.endswith("/"): iri = iri[:-1]
+      if not "//" in iri: iri = urljoin(prefixes[""], iri)
       return _abbreviate(iri)
     return _abbreviate(_unabbreviate_IRI(attrs["abbreviatedIRI"]))
   
@@ -605,7 +609,8 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
     
     elif (tag == "http://www.w3.org/2002/07/owl#Ontology"):
       ontology_iri_str = attrs["ontologyIRI"]
-      ontology_iri     = _abbreviate(ontology_iri_str)
+      if ontology_iri_str.endswith("/"): ontology_iri = _abbreviate(ontology_iri_str[:-1])
+      else:                              ontology_iri = _abbreviate(ontology_iri_str)
       objs.append((ontology_iri, _abbreviate(rdf_type), _abbreviate("http://www.w3.org/2002/07/owl#Ontology")))
       version_iri = attrs.get("versionIRI")
       if version_iri:
@@ -778,7 +783,7 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
       stack[start :] = [iri]
       
     elif (tag == "http://www.w3.org/2002/07/owl#Import"):
-      datas.append((ontology_iri, _abbreviate("http://www.w3.org/2002/07/owl#imports"), current_content, 0))
+      objs.append((ontology_iri, _abbreviate("http://www.w3.org/2002/07/owl#imports"), _abbreviate(current_content)))
       
     elif (tag == "http://www.w3.org/2002/07/owl#IRI"):
       #current_content is IRI !

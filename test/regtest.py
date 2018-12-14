@@ -516,6 +516,10 @@ class Test(BaseTest, unittest.TestCase):
     o = w.get_ontology("file://%s/test_ontoslash.owl" % HERE).load()
     
     assert len(o.imported_ontologies) == 1
+    
+    o2 = w.get_ontology("file://%s/test_ontoslash2.owl" % HERE).load()
+    
+    assert len(o2.imported_ontologies) == 1
         
   def test_ontology_19(self):
     w = self.new_world()
@@ -592,7 +596,75 @@ class Test(BaseTest, unittest.TestCase):
     
     r = set(onto.get_triples(None, None, '"9.9"^^<http://www.w3.org/2001/XMLSchema#float>'))
     assert r == {(319, 310, 9.9, 58)}
+    
+  def test_ontology_25(self):
+    w = self.new_world()
+    oi = w.get_ontology("file://%s/test_ontoslash3_imported.owl" % HERE).load()
+    o = w.get_ontology("file://%s/test_ontoslash3.owl" % HERE).load()
 
+    assert len(o.imported_ontologies) == 1
+    assert o.metadata.comment == ["TEST"]
+    assert o.Class1.iri == "http://test.org/test_ontoslash3#Class1"
+    assert o.Class2.iri == "http://test.org/test_ontoslash3#Class2"
+
+    assert len(oi.imported_ontologies) == 0
+    assert oi.metadata.comment == ["TEST imported"]
+    assert oi.ImportedClass1.iri == "http://test.org/test_ontoslash3/imported.owl#ImportedClass1"
+    assert oi.ImportedClass2.iri == "http://test.org/test_ontoslash3/imported.owl#ImportedClass2"
+    
+  def test_ontology_26(self):
+    w = self.new_world()
+    o = w.get_ontology("file://%s/test_ontoslash2.owl" % HERE).load()
+    
+    assert o.base_iri == "http://test.org/test_ontoslash2/"
+    assert o.Class1
+    assert o.Class2
+    assert o.Class1.iri == "http://test.org/test_ontoslash2/Class1"
+    assert o.Class2.iri == "http://test.org/test_ontoslash2/Class2"
+
+  def test_ontology_27(self):
+    w = self.new_world()
+    o = w.get_ontology("file://%s/test_ontoslash_owlxml.owl" % HERE).load()
+
+    assert len(o.imported_ontologies) == 1
+    assert o.base_iri == "http://test.org/test_ontoslash/"
+    assert o.Class1
+    assert o.Class2
+    assert o.Class1.iri == "http://test.org/test_ontoslash/Class1"
+    assert o.Class2.iri == "http://test.org/test_ontoslash/Class2"
+    
+    o2 = w.get_ontology("file://%s/test_ontoslash2_owlxml.owl" % HERE).load()
+    
+    assert len(o2.imported_ontologies) == 1
+    assert o2.base_iri == "http://test.org/test_ontoslash2/"
+    assert o2.Class1
+    assert o2.Class2
+    assert o2.Class1.iri == "http://test.org/test_ontoslash2/Class1"
+    assert o2.Class2.iri == "http://test.org/test_ontoslash2/Class2"
+
+  def test_ontology_28(self):
+    w = self.new_world()
+    oi = w.get_ontology("file://%s/test_ontoslash3_imported_owlxml.owl" % HERE).load()
+    o = w.get_ontology("file://%s/test_ontoslash3_owlxml.owl" % HERE).load()
+    
+    assert len(o.imported_ontologies) == 1
+    assert o.metadata.comment == ["TEST"]
+    assert o.Class1.iri == "http://test.org/test_ontoslash3#Class1"
+    assert o.Class2.iri == "http://test.org/test_ontoslash3#Class2"
+
+    assert len(oi.imported_ontologies) == 0
+    assert oi.metadata.comment == ["TEST imported"]
+    assert oi.ImportedClass1.iri == "http://test.org/test_ontoslash3/imported.owl#ImportedClass1"
+    assert oi.ImportedClass2.iri == "http://test.org/test_ontoslash3/imported.owl#ImportedClass2"
+    
+  def test_ontology_29(self):
+    w = self.new_world()
+    o = w.get_ontology("http://test.org/onto/")
+    o.metadata.comment = ["TEST"]
+    
+    self.assert_triple(o.storid, comment.storid, "TEST", w._abbreviate("http://www.w3.org/2001/XMLSchema#string"), world = w)
+    self.assert_triple(w._abbreviate("http://test.org/onto"), comment.storid, "TEST", w._abbreviate("http://www.w3.org/2001/XMLSchema#string"), world = w)
+    
     
   def test_class_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -3339,6 +3411,8 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     rapper.stdout.close()
     rapper.wait()
     
+    # Rapper does not remove trailing / at the end of the ontology IRI
+    triples1 = triples1.replace("<http://www.test.org/testurl/>", "<http://www.test.org/testurl>")
     self.assert_ntriples_equivalent(triples1, triples2)
     
   def test_format_24(self):

@@ -628,12 +628,13 @@ class Ontology(Namespace, _GraphManager):
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s (cached)..." % self.name, file = sys.stderr)
         
     self.loaded = True
-    
+
     if new_base_iri and (new_base_iri != self.base_iri):
       self.graph.add_ontology_alias(new_base_iri, self.base_iri)
       self.base_iri = new_base_iri
       self._namespaces[self.base_iri] = self.world.ontologies[self.base_iri] = self
-      if new_base_iri.endswith("#"):
+      #if new_base_iri.endswith("#"):
+      if new_base_iri.endswith("#") or new_base_iri.endswith("/"):
         self.storid = self.world._abbreviate(new_base_iri[:-1])
       else:
         self.storid = self.world._abbreviate(new_base_iri)

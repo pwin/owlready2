@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, xml.parsers.expat
+import sys, xml.parsers.expat, urllib.parse
 
 try:
   from owlready2.base import OwlReadyOntologyParsingError
@@ -189,7 +189,9 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
     if "IRI" in attrs:
       iri = attrs["IRI"]
       if not iri: return ontology_iri
-      if   iri.startswith("#") or iri.startswith("/"): iri = ontology_iri + iri
+      if iri.startswith("#") or iri.startswith("/"): iri = ontology_iri + iri
+      if iri.endswith("/"): iri = iri[:-1]
+      if not "//" in iri: return urllib.parse.urljoin(prefixes[""], iri)
       return iri
     return _unabbreviate_IRI(attrs["abbreviatedIRI"])
   
@@ -237,6 +239,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
     
     elif (tag == "http://www.w3.org/2002/07/owl#Ontology"):
       ontology_iri = attrs["ontologyIRI"]
+      if ontology_iri.endswith("/"): ontology_iri = ontology_iri[:-1]
       on_prepare_obj(ontology_iri, rdf_type, "http://www.w3.org/2002/07/owl#Ontology")
       version_iri = attrs.get("versionIRI")
       if version_iri:
@@ -403,7 +406,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       objs[start :] = [iri]
       
     elif (tag == "http://www.w3.org/2002/07/owl#Import"):
-      on_prepare_data(ontology_iri, "http://www.w3.org/2002/07/owl#imports", current_content, "")
+      on_prepare_obj(ontology_iri, "http://www.w3.org/2002/07/owl#imports", current_content)
       
     elif (tag == "http://www.w3.org/2002/07/owl#IRI"):
       iri = current_content

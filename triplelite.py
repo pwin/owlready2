@@ -372,9 +372,13 @@ class Graph(BaseMainGraph):
       
   def fix_base_iri(self, base_iri, c = None):
     if base_iri.endswith("#") or base_iri.endswith("/"): return base_iri
-    use_slash = self.execute("SELECT resources.iri FROM resources WHERE SUBSTR(resources.iri, 1, ?)=? LIMIT 1", (len(base_iri) + 1, base_iri + "/",)).fetchone()
+    use_slash = self.execute("SELECT iri FROM resources WHERE iri=? LIMIT 1", ("%s/" % base_iri,)).fetchone()
     if use_slash: return "%s/" % base_iri
-    else:         return "%s#" % base_iri
+    use_hash = self.execute("SELECT resources.iri FROM resources WHERE SUBSTR(resources.iri, 1, ?)=? LIMIT 1", (len(base_iri) + 1, "%s#" % base_iri,)).fetchone()
+    if use_hash: return "%s#" % base_iri
+    use_slash = self.execute("SELECT resources.iri FROM resources WHERE SUBSTR(resources.iri, 1, ?)=? LIMIT 1", (len(base_iri) + 1, "%s/" % base_iri,)).fetchone()
+    if use_slash: return "%s/" % base_iri
+    return "%s#" % base_iri
     
   def sub_graph(self, onto):
     new_in_quadstore = False
