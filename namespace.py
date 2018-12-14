@@ -156,7 +156,7 @@ class _GraphManager(object):
       if o and not (o < 0 or o.startswith('"')): o = self._unabbreviate(o)
       print("* Owlready2 * DEL TRIPLE", s, p, o, file = sys.stderr)
       
-  def _del_data_triple_spoddd(self, s = None, p = None, o = None, d = None):
+  def _del_data_triple_spod(self, s = None, p = None, o = None, d = None):
     if CURRENT_NAMESPACES[-1] is None: self._del_data_triple_raw_spodd(s, p, o, d)
     else:   CURRENT_NAMESPACES[-1].ontology._del_data_triple_raw_spodd(s, p, o, d)
     if _LOG_LEVEL > 1:
@@ -721,7 +721,7 @@ class Ontology(Namespace, _GraphManager):
       if o > 0: o = self._unabbreviate(o)
       print("* Owlready2 * SET TRIPLE", s, p, o, file = sys.stderr)
       
-  def _add_data_triple_spoddd(self, s, p, o, d):
+  def _add_data_triple_spod(self, s, p, o, d):
     if CURRENT_NAMESPACES[-1] is None: self._add_data_triple_raw_spodd(s, p, o, d)
     else:   CURRENT_NAMESPACES[-1].ontology._add_data_triple_raw_spodd(s, p, o, d)
     if _LOG_LEVEL > 1:
@@ -730,7 +730,7 @@ class Ontology(Namespace, _GraphManager):
       if d and (not d.startswith("@")): d = self._unabbreviate(d)
       print("* Owlready2 * ADD TRIPLE", s, p, o, d, file = sys.stderr)
       
-  def _set_data_triple_spoddd(self, s, p, o, d):
+  def _set_data_triple_spod(self, s, p, o, d):
     if CURRENT_NAMESPACES[-1] is None: self._set_data_triple_raw_spodd(s, p, o, d)
     else:   CURRENT_NAMESPACES[-1].ontology._set_data_triple_raw_spodd(s, p, o, d)
     if _LOG_LEVEL > 1:
@@ -758,10 +758,10 @@ class Ontology(Namespace, _GraphManager):
       if target_d is None:
         self._add_obj_triple_spo(bnode, owl_annotatedtarget, target)
       else:
-        self._add_data_triple_spoddd(bnode, owl_annotatedtarget, target, target_d)
+        self._add_data_triple_spod(bnode, owl_annotatedtarget, target, target_d)
     
     if d is None: self._add_obj_triple_spo  (bnode, annot, value)
-    else:         self._add_data_triple_spoddd(bnode, annot, value, d)
+    else:         self._add_data_triple_spod(bnode, annot, value, d)
     return bnode
     
   
@@ -783,10 +783,10 @@ class Ontology(Namespace, _GraphManager):
         if ok:
           if other:
             if d is None: self._del_obj_triple_spod(bnode, annot, value)
-            else:         self._del_data_triple_spoddd(bnode, annot, value, None)
+            else:         self._del_data_triple_spod(bnode, annot, value, None)
           else:
             self._del_obj_triple_spod  (bnode, None, None)
-            self._del_data_triple_spoddd(bnode, None, None, None)
+            self._del_data_triple_spod(bnode, None, None, None)
           return bnode
 
       
@@ -863,7 +863,7 @@ class Ontology(Namespace, _GraphManager):
     while bnode and (bnode != rdf_nil):
       bnode_next = self._get_obj_triple_sp_o(bnode, rdf_rest)
       self._del_obj_triple_spod(bnode, None, None)
-      self._del_data_triple_spoddd(bnode, None, None, None)
+      self._del_data_triple_spod(bnode, None, None, None)
       bnode = bnode_next
       
   def _set_list(self, bnode, l):
@@ -874,7 +874,7 @@ class Ontology(Namespace, _GraphManager):
     for i in range(len(l)):
       o,d = self._to_rdf(l[i])
       if d is None: self._add_obj_triple_spo  (bnode, rdf_first, o)
-      else:         self._add_data_triple_spoddd(bnode, rdf_first, o, d)
+      else:         self._add_data_triple_spod(bnode, rdf_first, o, d)
       if i < len(l) - 1:
         bnode_next = self.world.new_blank_node()
         self._add_obj_triple_spo(bnode, rdf_rest, bnode_next)
@@ -889,7 +889,7 @@ class Ontology(Namespace, _GraphManager):
       return
     for i in range(len(l)):
       if l[i][1] is None: self._add_obj_triple_spo  (bnode, rdf_first, l[i][0])
-      else:               self._add_data_triple_spoddd(bnode, rdf_first, l[i][0], l[i][1])
+      else:               self._add_data_triple_spod(bnode, rdf_first, l[i][0], l[i][1])
       if i < len(l) - 1:
         bnode_next = self.world.new_blank_node()
         self._add_obj_triple_spo(bnode, rdf_rest, bnode_next)

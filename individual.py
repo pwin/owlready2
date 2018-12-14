@@ -112,23 +112,23 @@ class ValueList(CallbackListWithLanguage):
         
     elif self._Prop._owl_type == owl_data_property:
       for removed in old - new:
-        obj.namespace.ontology._del_data_triple_spoddd(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
+        obj.namespace.ontology._del_data_triple_spod(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
         
       for added in new - old:
-        obj.namespace.ontology._add_data_triple_spoddd(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
+        obj.namespace.ontology._add_data_triple_spod(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
         
     else: #self._Prop._owl_type == owl_annotation_property:
       for removed in old - new:
         if hasattr(removed, "storid"):
           obj.namespace.ontology._del_obj_triple_spod(obj.storid, self._Prop.storid, removed.storid)
         else:
-          obj.namespace.ontology._del_data_triple_spoddd(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
+          obj.namespace.ontology._del_data_triple_spod(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
           
       for added in new - old:
         if hasattr(added, "storid"):
           obj.namespace.ontology._add_obj_triple_spo(obj.storid, self._Prop.storid, added.storid)
         else:
-          obj.namespace.ontology._add_data_triple_spoddd(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
+          obj.namespace.ontology._add_data_triple_spod(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
           
     
 class Thing(metaclass = ThingClass):
@@ -361,9 +361,9 @@ class Thing(metaclass = ThingClass):
             super().__setattr__(attr, value)
             
             if value is None:
-              self.namespace.ontology._del_data_triple_spoddd(self.storid, Prop.storid, None, None)
+              self.namespace.ontology._del_data_triple_spod(self.storid, Prop.storid, None, None)
             else:
-              self.namespace.ontology._set_data_triple_spoddd(self.storid, Prop.storid, *self.namespace.ontology._to_rdf(value))
+              self.namespace.ontology._set_data_triple_spod(self.storid, Prop.storid, *self.namespace.ontology._to_rdf(value))
           
           #else: #Prop._owl_type == owl_annotation_property: # Annotation cannot be functional
             

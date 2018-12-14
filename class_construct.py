@@ -49,7 +49,7 @@ class ClassConstruct(object):
   
   def _destroy_triples(self, ontology):
     ontology._del_obj_triple_spod(self.storid, None, None)
-    ontology._del_data_triple_spoddd(self.storid, None, None, None)
+    ontology._del_data_triple_spod(self.storid, None, None, None)
     
   def _create_triples (self, ontology):
     pass
@@ -283,12 +283,12 @@ class Restriction(ClassConstruct):
     if (self.type == SOME) or (self.type == ONLY) or (self.type == VALUE) or (self.type == HAS_SELF):
       o, d = ontology.world._to_rdf(self.value)
       if d is None: ontology._add_obj_triple_spo  (self.storid, self.type, o)
-      else:         ontology._add_data_triple_spoddd(self.storid, self.type, o, d)
+      else:         ontology._add_data_triple_spod(self.storid, self.type, o, d)
     else:
       if self.value is None:
-        if not self.cardinality is None: ontology._add_data_triple_spoddd(self.storid, _qualified_2_non_qualified[self.type], self.cardinality, _non_negative_integer)
+        if not self.cardinality is None: ontology._add_data_triple_spod(self.storid, _qualified_2_non_qualified[self.type], self.cardinality, _non_negative_integer)
       else:
-        if not self.cardinality is None: ontology._add_data_triple_spoddd(self.storid, self.type, self.cardinality, _non_negative_integer)
+        if not self.cardinality is None: ontology._add_data_triple_spod(self.storid, self.type, self.cardinality, _non_negative_integer)
         o, d = ontology.world._to_rdf(self.value)
         if self.value in _universal_datatype_2_abbrev:
           ontology._add_obj_triple_spo(self.storid, owl_ondatarange, o)
@@ -464,7 +464,7 @@ class ConstrainedDatatype(ClassConstruct):
         if value_datatype_abbrev == "__datatype__":
           value_datatype_abbrev = _universal_datatype_2_abbrev[self.base_datatype]
         bn = ontology.world.new_blank_node()
-        ontology._set_data_triple_spoddd(bn, rdfs_name, v, value_datatype_abbrev)
+        ontology._set_data_triple_spod(bn, rdfs_name, v, value_datatype_abbrev)
         l.append((bn, None))
     ontology._set_list_as_rdf(self._list_bnode, l)
     
