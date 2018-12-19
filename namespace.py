@@ -110,7 +110,6 @@ class _GraphManager(object):
         elif d in FLOAT_DATATYPES: o = float(o)
         d = self._abbreviate(d)
       else:                   d = 0
-      print((s, p, o, d))
       return self._get_data_triples_spod_spod(s, p, o, d)
     else:
       r = []

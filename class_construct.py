@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from itertools import chain
+
 from owlready2.namespace import *
 
 from owlready2.base import _universal_iri_2_abbrev, _universal_abbrev_2_datatype, _universal_datatype_2_abbrev
@@ -54,10 +56,13 @@ class ClassConstruct(object):
   def _create_triples (self, ontology):
     pass
   
-  def subclasses(self, only_loaded = False):
+  def subclasses(self, only_loaded = False, include_equivalent = True):
     if only_loaded:
       r = []
       for x in self.ontology.world._get_obj_triples_po_s(rdfs_subclassof, self.storid):
+        if not x < 0:
+          r.append(self.ontology.world._entities.get(x))
+      for x in self.ontology.world._get_obj_triples_po_s(owl_equivalentclass, self.storid):
         if not x < 0:
           r.append(self.ontology.world._entities.get(x))
       return r
@@ -65,7 +70,8 @@ class ClassConstruct(object):
     else:
       return [
         self.ontology.world._get_by_storid(x, None, ThingClass, self.ontology)
-        for x in self.ontology.world._get_obj_triples_po_s(rdfs_subclassof, self.storid)
+        for x in chain(self.ontology.world._get_obj_triples_po_s(rdfs_subclassof, self.storid),
+                       self.ontology.world._get_obj_triples_po_s(owl_equivalentclass, self.storid))
         if not x < 0
       ]
   

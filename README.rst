@@ -291,6 +291,7 @@ version 2 - 0.13
   - Fix messing up with IRI ending with a /
   - Fix error in World cloning
   - Fix the addition of Thing in class's parent when redefining a class with Thing as the only parent
+  - Fix inverse_resctriction()
   - Add error message when creating an existent quadstore
 
 

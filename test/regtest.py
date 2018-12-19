@@ -928,8 +928,65 @@ class Test(BaseTest, unittest.TestCase):
       class MyClass(Parent): label   = ["MyClass"]
       class MyClass(Thing): comment = ["abc"]
       
-    print(MyClass.is_a)
     assert MyClass.is_a == [Parent]
+    
+  def test_class_23(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test.owl")
+    
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      class F(Thing): pass
+      class G(Thing): pass
+      class H(Thing): pass
+      class I(Thing): pass
+      class J(Thing): pass
+      class K(Thing): pass
+      class L(Thing): pass
+      class M(Thing): pass
+      class N(Thing): pass
+      class p(Thing >> Thing): pass
+      
+      C.is_a.append(p.some(D))
+      E.is_a.append(F & p.some(G))
+      H.is_a.append(p.some(I | J))
+      K.is_a.append(L & p.some(M | N))
+      
+    assert set(D.inverse_restrictions(p)) == set([C])
+    assert set(G.inverse_restrictions(p)) == set([E])
+    assert set(I.inverse_restrictions(p)) == set([H])
+    assert set(M.inverse_restrictions(p)) == set([K])
+    
+  def test_class_24(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test.owl")
+    
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      class F(Thing): pass
+      class G(Thing): pass
+      class H(Thing): pass
+      class I(Thing): pass
+      class J(Thing): pass
+      class K(Thing): pass
+      class L(Thing): pass
+      class M(Thing): pass
+      class N(Thing): pass
+      class p(Thing >> Thing): pass
+      
+      C.equivalent_to.append(p.some(D))
+      E.equivalent_to.append(F & p.some(G))
+      H.equivalent_to.append(p.some(I | J))
+      K.equivalent_to.append(L & p.some(M | N))
+      
+    assert set(D.inverse_restrictions(p)) == set([C])
+    assert set(G.inverse_restrictions(p)) == set([E])
+    assert set(I.inverse_restrictions(p)) == set([H])
+    assert set(M.inverse_restrictions(p)) == set([K])
     
     
   def test_individual_1(self):

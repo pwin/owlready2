@@ -331,22 +331,30 @@ class EntityClass(type):
             yield Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
       
   def constructs(Class, Prop = None):
-    def _top_bn(s):
+    #def _top_bn(onto, s):
+    #  try:
+    #    construct = onto._parse_bnode(s)
+    #    return construct
+    #  except:
+    #    for relation in [rdf_first, rdf_rest, owl_complementof, owl_unionof, owl_intersectionof, owl_onclass]:
+    #      s2 = Class.namespace.world._get_obj_triple_po_s(relation, s)
+    #      if not s2 is None:
+    #        return _top_bn(onto, s2)
+    def _top_bn(onto, s):
+      for relation in [rdf_first, rdf_rest, owl_complementof, owl_unionof, owl_intersectionof, owl_onclass, SOME, ONLY]:
+        s2 = Class.namespace.world._get_obj_triple_po_s(relation, s)
+        if not s2 is None: return _top_bn(onto, s2)
       try:
-        construct = onto._parse_bnode(s)
-        return construct
+        return onto._parse_bnode(s)
       except:
-        for relation in [rdf_first, rdf_rest, owl_complementof, owl_unionof, owl_intersectionof, owl_onclass]:
-          s2 = Class.namespace.world._get_obj_triple_po_s(relation, s)
-          if not s2 is None:
-            return _top_bn(s2)
-          
+        return None
+      
     if Prop: Prop = Prop.storid
     for c,s,p,o in Class.namespace.world._get_obj_triples_cspo_cspo(None, None, Prop, Class.storid):
       if s < 0:
         
         onto = Class.namespace.world.graph.context_2_user_context(c)
-        construct = _top_bn(s)
+        construct = _top_bn(onto, s)
         if not construct is None:
           yield construct
           
@@ -402,7 +410,7 @@ class ThingClass(EntityClass):
   
   def get_class_properties(Class):
     for construct in itertools.chain(Class.is_a, Class.equivalent_to.indirect()):
-      if isinstance(construct, Restriction) and construct.type == SOME:
+      if isinstance(construct, Restriction) and ((construct.type == SOME) or (construct.type == VALUE)):
         yield construct.property
         
   def __and__(a, b): return And([a, b])
@@ -443,6 +451,43 @@ class ThingClass(EntityClass):
           Class, Prop)
           
   def inverse_restrictions(Class, Prop = None):
+    for construct in Class.constructs():
+      if   isinstance(construct, Restriction) and ((Prop is None) or (construct.property is Prop)):
+        if   construct.value is Class:
+          yield from construct.subclasses()
+        elif isinstance(construct.value, Or) and (Class in construct.value.Classes):
+            yield from construct.subclasses()
+            
+      elif isinstance(construct, And):
+        for subconstruct in construct.Classes:
+          if isinstance(subconstruct, Restriction) and ((Prop is None) or (subconstruct.property is Prop)):
+            if   subconstruct.value is Class:
+              yield from construct.subclasses()
+            elif isinstance(subconstruct.value, Or) and (Class in subconstruct.value.Classes):
+              yield from construct.subclasses()
+              
+  def aaainverse_restrictions(Class, Prop = None):
+    if Prop: Prop = Prop.storid
+    def _climb(onto, s, p, o, paths):
+      
+      
+      try:
+        construct = onto._parse_bnode(s)
+        return construct
+      except:
+        for relation in [rdf_first, rdf_rest, owl_intersectionof, owl_onclass]:
+          s2 = Class.namespace.world._get_obj_triple_po_s(relation, s)
+          if not s2 is None:
+            return _top_bn(s2)
+          
+    for c,s,p,o in Class.namespace.world._get_obj_triples_cspo_cspo(None, None, None, Class.storid):
+      if s < 0:
+        onto = Class.namespace.world.graph.context_2_user_context(c)
+        
+        construct = _top_bn(s)
+        if not construct is None:
+          yield construct
+    
     for construct in Class.constructs():
       if isinstance(construct, Restriction) and ((Prop is None) or (construct.property is Prop)):
         yield from construct.subclasses()
