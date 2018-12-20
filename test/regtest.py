@@ -988,7 +988,21 @@ class Test(BaseTest, unittest.TestCase):
     assert set(I.inverse_restrictions(p)) == set([H])
     assert set(M.inverse_restrictions(p)) == set([K])
     
+  def test_class_25(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test.owl")
     
+    with onto:
+      class C1(Thing): pass
+      class C2(Thing): pass
+      class p(Thing >> Thing, FunctionalProperty): pass
+      class O1(Thing):
+        is_a = [p.some(C1)]
+      class O2(O1):
+        is_a = [p.some(C2)]
+
+    assert O2.p == C2
+      
   def test_individual_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
 

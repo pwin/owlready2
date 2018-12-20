@@ -294,6 +294,12 @@ version 2 - 0.13
   - Fix inverse_resctriction()
   - Add error message when creating an existent quadstore
 
+version 2 - 0.14
+****************
+
+* Bugfixes:
+  - Fix functional class properties with inheritance
+
 
 Links
 -----

@@ -579,8 +579,18 @@ def _inherited_property_value_restrictions(x, Prop, already):
     if (Prop is None) or (x.property is Prop): yield x
     
   elif isinstance(x, EntityClass) or isinstance(x, Thing):
+    #for parent in itertools.chain(x.is_a, x.equivalent_to.indirect()):
+    #  if not parent in already:
+    #    already.add(parent)
+    #    yield from _inherited_property_value_restrictions(parent, Prop, already)
+    
+    # Need two passes in order to favor restriction on the initial class rather than those on the ancestor classes
     for parent in itertools.chain(x.is_a, x.equivalent_to.indirect()):
-      if not parent in already:
+      if isinstance(parent, Restriction):
+        if (Prop is None) or (parent.property is Prop): yield parent
+        
+    for parent in itertools.chain(x.is_a, x.equivalent_to.indirect()):
+      if (not isinstance(parent, Restriction)) and (not parent in already):
         already.add(parent)
         yield from _inherited_property_value_restrictions(parent, Prop, already)
         
