@@ -50,7 +50,7 @@ class ClassConstruct(object):
   def destroy(self): self._destroy_triples()
   
   def _destroy_triples(self, ontology):
-    ontology._del_obj_triple_spod(self.storid, None, None)
+    ontology._del_obj_triple_spo(self.storid, None, None)
     ontology._del_data_triple_spod(self.storid, None, None, None)
     
   def _create_triples (self, ontology):
@@ -161,9 +161,10 @@ class LogicalClassConstruct(ClassConstruct):
     ClassConstruct.__init__(self, ontology, bnode)
     
   def __eq__(self, other):
-    return isinstance(other, self.__class__) and (self.Classes == other.Classes)
+    return isinstance(other, self.__class__) and (set(self.Classes) == set(other.Classes))
   
-  __hash__ = object.__hash__
+  #__hash__ = object.__hash__
+  def __hash__(self): return hash(frozenset(self.Classes))
   
   def __rshift__(Domain, Range):
     import owlready2.prop
@@ -322,7 +323,9 @@ class Restriction(ClassConstruct):
     super().__setattr__(attr, v)
     if ((attr == "property") or (attr == "type") or (attr == "cardinality") or (attr == "value")) and self.ontology:
       self._destroy_triples(self.ontology)
+      if (attr == "value") and isinstance(v, ClassConstruct) and (not v.ontology): v._set_ontology(self.ontology)
       self._create_triples (self.ontology)
+    
       
   def _satisfied_by(self, x):
     if isinstance(x, EntityClass): return True # XXX not doable on classes
@@ -365,9 +368,10 @@ class OneOf(ClassConstruct):
     ClassConstruct.__init__(self, ontology, bnode)
     
   def __eq__(self, other):
-    return isinstance(other, OneOf) and (self.instances == other.instances)
+    return isinstance(other, OneOf) and (set(self.instances) == set(other.instances))
   
-  __hash__ = object.__hash__
+  #__hash__ = object.__hash__
+  def __hash__(self): return hash(frozenset(self.instances))
   
   def __getattr__(self, attr):
     if attr == "instances":

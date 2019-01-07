@@ -219,7 +219,10 @@ _universal_abbrev("http://www.w3.org/2000/01/rdf-schema#seeAlso")
 _universal_abbrev("http://www.w3.org/2002/07/owl#versionInfo")
 
 
-HAS_SELF                  = _universal_abbrev("http://www.w3.org/2002/07/owl#hasSelf")
+HAS_SELF = _universal_abbrev("http://www.w3.org/2002/07/owl#hasSelf")
+
+owlready_class_property_type = _universal_abbrev("http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#class_property_type")
+
 
 issubclass_python = issubclass
 

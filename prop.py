@@ -29,6 +29,11 @@ from owlready2.base       import _universal_abbrev_2_datatype, _universal_dataty
 _next_domain_range = None
 _check_superclasses = False
 
+_default_class_property_type = ["some"]
+def set_default_class_property_type(types):
+  global _default_class_property_type
+  _default_class_property_type = types
+
 class PropertyClass(EntityClass):
   _rdfs_is_a        = rdfs_subpropertyof
   _owl_equivalent   = owl_equivalentproperty
@@ -58,10 +63,11 @@ class PropertyClass(EntityClass):
       range          = [_next_domain_range[1]]
       _next_domain_range = None
     else:
-      domain         = obj_dict.pop("domain", False)
-      range          = obj_dict.pop("range", False)
-    inverse_property = obj_dict.pop("inverse_property", None) or obj_dict.pop("inverse", False)
-    python_name      = obj_dict.pop("python_name", None)
+      domain            = obj_dict.pop("domain", False)
+      range             = obj_dict.pop("range", False)
+    inverse_property    = obj_dict.pop("inverse_property", None) or obj_dict.pop("inverse", False)
+    python_name         = obj_dict.pop("python_name", None)
+    class_property_type = obj_dict.pop("class_property_type", None)
     super().__init__(name, bases, obj_dict)
     
     Prop.namespace.world._props[name] = Prop
@@ -71,6 +77,16 @@ class PropertyClass(EntityClass):
     type.__setattr__(Prop, "_property_chain", None)
     type.__setattr__(Prop, "_inverse_property", False)
     type.__setattr__(Prop, "_python_name", name)
+
+    _class_property_type = CallbackList(
+      (o for o, d in Prop.namespace.world._get_data_triples_sp_od(Prop.storid, owlready_class_property_type)),
+      Prop, PropertyClass._class_property_type_changed)
+    
+    type.__setattr__(Prop, "_class_property_type", _class_property_type)
+    types = _class_property_type or _default_class_property_type
+    type.__setattr__(Prop, "_class_property_some",     "some"     in types)
+    type.__setattr__(Prop, "_class_property_only",     "only"     in types)
+    type.__setattr__(Prop, "_class_property_relation", "relation" in types)
     
     if not LOADING:
       if not domain is False:
@@ -82,7 +98,12 @@ class PropertyClass(EntityClass):
       if not inverse_property is False:
         Prop.inverse_property = inverse_property
         
-      if not python_name is None: Prop.python_name = python_name
+      if not python_name is None:
+        Prop.python_name = python_name
+        
+      if not class_property_type is None:
+        Prop.class_property_type = class_property_type
+        
       
   def _add_is_a_triple(Prop, base):
     if   base in _CLASS_PROPS: pass
@@ -91,8 +112,8 @@ class PropertyClass(EntityClass):
     
   def _del_is_a_triple(Prop, base):
     if   base in _CLASS_PROPS: pass
-    elif base in _TYPE_PROPS:  Prop.namespace.ontology._del_obj_triple_spod(Prop.storid, rdf_type       , base.storid)
-    else:                      Prop.namespace.ontology._del_obj_triple_spod(Prop.storid, Prop._rdfs_is_a, base.storid)
+    elif base in _TYPE_PROPS:  Prop.namespace.ontology._del_obj_triple_spo(Prop.storid, rdf_type       , base.storid)
+    else:                      Prop.namespace.ontology._del_obj_triple_spo(Prop.storid, Prop._rdfs_is_a, base.storid)
     
     
   def get_domain(Prop):
@@ -109,7 +130,7 @@ class PropertyClass(EntityClass):
     new = frozenset(Prop.domain)
     old = frozenset(old)
     for x in old - new:
-      Prop.namespace.ontology._del_obj_triple_spod(Prop.storid, rdf_domain, x.storid)
+      Prop.namespace.ontology._del_obj_triple_spo(Prop.storid, rdf_domain, x.storid)
       if isinstance(x, ClassConstruct): x._set_ontology(None)
     for x in new - old:
       if isinstance(x, ClassConstruct): x._set_ontology(Prop.namespace.ontology)
@@ -138,12 +159,26 @@ class PropertyClass(EntityClass):
     old = frozenset(old)
     for x in old - new:
       x2 = _universal_datatype_2_abbrev.get(x) or x.storid
-      Prop.namespace.ontology._del_obj_triple_spod(Prop.storid, rdf_range, x2)
+      Prop.namespace.ontology._del_obj_triple_spo(Prop.storid, rdf_range, x2)
       if isinstance(x, ClassConstruct): x._set_ontology(None)
     for x in new - old:
       if isinstance(x, ClassConstruct): x._set_ontology(Prop.namespace.ontology)
       x2 = _universal_datatype_2_abbrev.get(x) or x.storid
       Prop.namespace.ontology._add_obj_triple_spo(Prop.storid, rdf_range, x2)
+      
+
+  def get_class_property_type(Prop): return Prop._class_property_type
+  def set_class_property_type(Prop, value): Prop.class_property_type.reinit(value)
+  class_property_type = property(get_class_property_type, set_class_property_type)
+  
+  def _class_property_type_changed(Prop, old):
+    types = Prop._class_property_type or _default_class_property_type
+    type.__setattr__(Prop, "_class_property_some",     "some"     in types)
+    type.__setattr__(Prop, "_class_property_only",     "only"     in types)
+    type.__setattr__(Prop, "_class_property_relation", "relation" in types)
+    Prop.namespace.ontology._del_data_triple_spod(Prop.storid, owlready_class_property_type, None, None)
+    for x in Prop._class_property_type:
+      Prop.namespace.ontology._add_data_triple_spod(Prop.storid, owlready_class_property_type, x, "")
       
       
   def get_property_chain(Prop):
@@ -162,7 +197,7 @@ class PropertyClass(EntityClass):
     new = frozenset(Prop._property_chain)
     old = frozenset(old)
     for x in old - new:
-      Prop.namespace.ontology._del_obj_triple_spod(Prop.storid, owl_propertychain, x.storid)
+      Prop.namespace.ontology._del_obj_triple_spo(Prop.storid, owl_propertychain, x.storid)
       x._set_ontology(None)
     for x in new - old:
       x._set_ontology(Prop.namespace.ontology)
@@ -378,7 +413,7 @@ def destroy_entity(e):
     if   e._owl_type == owl_object_property:
       for s,p,o in e.namespace.world._get_obj_triples_spo_spo(None, e.storid, None):
         modified_entities.add(s)
-      e.namespace.world._del_obj_triple_spod(None, e.storid, None)
+      e.namespace.world._del_obj_triple_spo(None, e.storid, None)
       # XXX inverse ?
     elif e._owl_type == owl_data_property:
       for s,p,o,d in e.namespace.world._get_data_triples_spod_spod(None, e.storid, None, None):
@@ -388,7 +423,7 @@ def destroy_entity(e):
     else: #e._owl_type == owl_annotation_property:
       for s,p,o,d in e.namespace.world._get_triples_spod_spod(None, e.storid, None, None):
         modified_entities.add(s)
-      e.namespace.world._del_obj_triple_spod (None, e.storid, None)
+      e.namespace.world._del_obj_triple_spo (None, e.storid, None)
       e.namespace.world._del_data_triple_spod(None, e.storid, None, None)
       
     for s in modified_entities:

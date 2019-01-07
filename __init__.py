@@ -64,6 +64,7 @@ owlready2.entity.ClassConstruct     = ClassConstruct
 owlready2.entity.And                = And
 owlready2.entity.Or                 = Or
 owlready2.entity.Not                = Not
+owlready2.entity.OneOf              = OneOf
 owlready2.entity.Restriction        = Restriction
 owlready2.entity.ObjectPropertyClass= ObjectPropertyClass
 owlready2.entity.ObjectProperty     = ObjectProperty

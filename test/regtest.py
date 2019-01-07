@@ -3117,7 +3117,6 @@ I took a placebo
     
     assert D.is_a == [Thing]
     
-    
   def test_class_prop_11(self):
     onto = self.new_ontology()
     with onto:
@@ -3140,6 +3139,213 @@ I took a placebo
     del D.is_a[-1]
 
     assert D.rel == []
+    
+  def test_class_prop_12(self):
+    onto = self.new_ontology()
+    with onto:
+      class p1(ObjectProperty): pass
+      class p2(ObjectProperty):
+        class_property_type = ["only"]
+        
+    assert p1.class_property_type == []
+    assert p1._class_property_only == False
+    assert p1._class_property_some == True
+    
+    assert p2.class_property_type == ["only"]
+    assert p2._class_property_only == True
+    assert p2._class_property_some == False
+    
+    self.assert_triple(p2.storid, owlready_class_property_type, "only", "")
+    
+    p1.class_property_type.append("only")
+    assert p1._class_property_only == True
+    assert p1._class_property_some == False
+    self.assert_triple(p1.storid, owlready_class_property_type, "only", "")
+    
+    p1.class_property_type.append("some")
+    assert p1._class_property_only == True
+    assert p1._class_property_some == True
+    self.assert_triple(p1.storid, owlready_class_property_type, "some", "")
+    
+  def test_class_prop_13(self):
+    onto = self.new_ontology()
+    with onto:
+      class p(ObjectProperty): class_property_type = ["only"]
+      class C1(Thing): pass
+      class C2(Thing): pass
+      c11 = C1()
+      c12 = C1()
+      class C3(Thing):
+        is_a = [p.only(C1)]
+      class C4(Thing):
+        is_a = [p.only(Or([C1, C2]))]
+      class C5(Thing):
+        is_a = [p.only(Or([OneOf([c11, c12]), C2]))]
+        
+    assert set(C1.p) == set([])
+    assert set(C2.p) == set([])
+    assert set(C3.p) == set([C1])
+    assert set(C4.p) == set([C1, C2])
+    assert set(C5.p) == set([c11, c12, C2])
+    
+  def test_class_prop_14(self):
+    onto = self.new_ontology()
+    with onto:
+      class p(ObjectProperty): class_property_type = ["only"]
+      class d(DataProperty):   class_property_type = ["only"]
+      class C1(Thing): pass
+      class C2(Thing): pass
+      c11 = C1()
+      c12 = C1()
+      class C3(Thing): pass
+      
+    C3.p = [C1]
+    assert p.only(C1) in C3.is_a
+    assert not p.some(C1) in C3.is_a
+    
+    C3.p.append(C2)
+    assert p.only(Or([C1, C2])) in C3.is_a
+    
+    C3.p.append(c11)
+    assert p.only(Or([C1, C2, OneOf([c11])])) in C3.is_a
+    
+    C3.p.append(c12)
+    assert p.only(Or([C1, C2, OneOf([c11, c12])])) in C3.is_a
+    
+    C3.p.remove(C1)
+    assert p.only(Or([C2, OneOf([c11, c12])])) in C3.is_a
+    
+    C3.p.remove(C2)
+    assert p.only(OneOf([c11, c12])) in C3.is_a
+    
+    C3.p.remove(c11)
+    assert p.only(OneOf([c12])) in C3.is_a
+    
+    C3.p.remove(c12)
+    assert C3.is_a == [Thing]
+
+    C3.d = ["abc", "def"]
+    assert d.only(OneOf(["abc", "def"])) in C3.is_a
+    
+  def test_class_prop_15(self):
+    onto = self.new_ontology()
+    with onto:
+      class p(ObjectProperty): class_property_type = ["some", "only"]
+      class C1(Thing): pass
+      class C2(Thing): pass
+      c11 = C1()
+      c12 = C1()
+      class C3(Thing): pass
+      
+    C3.p = [C1]
+    assert p.only(C1) in C3.is_a
+    assert p.some(C1) in C3.is_a
+    assert not p.some(C2) in C3.is_a
+    assert not p.some(c11) in C3.is_a
+    
+    C3.p.append(C2)
+    assert p.only(Or([C1, C2])) in C3.is_a
+    assert p.some(C1) in C3.is_a
+    assert p.some(C2) in C3.is_a
+    
+    C3.p.append(c11)
+    C3.p.append(c12)
+    assert p.only(Or([C1, C2, OneOf([c11, c12])])) in C3.is_a
+    assert p.some(C1) in C3.is_a
+    assert p.some(C2) in C3.is_a
+    assert p.value(c11) in C3.is_a
+    assert p.value(c12) in C3.is_a
+    
+    C3.p.remove(C1)
+    C3.p.remove(c11)
+    assert p.only(Or([C2, OneOf([c12])])) in C3.is_a
+    assert not p.some(C1) in C3.is_a
+    assert p.some(C2) in C3.is_a
+    assert not p.value(c11) in C3.is_a
+    assert p.value(c12) in C3.is_a
+    
+  def test_class_prop_16(self):
+    onto = self.new_ontology()
+    with onto:
+      class p(ObjectProperty): class_property_type = ["relation"]
+      class d(DataProperty):   class_property_type = ["relation"]
+      class C1(Thing): pass
+      class C2(Thing): pass
+      c11 = C1()
+      c12 = C1()
+      class C3(Thing): pass
+      
+    assert C3.p == []
+
+    C3.p = [C1, c11]
+    
+    self.assert_triple(C3.storid, p.storid, C1.storid)
+    self.assert_triple(C3.storid, p.storid, c11.storid)
+    self.assert_not_triple(C3.storid, p.storid, C2.storid)
+    self.assert_not_triple(C3.storid, p.storid, c12.storid)
+    
+    C3.d = [1, 2]
+    
+    self.assert_triple(C3.storid, d.storid, 1, default_world._abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
+    self.assert_triple(C3.storid, d.storid, 2, default_world._abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
+    self.assert_not_triple(C3.storid, d.storid, 3, default_world._abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
+    
+    C3.d.remove(2)
+    C3.d.append(3)
+    
+    self.assert_triple(C3.storid, d.storid, 1, default_world._abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
+    self.assert_not_triple(C3.storid, d.storid, 2, default_world._abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
+    self.assert_triple(C3.storid, d.storid, 3, default_world._abbreviate("http://www.w3.org/2001/XMLSchema#integer"))
+    
+  def test_class_prop_17(self):
+    onto = self.new_ontology()
+    with onto:
+      class p(ObjectProperty, FunctionalProperty): class_property_type = ["only"]
+      class d(DataProperty, FunctionalProperty):   class_property_type = ["only"]
+      class C1(Thing): pass
+      class C2(Thing): pass
+      c11 = C1()
+      c12 = C1()
+      class C3(Thing): pass
+      
+    C3.p = C1
+    assert p.only(C1) in C3.is_a
+    
+    C3.p = C2
+    assert p.only(C2) in C3.is_a
+    assert not p.only(C1) in C3.is_a
+    
+    C3.p = c11
+    assert p.only(OneOf([c11])) in C3.is_a
+    assert not p.only(C1) in C3.is_a
+    assert not p.only(C2) in C3.is_a
+    
+    C3.d = 1
+    assert d.only(OneOf([1])) in C3.is_a
+    assert not d.only(OneOf([2])) in C3.is_a
+    
+    C3.d = 2
+    assert not d.only(OneOf([1])) in C3.is_a
+    assert d.only(OneOf([2])) in C3.is_a
+    
+  def test_class_prop_18(self):
+    onto = self.new_ontology()
+    with onto:
+      class p(ObjectProperty): class_property_type = ["only"]
+      class d(DataProperty):   class_property_type = ["only"]
+      class C1(Thing): pass
+      class C2(Thing): pass
+      c11 = C1()
+      c12 = C1()
+      class C3(Thing): pass
+      class C4(C3): pass
+      class C5(C4): pass
+      
+    C3.p = [C1, C2, c11, c12]
+    C4.p = [C1, c11]
+    
+    assert C5.p == []
+    assert set(C5.p.indirect()) == set([C1, c11])
     
     
   def test_format_1(self):

@@ -62,10 +62,10 @@ class AllDisjoint(object):
       
   def _destroy_triples(self):
     if   isinstance(self.storid, int):
-      self.ontology._del_obj_triple_spod(self.storid, None, None)
+      self.ontology._del_obj_triple_spo(self.storid, None, None)
       self.ontology._del_list(self._list_bnode)
     elif isinstance(self.storid, tuple):
-      self.ontology._del_obj_triple_spod(*self.storid)
+      self.ontology._del_obj_triple_spo(*self.storid)
       
   def destroy(self): self._destroy_triples()
   

@@ -90,5 +90,5 @@ def close_world(self, Properties = None, close_instance_list = True, recursive =
       close_world(individual, Properties, close_instance_list, recursive)
       
     for Class in self.classes():
-      close_world(Class, Properties, close_instance_list, recursive)
+      close_world(Class, Properties, close_instance_list, False) # False because all the loop will already close subclasses 
       

@@ -49,6 +49,9 @@
     <!-- http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#python_name -->
 
     <AnnotationProperty rdf:about="&owlready_ontology;python_name"/>
+
+    <AnnotationProperty rdf:about="&owlready_ontology;class_property_type"/>
+ 
 </rdf:RDF>
 
 

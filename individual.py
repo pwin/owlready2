@@ -101,9 +101,9 @@ class ValueList(CallbackListWithLanguage):
     
     if   self._Prop._owl_type == owl_object_property:
       for removed in old - new:
-        obj.namespace.ontology._del_obj_triple_spod(obj.storid, self._Prop.storid, removed.storid)
+        obj.namespace.ontology._del_obj_triple_spo(obj.storid, self._Prop.storid, removed.storid)
         if inverse:
-          obj.namespace.ontology._del_obj_triple_spod(removed.storid, inverse.storid, obj.storid) # Also remove inverse
+          obj.namespace.ontology._del_obj_triple_spo(removed.storid, inverse.storid, obj.storid) # Also remove inverse
           removed.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
           
       for added in new - old:
@@ -120,7 +120,7 @@ class ValueList(CallbackListWithLanguage):
     else: #self._Prop._owl_type == owl_annotation_property:
       for removed in old - new:
         if hasattr(removed, "storid"):
-          obj.namespace.ontology._del_obj_triple_spod(obj.storid, self._Prop.storid, removed.storid)
+          obj.namespace.ontology._del_obj_triple_spo(obj.storid, self._Prop.storid, removed.storid)
         else:
           obj.namespace.ontology._del_data_triple_spod(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
           
@@ -226,7 +226,7 @@ class Thing(metaclass = ThingClass):
     old = set(old)
     
     for base in old - new:
-      if not LOADING: self.namespace.ontology._del_obj_triple_spod(self.storid, rdf_type, base.storid)
+      if not LOADING: self.namespace.ontology._del_obj_triple_spo(self.storid, rdf_type, base.storid)
       if isinstance(base, ClassConstruct): base._set_ontology(None)
     bases = ThingClass._find_base_classes(self.is_a)
     if len(bases) == 1:
@@ -261,7 +261,7 @@ class Thing(metaclass = ThingClass):
     old = frozenset(old)
     
     for x in old - new:
-      self.namespace.ontology._del_obj_triple_spod(self.storid, owl_equivalentindividual, x.storid)
+      self.namespace.ontology._del_obj_triple_spo(self.storid, owl_equivalentindividual, x.storid)
       if isinstance(x, ClassConstruct): x._set_ontology(None)
       else: # Invalidate it
         if x.equivalent_to._indirect:
@@ -345,12 +345,12 @@ class Thing(metaclass = ThingClass):
             old_value = self.__dict__.get(attr, None)
             if Prop.inverse_property and (not old_value is None):
               old_value.__dict__.pop(Prop.inverse_property.python_name, None) # Remove => force reloading; XXX optimizable
-              self.namespace.ontology._del_obj_triple_spod(old_value.storid, Prop.inverse_property.storid, self.storid) # Also remove inverse
+              self.namespace.ontology._del_obj_triple_spo(old_value.storid, Prop.inverse_property.storid, self.storid) # Also remove inverse
               
             super().__setattr__(attr, value)
             
             if value is None:
-              self.namespace.ontology._del_obj_triple_spod(self.storid, Prop.storid, None)
+              self.namespace.ontology._del_obj_triple_spo(self.storid, Prop.storid, None)
             else:
               self.namespace.ontology._set_obj_triple_spo(self.storid, Prop.storid, value.storid)
               if Prop.inverse_property: value.__dict__.pop(Prop.inverse_property.python_name, None) # Remove => force reloading; XXX optimizable

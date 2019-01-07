@@ -146,7 +146,7 @@ class _GraphManager(object):
         else:
           yield bnode
           
-  def _del_obj_triple_spod(self, s = None, p = None, o = None):
+  def _del_obj_triple_spo(self, s = None, p = None, o = None):
     if CURRENT_NAMESPACES[-1] is None: self._del_obj_triple_raw_spo(s, p, o)
     else:   CURRENT_NAMESPACES[-1].ontology._del_obj_triple_raw_spo(s, p, o)
     if _LOG_LEVEL > 1:
@@ -579,7 +579,7 @@ class Ontology(Namespace, _GraphManager):
     old = set(old)
     new = set(self._imported_ontologies)
     for ontology in old - new:
-      self._del_obj_triple_spod(self.storid, owl_imports, ontology.storid)
+      self._del_obj_triple_spo(self.storid, owl_imports, ontology.storid)
     for ontology in new - old:
       self._add_obj_triple_spo(self.storid, owl_imports, ontology.storid)
       
@@ -782,10 +782,10 @@ class Ontology(Namespace, _GraphManager):
       else:
         if ok:
           if other:
-            if d is None: self._del_obj_triple_spod(bnode, annot, value)
+            if d is None: self._del_obj_triple_spo(bnode, annot, value)
             else:         self._del_data_triple_spod(bnode, annot, value, None)
           else:
-            self._del_obj_triple_spod  (bnode, None, None)
+            self._del_obj_triple_spo  (bnode, None, None)
             self._del_data_triple_spod(bnode, None, None, None)
           return bnode
 
@@ -862,7 +862,7 @@ class Ontology(Namespace, _GraphManager):
   def _del_list(self, bnode):
     while bnode and (bnode != rdf_nil):
       bnode_next = self._get_obj_triple_sp_o(bnode, rdf_rest)
-      self._del_obj_triple_spod(bnode, None, None)
+      self._del_obj_triple_spo(bnode, None, None)
       self._del_data_triple_spod(bnode, None, None, None)
       bnode = bnode_next
       

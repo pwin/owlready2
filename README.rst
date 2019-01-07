@@ -26,7 +26,7 @@ Owlready2 can:
 
  - Perform automatic classification of classes and instances, using the HermiT reasoner.
 
- - Tested up to 200 millions of RDF triples (but can potentially support more).
+ - Tested up to 1 billion of RDF triples! (but can potentially support more)
 
  - In addition, the quadstore is compatible with the RDFlib Python module, which can be used to perform SPARQL queries.
 
@@ -297,8 +297,10 @@ version 2 - 0.13
 version 2 - 0.14
 ****************
 
+* Support several class property types : some, only, some + only, and direct relation
 * Bugfixes:
   - Fix functional class properties with inheritance
+  - Fix dupplicated instance list restrictions when calling close_world(ontology)
 
 
 Links

@@ -141,7 +141,7 @@ class EntityClass(type):
     Class.namespace.ontology._add_obj_triple_spo(Class.storid, Class._rdfs_is_a, base.storid)
     
   def _del_is_a_triple(Class, base):
-    Class.namespace.ontology._del_obj_triple_spod(Class.storid, Class._rdfs_is_a, base.storid)
+    Class.namespace.ontology._del_obj_triple_spo(Class.storid, Class._rdfs_is_a, base.storid)
     
   def __init__(Class, name, bases, obj_dict):
     for k, v in obj_dict.items():
@@ -174,7 +174,7 @@ class EntityClass(type):
     old = frozenset(old)
     
     for x in old - new:
-      Class.namespace.ontology._del_obj_triple_spod(Class.storid, Class._owl_equivalent, x    .storid)
+      Class.namespace.ontology._del_obj_triple_spo(Class.storid, Class._owl_equivalent, x    .storid)
       if isinstance(x, ClassConstruct): x._set_ontology(None)
       else: # Invalidate it
         if x.equivalent_to._indirect:
@@ -442,14 +442,49 @@ class ThingClass(EntityClass):
     
     else:
       if (not force_list) and Prop.is_functional_for(Class):
-        for r in _inherited_property_value_restrictions(Class, Prop, set()):
-          if (r.type == VALUE) or (r.type == SOME): return r.value
+        if Prop._class_property_some:
+          for r in _inherited_property_value_restrictions(Class, Prop, set()):
+            if (r.type == VALUE) or (r.type == SOME): return r.value
+            
+        if Prop._class_property_only:
+          for r in _inherited_property_value_restrictions(Class, Prop, set()):
+            if (r.type == ONLY): return next(_flatten_only(r), None)
+            
+        if Prop._class_property_relation:
+          if Prop._owl_type == owl_object_property:
+            values = [Class.namespace.ontology._to_python(o) for o in Class.namespace.world._get_obj_triples_sp_o(Class.storid, Prop.storid)]
+            if (not values) and Prop.inverse_property:
+              values = [Class.namespace.ontology._to_python(s) for s in Class.namespace.world._get_obj_triples_po_s(Prop.inverse_property.storid, Class.storid)]
+            if values: return values[0]
+          else:
+            values = [Class.namespace.ontology._to_python(o, d) for o, d in Class.namespace.world._get_data_triples_sp_od(Class.storid, Prop.storid)]
+            if values: return values[0]
         return None
+      
       else:
-        return RoleFilerList(
-          set(r.value for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()) for r in _property_value_restrictions(SuperClass, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
-          Class, Prop)
-          
+        if   Prop._class_property_some:
+          return ClassValueList(
+            set(r.value for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()) for r in _property_value_restrictions(SuperClass, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
+            Class, Prop)
+        
+        elif Prop._class_property_only:
+          values = set()
+          for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()):
+            for r in _property_value_restrictions(SuperClass, Prop, set()):
+              if r.type == ONLY: values.update(_flatten_only(r))
+          return ClassValueList(values, Class, Prop)
+        
+        elif Prop._class_property_relation:
+          values = set()
+          for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()):
+            if Prop._owl_type == owl_object_property:
+              values.update(Class.namespace.ontology._to_python(o) for o in Class.namespace.world._get_obj_triples_sp_o(Class.storid, Prop.storid))
+              if Prop.inverse_property:
+                values.update(Class.namespace.ontology._to_python(s) for s in Class.namespace.world._get_obj_triples_po_s(Prop.inverse_property.storid, Class.storid))
+            else:
+              values.update(Class.namespace.ontology._to_python(o, d) for o, d in Class.namespace.world._get_data_triples_sp_od(Class.storid, Prop.storid))
+          return ClassValueList(values, Class, Prop)
+        
   def inverse_restrictions(Class, Prop = None):
     for construct in Class.constructs():
       if   isinstance(construct, Restriction) and ((Prop is None) or (construct.property is Prop)):
@@ -466,40 +501,7 @@ class ThingClass(EntityClass):
             elif isinstance(subconstruct.value, Or) and (Class in subconstruct.value.Classes):
               yield from construct.subclasses()
               
-  def aaainverse_restrictions(Class, Prop = None):
-    if Prop: Prop = Prop.storid
-    def _climb(onto, s, p, o, paths):
-      
-      
-      try:
-        construct = onto._parse_bnode(s)
-        return construct
-      except:
-        for relation in [rdf_first, rdf_rest, owl_intersectionof, owl_onclass]:
-          s2 = Class.namespace.world._get_obj_triple_po_s(relation, s)
-          if not s2 is None:
-            return _top_bn(s2)
-          
-    for c,s,p,o in Class.namespace.world._get_obj_triples_cspo_cspo(None, None, None, Class.storid):
-      if s < 0:
-        onto = Class.namespace.world.graph.context_2_user_context(c)
-        
-        construct = _top_bn(s)
-        if not construct is None:
-          yield construct
-    
-    for construct in Class.constructs():
-      if isinstance(construct, Restriction) and ((Prop is None) or (construct.property is Prop)):
-        yield from construct.subclasses()
-        
-  # Role-fillers as class properties
-  
-  #def _get_prop_for_self(self, attr):
-  #  Prop = Class.namespace.world._reasoning_props.get(attr)
-  #  if Prop is None: raise AttributeError("'%s' property is not defined." % attr)
-  #  for domain in Prop.domain:
-  #    if not domain._satisfied_by(self): raise AttributeError("'%s' property has incompatible domain for %s." % (attr, self))
-  #  return Prop
+  # Class properties
   
   def _on_class_prop_changed(Class, Prop, old, new):
     old     = set(old)
@@ -507,25 +509,74 @@ class ThingClass(EntityClass):
     removed = old - new
     inverse = Prop.inverse_property
     
-    if removed:
+    if Prop._class_property_some:
+      if removed:
+        for r in list(_inherited_property_value_restrictions(Class, Prop, set())):
+          if ((r.type == SOME) or (r.type == VALUE)) and (r.value in removed) and (r in Class.is_a):
+            Class.is_a.remove(r)
+            if r.type == VALUE:
+              if isinstance(Prop, ObjectPropertyClass):
+                for r2 in r.value.is_a:
+                  if isinstance(r2, Restriction) and ((r2.property is inverse) or (isinstance(r2.property, Inverse) and (r2.property.property is Prop))) and (r2.type == SOME) and (r2.value is Class):
+                    r.value.is_a.remove(r2)
+                    break
+                  
+      for v in new - old:
+        if isinstance(v, EntityClass) or isinstance(v, ClassConstruct):
+          Class.is_a.append(Prop.some(v))
+        else:
+          Class.is_a.append(Prop.value(v))
+          if isinstance(Prop, ObjectPropertyClass):
+            v.is_a.append(Inverse(Prop).some(Class))
+            
+    if Prop._class_property_only:
       for r in list(_inherited_property_value_restrictions(Class, Prop, set())):
-        if (r.value in removed) and (r in Class.is_a):
-          Class.is_a.remove(r)
-          if r.type == VALUE:
-            if isinstance(Prop, ObjectPropertyClass):
-              for r2 in r.value.is_a:
-                if isinstance(r2, Restriction) and ((r2.property is inverse) or (isinstance(r2.property, Inverse) and (r2.property.property is Prop))) and (r2.type == SOME) and (r2.value is Class):
-                  r.value.is_a.remove(r2)
-                  break
-                
-    for v in new - old:
-      if isinstance(v, EntityClass) or isinstance(v, ClassConstruct):
-        Class.is_a.append(Prop.some(v))
-      else:
-        Class.is_a.append(Prop.value(v))
-        if isinstance(Prop, ObjectPropertyClass):
-          v.is_a.append(Inverse(Prop).some(Class))
+        if (r.type == ONLY): break
+      else: r = None
         
+      only_classes   = [v for v in new if isinstance(v, EntityClass) or isinstance(v, ClassConstruct)]
+      only_instances = [v for v in new if not v in only_classes]
+      
+      if only_instances: only_classes.append(OneOf(only_instances))
+      if not only_classes:
+        if r: Class.is_a.remove(r)
+      else:
+        if len(only_classes) == 1:
+          if r: r.value = only_classes[0]
+          else:
+            r = Prop.only(only_classes[0])
+            Class.is_a.append(r)
+        else:
+          if r:
+            if isinstance(r.value, Or): r.value.Classes = only_classes
+            else:                       r.value = Or(only_classes)
+          else:
+            r = Prop.only(Or(only_classes))
+            Class.is_a.append(r)
+            
+    if Prop._class_property_relation:
+      if Prop._owl_type == owl_object_property:
+        for v in removed:
+          Class.namespace.ontology._del_obj_triple_spo(Class.storid, Prop.storid, v.storid)
+          if inverse:
+            Class.namespace.ontology._del_obj_triple_spo(v.storid, inverse.storid, Class.storid) # Also remove inverse
+            #if isinstance(v, EntityClass): v.__dict__.pop("__%s" % inverse.python_name, None) # Remove => force reloading; XXX optimizable
+            #else:                          v.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
+            
+        for v in new - old:
+          Class.namespace.ontology._add_obj_triple_spo(Class.storid, Prop.storid, v.storid)
+          #if inverse:
+          #  if isinstance(v, EntityClass): v.__dict__.pop("__%s" % inverse.python_name, None) # Remove => force reloading; XXX optimizable
+          #  else:                          v.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
+          
+      else: # Data prop
+        for v in removed:
+          Class.namespace.ontology._del_data_triple_spod(Class.storid, Prop.storid, Class.namespace.ontology._to_rdf(v)[0], None)
+          
+        for v in new - old:
+          Class.namespace.ontology._add_data_triple_spod(Class.storid, Prop.storid, *Class.namespace.ontology._to_rdf(v))
+          
+          
   def __setattr__(Class, attr, value):
     if attr in SPECIAL_ATTRS:
       super().__setattr__(attr, value)
@@ -536,34 +587,68 @@ class ThingClass(EntityClass):
     if Prop is None:
       raise AttributeError("'%s' property is not defined." % attr)
     
-    if Prop.is_functional_for(Class):
-      for r in _inherited_property_value_restrictions(Class, Prop, set()):
-        if (r.type == VALUE): old = [r.value]; break
-      else: old = []
-      if value is None: Class._on_class_prop_changed(Prop, old, [])
-      else:             Class._on_class_prop_changed(Prop, old, [value])
-    else:
-      if issubclass_python(Prop, AnnotationProperty):
-        if   value is None:               value = []
-        elif not isinstance(value, list): value = [value]
-      getattr(Class, attr).reinit(value)
-      
+    current_value = Class._get_class_prop_value(Prop, attr, True)
+    if   value is None:               value = []
+    elif not isinstance(value, list): value = [value]
+    current_value.reinit(value)
+    
+    #if Prop.is_functional_for(Class):
+    #  for r in _inherited_property_value_restrictions(Class, Prop, set()):
+    #    if (r.type == VALUE) or (r.type == SOME): old = [r.value]; break
+    #  else: old = []
+    #  if value is None: Class._on_class_prop_changed(Prop, old, [])
+    #  else:             Class._on_class_prop_changed(Prop, old, [value])
+    #  
+    #else:
+    #  if issubclass_python(Prop, AnnotationProperty):
+    #    if   value is None:               value = []
+    #    elif not isinstance(value, list): value = [value]
+    #  getattr(Class, attr).reinit(value)
+    
 
-class RoleFilerList(CallbackListWithLanguage):
+class ClassValueList(CallbackListWithLanguage):
   __slots__ = ["_Prop"]
   def __init__(self, l, obj, Prop):
     list.__init__(self, l)
     self._obj  = obj
     self._Prop = Prop
     
-  def _callback(self, obj, old): self._obj._on_class_prop_changed(self._Prop, old, self)
-  
+  def _callback(self, obj, old):
+    self._obj._on_class_prop_changed(self._Prop, old, self)
+    
   def indirect(self):
-    for r in _inherited_property_value_restrictions(self._obj, self._Prop, set()):
-      if (r.type == VALUE) or (r.type == SOME):
-        yield r.value
-        
+    if   self._Prop._class_property_some:
+      for r in _inherited_property_value_restrictions(self._obj, self._Prop, set()):
+        if (r.type == VALUE) or (r.type == SOME):
+          yield r.value
+          
+    elif self._Prop._class_property_only:
+      for r in _inherited_property_value_restrictions(self._obj, self._Prop, set()):
+        if (r.type == VALUE) or (r.type == ONLY):
+          yield from _flatten_only(r)
+          
+    elif self._Prop._class_property_relation:
+      for ancestor in self.ancestors():
+        if Prop._owl_type == owl_object_property:
+          for o in self.namespace.world._get_obj_triples_sp_o(Class.storid, Prop.storid):
+            yield self.namespace.ontology._to_python(o)
+          if Prop.inverse_property:
+            for s in self.namespace.world._get_obj_triples_po_s(Prop.inverse_property.storid, Class.storid):
+              yield self.namespace.ontology._to_python(s)
+        else:
+          for o, d in self.namespace.world._get_data_triples_sp_od(Class.storid, Prop.storid):
+            yield self.namespace.ontology._to_python(o, d)
+            
 
+def _flatten_only(r):
+  if isinstance(r.value, Or):
+    for i in r.value.Classes:
+      if isinstance(i, OneOf): yield from i.instances
+      else:                    yield i
+  else:
+    if isinstance(r.value, OneOf): yield from r.value.instances
+    else:                          yield r.value
+    
 def _property_value_restrictions(x, Prop, already):
   if   isinstance(x, Restriction):
     if (Prop is None) or (x.property is Prop): yield x

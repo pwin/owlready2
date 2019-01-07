@@ -66,10 +66,12 @@ following attributes: .property, .type (SOME, ONLY, MIN, MAX, EXACTLY or VALUE),
 and .value (a Class, an Individual, a class contruct or another restriction).
 
 
-Existential restrictions as class properties
---------------------------------------------
+Restrictions as class properties
+--------------------------------
 
-Existential restrictions (i.e. SOME restrictions) and role-fillers (i.e. VALUES restrictions) can be accessed
+Owlready allows to access restriction as class properties.
+
+By default, existential restrictions (i.e. SOME restrictions and VALUES restrictions) can be accessed
 as if they were class properties in Owlready. For example:
 
 ::
@@ -78,6 +80,22 @@ as if they were class properties in Owlready. For example:
    [onto.ActivePrinciple]
 
 These class attributes can also be modified (e.g. NonPlaceboDrug.has_for_active_principle.append(...) ).
+
+The .class_property_type attribute of Properties allows to indicate how to handle class properties.
+It is a list made of the following values:
+
+ * "some": handle class properties as existential restrictions (i.e. SOME restrictions and VALUES restrictions).
+ * "only": handle class properties as universal restrictions (i.e. ONLY restrictions).
+ * "relation": handle class properties as relations (i.e. simple RDF triple, as in Linked Data).
+
+When more than one value is specified, all the specified method are used when defining the value of the property
+for a class.
+ 
+The .class_property_type attribute corresponds to the "http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#class_property_type"
+annotation.
+
+The set_default_class_property_type(types) global function allows to set the default type of class property used,
+when no type is specified for a given property. The default value is ["some"].
 
 
 Logical operators (intersection, union and complement)
