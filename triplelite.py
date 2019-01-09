@@ -1499,6 +1499,12 @@ EXCEPT %s""" % (sql, "\nUNION ALL ".join("""SELECT candidates.s FROM candidates,
   def _do_search_rdf(self):
     sql, params = self.sql_request()
     return self.world.graph.execute(sql, params).fetchall()
+  
+  def _lazy_len(self):
+    sql, params = self.sql_request()
+    sql = """select count(*) FROM (%s)""" % sql
+    return self.world.graph.execute(sql, params).fetchone()[0]
+  
     
   def dump(self):
     sql, params = self.sql_request()

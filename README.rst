@@ -298,6 +298,7 @@ version 2 - 0.14
 ****************
 
 * Support several class property types : some, only, some + only, and direct relation
+* Optimize search() when only the number of returned elements is used
 * Bugfixes:
   - Fix functional class properties with inheritance
   - Fix dupplicated instance list restrictions when calling close_world(ontology)

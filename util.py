@@ -145,9 +145,13 @@ class LazyList(FirstList):
     return super().__iter__()
     
   def __len__(self):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
+    if self._populate: return self._lazy_len()
     return super().__len__()
-    
+  
+  def _lazy_len(self):
+    FirstList.__init__(self, self._populate()); self._populate = None
+    return super().__len__()
+  
   def __eq__(self, o):
     if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
     return super().__eq__(o)
