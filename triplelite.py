@@ -68,7 +68,7 @@ class Graph(BaseMainGraph):
     
     if clone and (filename != ":memory:"):
       if exists: raise ValueError("Cannot save existent quadstore in '%s': File already exists! Use a new filename for saving quadstore or, for opening an already existent quadstore, do not create any triple before calling set_backend()." % filename)
-
+      
     if sqlite_tmp_dir: os.environ["SQLITE_TMPDIR"] = sqlite_tmp_dir
     
     self.db = sqlite3.connect(filename, check_same_thread = False)
@@ -171,6 +171,7 @@ class Graph(BaseMainGraph):
       except sqlite3.OperationalError: # Old SQLite3 does not support WITHOUT ROWID -- here it is just an optimization
         self.execute("""CREATE TABLE resources (storid INTEGER PRIMARY KEY, iri TEXT)""")
       self.db.executemany("INSERT INTO resources VALUES (?,?)", _universal_abbrev_2_iri.items())
+      self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
       self.set_indexed(True)
       self.db.commit()
       
