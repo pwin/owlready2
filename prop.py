@@ -178,7 +178,7 @@ class PropertyClass(EntityClass):
     type.__setattr__(Prop, "_class_property_relation", "relation" in types)
     Prop.namespace.ontology._del_data_triple_spod(Prop.storid, owlready_class_property_type, None, None)
     for x in Prop._class_property_type:
-      Prop.namespace.ontology._add_data_triple_spod(Prop.storid, owlready_class_property_type, x, "")
+      Prop.namespace.ontology._add_data_triple_spod(Prop.storid, owlready_class_property_type, x, 0)
       
       
   def get_property_chain(Prop):
@@ -239,7 +239,7 @@ class PropertyClass(EntityClass):
   def some    (Prop,     value): return Restriction(Prop, SOME    , None, value)
   def only    (Prop,     value): return Restriction(Prop, ONLY    , None, value)
   def value   (Prop,     value): return Restriction(Prop, VALUE   , None, value)
-  def has_self(Prop,     value): return Restriction(Prop, HAS_SELF, None, value)
+  def has_self(Prop,     value = True): return Restriction(Prop, HAS_SELF, None, value)
   def exactly (Prop, nb, value = None): return Restriction(Prop, EXACTLY, nb  , value)
   def min     (Prop, nb, value = None): return Restriction(Prop, MIN    , nb  , value)
   def max     (Prop, nb, value = None): return Restriction(Prop, MAX    , nb  , value)

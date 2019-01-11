@@ -247,6 +247,7 @@ def _save(f, format, graph):
         if o < 0: o = "_:%s" % (-o)
         else:     o = "<%s>" % _unabbreviate(o)
       else:
+        print(s,p,o,d)
         if isinstance(o, str):  o = o.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
         if   isinstance(d, str) and d.startswith("@"): o = '"%s"%s' % (o, d)
         elif d == 0:                                   o = '"%s"' % o
