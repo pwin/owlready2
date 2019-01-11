@@ -3347,6 +3347,56 @@ I took a placebo
     assert C5.p == []
     assert set(C5.p.indirect()) == set([C1, c11])
     
+  def test_class_prop_19(self):
+    onto = self.new_ontology()
+    with onto:
+      class p(ObjectProperty): class_property_type = ["some"]
+      class q(ObjectProperty): class_property_type = ["only"]
+      class d(DataProperty):   class_property_type = ["some"]
+      class C1(Thing): pass
+      class C2(Thing): pass
+      class C3(Thing): pass
+      class C4(C1):
+        equivalent_to = [C1 & p.some(C2)]
+      c11 = C1()
+
+    assert C4.defined_class == False
+    C4.defined_class = True
+    assert C4.defined_class == True
+    type.__delattr__(C4, "__defined_class")
+    assert C4.defined_class == True
+
+    C4.defined_class = False
+    assert C4.defined_class == False
+    type.__delattr__(C4, "__defined_class")
+    assert C4.defined_class == False
+    
+    C4.defined_class = True
+    
+    assert C4.p == [C2]
+    
+    C4.p = [C2, C3]
+    assert C4.equivalent_to == [C1 & p.some(C2) & p.some(C3)]
+    
+    C4.p.remove(C2)
+    assert C4.equivalent_to == [C1 & p.some(C3)]
+    
+    C4.d.append(1)
+    assert C4.equivalent_to == [C1 & p.some(C3) & d.value(1)]
+    
+    C4.d.append(2)
+    assert C4.equivalent_to == [C1 & p.some(C3) & d.value(1) & d.value(2)]
+    
+    C4.q.append(C1)
+    assert C4.equivalent_to == [C1 & p.some(C3) & d.value(1) & d.value(2) & q.only(C1)]
+    
+    C4.q.append(C2)
+    assert C4.equivalent_to == [C1 & p.some(C3) & d.value(1) & d.value(2) & q.only(C1 | C2)]
+    
+    C4.q.append(c11)
+    #print(C4.equivalent_to)
+    assert C4.equivalent_to == [C1 & p.some(C3) & d.value(1) & d.value(2) & q.only(C1 | C2 | OneOf([c11]))]
+
     
   def test_format_1(self):
     from owlready2.triplelite import _guess_format

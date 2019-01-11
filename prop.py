@@ -166,7 +166,7 @@ class PropertyClass(EntityClass):
       x2 = _universal_datatype_2_abbrev.get(x) or x.storid
       Prop.namespace.ontology._add_obj_triple_spo(Prop.storid, rdf_range, x2)
       
-
+      
   def get_class_property_type(Prop): return Prop._class_property_type
   def set_class_property_type(Prop, value): Prop.class_property_type.reinit(value)
   class_property_type = property(get_class_property_type, set_class_property_type)

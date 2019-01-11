@@ -425,6 +425,31 @@ class ThingClass(EntityClass):
     else:
       return owlready2.prop.DataProperty
     
+  def get_defined_class(Class):
+    v = Class.__dict__.get("__defined_class", None)
+    if v is None:
+      v = Class.namespace.ontology._get_data_triple_sp_od(Class.storid, owlready_defined_class)
+      if v: v = from_literal(*v)
+      else: v = False
+      type.__setattr__(Class, "__defined_class", v)
+    return v
+  def set_defined_class(Class, defined_class):
+    type.__setattr__(Class, "__defined_class", defined_class)
+    if defined_class:
+      Class.namespace.ontology._set_data_triple_spod(Class.storid, owlready_defined_class, *to_literal(True))
+      #parents, r = Class._get_defined_construct()
+      #for i in Class.is_a:
+      #  if isinstance(i, Restriction):
+      #    Class.is_a.append(i)
+    else:
+      Class.namespace.ontology._del_data_triple_spod(Class.storid, owlready_defined_class, "true", None)
+      #parents, r = Class._get_defined_construct()
+      #if r:
+      #  Class.equivalent_to.remove(r)
+      #  for i in r.Classes:
+      #    if isinstance(i, Restriction): Class.is_a.append(i)
+  defined_class = property(get_defined_class, set_defined_class)
+  
   def __getattr__(Class, attr):
     Prop = Class.namespace.world._props.get(attr)
     if Prop is None: raise AttributeError("'%s' property is not defined." % attr)
@@ -502,6 +527,13 @@ class ThingClass(EntityClass):
               yield from construct.subclasses()
               
   # Class properties
+
+  def _get_defined_construct(Class):
+    parents = { c for c in Class.is_a if isinstance(c, ThingClass) }
+    for r in Class.equivalent_to:
+      if isinstance(r, And) and (parents.issubset(r.Classes)): break
+    else: r = None
+    return parents, r
   
   def _on_class_prop_changed(Class, Prop, old, new):
     old     = set(old)
@@ -509,72 +541,118 @@ class ThingClass(EntityClass):
     removed = old - new
     inverse = Prop.inverse_property
     
-    if Prop._class_property_some:
-      if removed:
-        for r in list(_inherited_property_value_restrictions(Class, Prop, set())):
-          if ((r.type == SOME) or (r.type == VALUE)) and (r.value in removed) and (r in Class.is_a):
-            Class.is_a.remove(r)
-            if r.type == VALUE:
-              if isinstance(Prop, ObjectPropertyClass):
-                for r2 in r.value.is_a:
-                  if isinstance(r2, Restriction) and ((r2.property is inverse) or (isinstance(r2.property, Inverse) and (r2.property.property is Prop))) and (r2.type == SOME) and (r2.value is Class):
-                    r.value.is_a.remove(r2)
-                    break
-                  
-      for v in new - old:
-        if isinstance(v, EntityClass) or isinstance(v, ClassConstruct):
-          Class.is_a.append(Prop.some(v))
-        else:
-          Class.is_a.append(Prop.value(v))
-          if isinstance(Prop, ObjectPropertyClass):
-            v.is_a.append(Inverse(Prop).some(Class))
-            
-    if Prop._class_property_only:
-      for r in list(_inherited_property_value_restrictions(Class, Prop, set())):
-        if (r.type == ONLY): break
-      else: r = None
-        
-      only_classes   = [v for v in new if isinstance(v, EntityClass) or isinstance(v, ClassConstruct)]
-      only_instances = [v for v in new if not v in only_classes]
+    if Class.defined_class:
+      parents, r = Class._get_defined_construct()
       
-      if only_instances: only_classes.append(OneOf(only_instances))
-      if not only_classes:
-        if r: Class.is_a.remove(r)
-      else:
-        if len(only_classes) == 1:
-          if r: r.value = only_classes[0]
-          else:
-            r = Prop.only(only_classes[0])
-            Class.is_a.append(r)
+      if Prop._class_property_some:
+        if r:
+          for v in removed:
+            for i in r.Classes:
+              if isinstance(i, Restriction) and (i.property is Prop) and ((i.type == SOME) or (i.type == VALUE)) and (i.value is v):
+                r.Classes.remove(i)
+                break
+              
+        added = new - old
+        if added:
+          if not r:
+            r = And(parents)
+            Class.equivalent_to.append(r)
+          for v in added:
+            if isinstance(v, ThingClass): r.Classes.append(Prop.some(v))
+            else:                         r.Classes.append(Prop.value(v))
+      
+      if Prop._class_property_only:
+        for r2 in r.Classes:
+          if isinstance(r2, Restriction) and (r2.type == ONLY) and (r2.property is Prop): break
+        else: r2 = None
+
+        only_classes   = [v for v in new if isinstance(v, EntityClass) or isinstance(v, ClassConstruct)]
+        only_instances = [v for v in new if not v in only_classes]
+        
+        if only_instances: only_classes.append(OneOf(only_instances))
+        if not only_classes:
+          if r2: r.Classes.remove(r2)
         else:
-          if r:
-            if isinstance(r.value, Or): r.value.Classes = only_classes
-            else:                       r.value = Or(only_classes)
+          if len(only_classes) == 1:
+            if r2: r2.value = only_classes[0]
+            else:
+              r2 = Prop.only(only_classes[0])
+              r.Classes.append(r2)
           else:
-            r = Prop.only(Or(only_classes))
-            Class.is_a.append(r)
-            
-    if Prop._class_property_relation:
-      if Prop._owl_type == owl_object_property:
-        for v in removed:
-          Class.namespace.ontology._del_obj_triple_spo(Class.storid, Prop.storid, v.storid)
-          if inverse:
-            Class.namespace.ontology._del_obj_triple_spo(v.storid, inverse.storid, Class.storid) # Also remove inverse
-            #if isinstance(v, EntityClass): v.__dict__.pop("__%s" % inverse.python_name, None) # Remove => force reloading; XXX optimizable
-            #else:                          v.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
-            
+            if r2:
+              if isinstance(r2.value, Or): r2.value.Classes = only_classes
+              else:                        r2.value = Or(only_classes)
+            else:
+              r2 = Prop.only(Or(only_classes))
+              r.Classes.append(r2)
+        
+    else:
+      if Prop._class_property_some:
+        if removed:
+          for r in list(_inherited_property_value_restrictions(Class, Prop, set())):
+            if ((r.type == SOME) or (r.type == VALUE)) and (r.value in removed) and (r in Class.is_a):
+              Class.is_a.remove(r)
+              if r.type == VALUE:
+                if isinstance(Prop, ObjectPropertyClass):
+                  for r2 in r.value.is_a:
+                    if isinstance(r2, Restriction) and ((r2.property is inverse) or (isinstance(r2.property, Inverse) and (r2.property.property is Prop))) and (r2.type == SOME) and (r2.value is Class):
+                      r.value.is_a.remove(r2)
+                      break
+                    
         for v in new - old:
-          Class.namespace.ontology._add_obj_triple_spo(Class.storid, Prop.storid, v.storid)
-          #if inverse:
-          #  if isinstance(v, EntityClass): v.__dict__.pop("__%s" % inverse.python_name, None) # Remove => force reloading; XXX optimizable
-          #  else:                          v.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
-          
-      else: # Data prop
-        for v in removed:
-          Class.namespace.ontology._del_data_triple_spod(Class.storid, Prop.storid, Class.namespace.ontology._to_rdf(v)[0], None)
-          
-        for v in new - old:
-          Class.namespace.ontology._add_data_triple_spod(Class.storid, Prop.storid, *Class.namespace.ontology._to_rdf(v))
+          if isinstance(v, EntityClass) or isinstance(v, ClassConstruct):
+            Class.is_a.append(Prop.some(v))
+          else:
+            Class.is_a.append(Prop.value(v))
+            if isinstance(Prop, ObjectPropertyClass):
+              v.is_a.append(Inverse(Prop).some(Class))
+            
+      if Prop._class_property_only:
+        for r in list(_inherited_property_value_restrictions(Class, Prop, set())):
+          if (r.type == ONLY): break
+        else: r = None
+        
+        only_classes   = [v for v in new if isinstance(v, EntityClass) or isinstance(v, ClassConstruct)]
+        only_instances = [v for v in new if not v in only_classes]
+      
+        if only_instances: only_classes.append(OneOf(only_instances))
+        if not only_classes:
+          if r: Class.is_a.remove(r)
+        else:
+          if len(only_classes) == 1:
+            if r: r.value = only_classes[0]
+            else:
+              r = Prop.only(only_classes[0])
+              Class.is_a.append(r)
+          else:
+            if r:
+              if isinstance(r.value, Or): r.value.Classes = only_classes
+              else:                       r.value = Or(only_classes)
+            else:
+              r = Prop.only(Or(only_classes))
+              Class.is_a.append(r)
+            
+      if Prop._class_property_relation:
+        if Prop._owl_type == owl_object_property:
+          for v in removed:
+            Class.namespace.ontology._del_obj_triple_spo(Class.storid, Prop.storid, v.storid)
+            if inverse:
+              Class.namespace.ontology._del_obj_triple_spo(v.storid, inverse.storid, Class.storid) # Also remove inverse
+              #if isinstance(v, EntityClass): v.__dict__.pop("__%s" % inverse.python_name, None) # Remove => force reloading; XXX optimizable
+              #else:                          v.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
+              
+          for v in new - old:
+            Class.namespace.ontology._add_obj_triple_spo(Class.storid, Prop.storid, v.storid)
+            #if inverse:
+            #  if isinstance(v, EntityClass): v.__dict__.pop("__%s" % inverse.python_name, None) # Remove => force reloading; XXX optimizable
+            #  else:                          v.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
+            
+        else: # Data prop
+          for v in removed:
+            Class.namespace.ontology._del_data_triple_spod(Class.storid, Prop.storid, Class.namespace.ontology._to_rdf(v)[0], None)
+            
+          for v in new - old:
+            Class.namespace.ontology._add_data_triple_spod(Class.storid, Prop.storid, *Class.namespace.ontology._to_rdf(v))
           
           
   def __setattr__(Class, attr, value):

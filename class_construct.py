@@ -84,7 +84,7 @@ class Not(ClassConstruct):
   def __eq__(self, other):
     return isinstance(other, Not) and (self.Class == other.Class)
   
-  __hash__ = object.__hash__
+  def __hash__(self): return hash(self.Class)
   
   def __repr__(self): return "Not(%s)" % (self.Class)
   
@@ -125,7 +125,7 @@ class Inverse(ClassConstruct):
   def __eq__(self, other):
     return isinstance(other, Inverse) and (self.property == other.property)
   
-  __hash__ = object.__hash__
+  def __hash__(self): return hash(self.property)
   
   def __init__(self, Property, ontology = None, bnode = None, simplify = True):
     super().__init__(ontology, bnode)
@@ -163,7 +163,6 @@ class LogicalClassConstruct(ClassConstruct):
   def __eq__(self, other):
     return isinstance(other, self.__class__) and (set(self.Classes) == set(other.Classes))
   
-  #__hash__ = object.__hash__
   def __hash__(self): return hash(frozenset(self.Classes))
   
   def __rshift__(Domain, Range):
@@ -193,6 +192,8 @@ class LogicalClassConstruct(ClassConstruct):
   def _callback(self, old):
     if self.ontology:
       self._destroy_triples(self.ontology)
+      for i in self.Classes:
+        if isinstance(i, ClassConstruct) and (i.ontology is None): i._set_ontology(self.ontology)
       self._create_triples (self.ontology)
       
   def _destroy_triples(self, ontology):
@@ -268,9 +269,9 @@ class Restriction(ClassConstruct):
     super().__init__(ontology, bnode)
 
   def __eq__(self, other):
-    return isinstance(other, Restriction) and (self.type is other.type) and (self.property is other.property) and (self.value == other.value) and (self.cardinality == other.cardinality)
+    return isinstance(other, Restriction) and (self.type == other.type) and (self.property is other.property) and (self.value == other.value) and (self.cardinality == other.cardinality)
   
-  __hash__ = object.__hash__
+  def __hash__(self): return hash((self.type, self.property, self.value, self.cardinality))
   
   def __repr__(self):
     if (self.type == SOME) or (self.type == ONLY) or (self.type == VALUE) or (self.type == HAS_SELF):
@@ -370,7 +371,6 @@ class OneOf(ClassConstruct):
   def __eq__(self, other):
     return isinstance(other, OneOf) and (set(self.instances) == set(other.instances))
   
-  #__hash__ = object.__hash__
   def __hash__(self): return hash(frozenset(self.instances))
   
   def __getattr__(self, attr):

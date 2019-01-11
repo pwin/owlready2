@@ -298,6 +298,7 @@ version 2 - 0.14
 ****************
 
 * Support several class property types : some, only, some + only, and direct relation
+* Automatically create defined classes via class properties
 * Optimize search() when only the number of returned elements is used
 * Bugfixes:
   - Fix functional class properties with inheritance

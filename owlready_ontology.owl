@@ -51,6 +51,8 @@
     <AnnotationProperty rdf:about="&owlready_ontology;python_name"/>
 
     <AnnotationProperty rdf:about="&owlready_ontology;class_property_type"/>
+
+    <AnnotationProperty rdf:about="&owlready_ontology;defined_class"/>
  
 </rdf:RDF>
 
