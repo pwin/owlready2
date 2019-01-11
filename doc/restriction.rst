@@ -65,6 +65,8 @@ Restrictions can be modified *in place* (Owlready2 updates the quadstore automat
 following attributes: .property, .type (SOME, ONLY, MIN, MAX, EXACTLY or VALUE), .cardinality
 and .value (a Class, an Individual, a class contruct or another restriction).
 
+   
+
 
 Restrictions as class properties
 --------------------------------
@@ -98,6 +100,91 @@ The set_default_class_property_type(types) global function allows to set the def
 when no type is specified for a given property. The default value is ["some"].
 
 
+Restrictions as class properties in defined classes
+---------------------------------------------------
+
+Defined classes are classes that are defined by an "equivalent to" relation, such as Placebo and NonPlaceboDrug above.
+
+The .defined_class Boolean attribute can be used to mark a class as "defined".
+It corresponds to the "http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#defined_class" annotation.
+
+When a class is marked as "defined", Owlready automatically generates an equivalent_to formula, taking into account
+the class parents and the class properties.
+
+The following program shows an example. It creates a drug ontology, with a Drug class and several HealthConditions.
+In addition, two properties are created, for indiciations and contraindications. Here, we choose to manage indications
+with SOME restrictions and contraindication with ONLY restrictions.
+
+Then, the program creates two subclasses of Drug: Antalgic and Aspirin. Thoses subclasses are marked as defined (with
+defined_class = True), and their properties are defined also.
+
+::
+
+   >>> onto2 = get_ontology("http://test.org/onto2.owl")
+   
+   >>> with onto2:
+   ...     class Drug(Thing): pass
+   ...     class ActivePrinciple(Thing): pass
+   ...     class has_for_active_principle(Drug >> ActivePrinciple): pass
+      
+   ...     class HeathCondition(Thing): pass
+   ...     class Pain(HeathCondition): pass
+   ...     class ModeratePain(Pain): pass
+   ...     class CardiacDisorder(HeathCondition): pass
+   ...     class Hypertension(CardiacDisorder): pass
+      
+   ...     class Pregnancy(HeathCondition): pass
+   ...     class Child(HeathCondition): pass
+   ...     class Bleeding(HeathCondition): pass
+      
+   ...     class has_for_indications      (Drug >> HeathCondition): class_property_type = ["some"]
+   ...     class has_for_contraindications(Drug >> HeathCondition): class_property_type = ["only"]
+  
+   ...     class Antalgic(Drug): 
+   ...         defined_class = True
+   ...         has_for_indications = [Pain]
+   ...         has_for_contraindications = [Pregnancy, Child, Bleeding]
+        
+   ...     class Aspirin(Antalgic):
+   ...         defined_class = True
+   ...         has_for_indications = [ModeratePain]
+   ...         has_for_contraindications = [Pregnancy, Bleeding]
+
+
+Owlready automatically produces the appropriate equivalent_to formula, as we can verify:
+
+::
+
+   >>> print(Antalgic.equivalent_to)
+   [onto.Drug
+   & onto.has_for_indications.some(onto.Pain)
+   & onto.has_for_contraindications.only(onto.Child | onto.Pregnancy | onto.Bleeding)]
+   
+   >>> print(Aspirin.equivalent_to)
+   [onto.Antalgic
+   & onto.has_for_indications.some(onto.ModeratePain)
+   & onto.has_for_contraindications.only(onto.Pregnancy | onto.Bleeding)]
+
+
+Notice that this mapping between class properties and definition is bidirectional: one can also use it to access
+an existing definition as class properties. The following example illustrates that:
+
+::
+
+   >>> with onto2:
+   ...     class Antihypertensive(Drug):
+   ...         equivalent_to = [Drug
+   ...                          & has_for_indications.some(Hypertension)
+   ...                          &has_for_contraindications.only(Pregnancy)]
+   
+   >>> print(Antihypertensive.has_for_indications)
+   [onto.Hypertension]
+   
+   >>> print(Antihypertensive.has_for_contraindications)
+   [onto.Pregnancy]
+
+
+   
 Logical operators (intersection, union and complement)
 ------------------------------------------------------
 
@@ -191,3 +278,4 @@ The PropertyChain() function allows to create a new property chain from a list o
    PropertyChain([prop1, prop2])
    
 The construct be modified *in place* using the .properties attribute.
+

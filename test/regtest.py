@@ -3397,6 +3397,48 @@ I took a placebo
     #print(C4.equivalent_to)
     assert C4.equivalent_to == [C1 & p.some(C3) & d.value(1) & d.value(2) & q.only(C1 | C2 | OneOf([c11]))]
 
+  def test_class_prop_20(self):
+    onto = self.new_ontology()
+   
+    with onto:
+      class Drug(Thing): pass
+      class ActivePrinciple(Thing): pass
+      class has_for_active_principle(Drug >> ActivePrinciple): pass
+      
+      class HeathCondition(Thing): pass
+      class Pain(HeathCondition): pass
+      class ModeratePain(Pain): pass
+      class CardiacDisorder(HeathCondition): pass
+      class Hypertension(CardiacDisorder): pass
+      
+      class Pregnancy(HeathCondition): pass
+      class Child(HeathCondition): pass
+      class Bleeding(HeathCondition): pass
+      
+      class has_for_indications      (Drug >> HeathCondition): class_property_type = ["some"]
+      class has_for_contraindications(Drug >> HeathCondition): class_property_type = ["only"]
+  
+      class Antalgic(Drug): 
+        defined_class = True
+        has_for_indications = [Pain]
+        has_for_contraindications = [Pregnancy, Child, Bleeding]
+        
+      class Aspirin(Antalgic):
+        defined_class = True
+        has_for_indications = [ModeratePain]
+        has_for_contraindications = [Pregnancy, Bleeding]
+
+      class Antihypertensive(Drug):
+        equivalent_to = [Drug
+                         & has_for_indications.some(Hypertension)
+                         &has_for_contraindications.only(Pregnancy)]
+        
+    assert Antalgic.equivalent_to == [Drug & has_for_indications.some(Pain) & has_for_contraindications.only(Pregnancy | Child | Bleeding)]
+    assert Aspirin .equivalent_to == [Antalgic & has_for_indications.some(ModeratePain) & has_for_contraindications.only(Pregnancy | Bleeding)]
+
+    assert Antihypertensive.has_for_indications       == [Hypertension]
+    assert Antihypertensive.has_for_contraindications == [Pregnancy]
+
     
   def test_format_1(self):
     from owlready2.triplelite import _guess_format

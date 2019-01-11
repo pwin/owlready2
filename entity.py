@@ -144,6 +144,8 @@ class EntityClass(type):
     Class.namespace.ontology._del_obj_triple_spo(Class.storid, Class._rdfs_is_a, base.storid)
     
   def __init__(Class, name, bases, obj_dict):
+    if "defined_class" in obj_dict:
+      Class.defined_class = obj_dict["defined_class"] # Before the other!
     for k, v in obj_dict.items():
       if k in SPECIAL_ATTRS: continue
       Prop = Class.namespace.world._props.get(k)
@@ -562,10 +564,12 @@ class ThingClass(EntityClass):
             else:                         r.Classes.append(Prop.value(v))
       
       if Prop._class_property_only:
-        for r2 in r.Classes:
-          if isinstance(r2, Restriction) and (r2.type == ONLY) and (r2.property is Prop): break
+        if r:
+          for r2 in r.Classes:
+            if isinstance(r2, Restriction) and (r2.type == ONLY) and (r2.property is Prop): break
+          else: r2 = None
         else: r2 = None
-
+        
         only_classes   = [v for v in new if isinstance(v, EntityClass) or isinstance(v, ClassConstruct)]
         only_instances = [v for v in new if not v in only_classes]
         
@@ -573,6 +577,9 @@ class ThingClass(EntityClass):
         if not only_classes:
           if r2: r.Classes.remove(r2)
         else:
+          if not r:
+            r = And(parents)
+            Class.equivalent_to.append(r)
           if len(only_classes) == 1:
             if r2: r2.value = only_classes[0]
             else:
