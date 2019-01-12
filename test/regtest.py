@@ -520,7 +520,7 @@ class Test(BaseTest, unittest.TestCase):
     o2 = w.get_ontology("file://%s/test_ontoslash2.owl" % HERE).load()
     
     assert len(o2.imported_ontologies) == 1
-        
+    
   def test_ontology_19(self):
     w = self.new_world()
     o = w.get_ontology("http://test.org/t.owl")
@@ -1309,6 +1309,35 @@ class Test(BaseTest, unittest.TestCase):
     assert o1 is n.mon_frometon
     
     assert len(n.graph) == nb_triples
+    
+  def test_individual_21(self):
+    world   = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+
+    o = n.Cheese(0)
+    o.label = ["anonymous cheese"]
+    
+    assert o.storid < 0
+    assert o.name  == ""
+    assert o.iri   == ""
+    assert o.label == ["anonymous cheese"]
+
+    p = n.Pizza("mapiz", has_topping = [o])
+    
+    buf = BytesIO()
+    n.save(buf)
+    
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load(fileobj = BytesIO(buf.getvalue()))
+    
+    p = n.mapiz
+    o = p.has_topping[0]
+    
+    assert o.storid < 0
+    assert o.name  == ""
+    assert o.iri   == ""
+    assert o.label == ["anonymous cheese"]
+    
     
   def test_prop_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -3155,17 +3184,17 @@ I took a placebo
     assert p2._class_property_only == True
     assert p2._class_property_some == False
     
-    self.assert_triple(p2.storid, owlready_class_property_type, "only", "")
+    self.assert_triple(p2.storid, owlready_class_property_type, "only", 0)
     
     p1.class_property_type.append("only")
     assert p1._class_property_only == True
     assert p1._class_property_some == False
-    self.assert_triple(p1.storid, owlready_class_property_type, "only", "")
+    self.assert_triple(p1.storid, owlready_class_property_type, "only", 0)
     
     p1.class_property_type.append("some")
     assert p1._class_property_only == True
     assert p1._class_property_some == True
-    self.assert_triple(p1.storid, owlready_class_property_type, "some", "")
+    self.assert_triple(p1.storid, owlready_class_property_type, "some", 0)
     
   def test_class_prop_13(self):
     onto = self.new_ontology()
@@ -3369,6 +3398,7 @@ I took a placebo
     C4.defined_class = False
     assert C4.defined_class == False
     type.__delattr__(C4, "__defined_class")
+    
     assert C4.defined_class == False
     
     C4.defined_class = True
@@ -3790,7 +3820,6 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     world = self.new_world()
     world.set_backend(filename = quadstore)
     onto = world.get_ontology("http://test.org/test_slash/").load()
-    onto.graph.dump()
     assert onto.C is not None
     world.close()
     

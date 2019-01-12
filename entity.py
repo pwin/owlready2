@@ -444,7 +444,7 @@ class ThingClass(EntityClass):
       #  if isinstance(i, Restriction):
       #    Class.is_a.append(i)
     else:
-      Class.namespace.ontology._del_data_triple_spod(Class.storid, owlready_defined_class, "true", 0)
+      Class.namespace.ontology._del_data_triple_spod(Class.storid, owlready_defined_class, "true", None)
       #parents, r = Class._get_defined_construct()
       #if r:
       #  Class.equivalent_to.remove(r)

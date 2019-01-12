@@ -115,6 +115,7 @@ get_namespace = default_world.get_namespace
 
 
 def default_render_func(entity):
+  if entity.storid < 0: return "_:%s" % (-entity.storid)
   return "%s.%s" % (entity.namespace.name, entity.name)
 
 def set_render_func(func):

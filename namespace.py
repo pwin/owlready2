@@ -461,21 +461,26 @@ class World(_GraphManager):
         if full_iri.startswith(owl.base_iri) or full_iri.startswith(rdfs.base_iri) or full_iri.startswith("http://www.w3.org/1999/02/22-rdf-syntax-ns#"): return None
         
       if main_onto:
-        full_iri = full_iri or self._unabbreviate(storid)
-        splitted = full_iri.rsplit("#", 1)
-        if len(splitted) == 2:
-          namespace = main_onto.get_namespace("%s#" % splitted[0])
-          name = splitted[1]
+        if isinstance(storid, int) and (storid < 0):
+          full_iri = ""
+          namespace = main_onto
+          name = storid
         else:
-          splitted = full_iri.rsplit("/", 1)
+          full_iri = full_iri or self._unabbreviate(storid)
+          splitted = full_iri.rsplit("#", 1)
           if len(splitted) == 2:
-            namespace = main_onto.get_namespace("%s/" % splitted[0])
+            namespace = main_onto.get_namespace("%s#" % splitted[0])
             name = splitted[1]
           else:
-            namespace = main_onto.get_namespace("")
-            name = full_iri
-            
-            
+            splitted = full_iri.rsplit("/", 1)
+            if len(splitted) == 2:
+              namespace = main_onto.get_namespace("%s/" % splitted[0])
+              name = splitted[1]
+            else:
+              namespace = main_onto.get_namespace("")
+              name = full_iri
+              
+              
       # Read and create with classes first, but not construct, in order to break cycles.
       if   main_type is ThingClass:
         types = tuple(is_a_entities) or (Thing,)
@@ -736,7 +741,6 @@ class Ontology(Namespace, _GraphManager):
     if _LOG_LEVEL > 1:
       if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
-      print(s,p,o,d)
       if isinstance(d, str) and (not d.startswith("@")): d = self._unabbreviate(d)
       print("* Owlready2 * SET TRIPLE", s, p, o, d, file = sys.stderr)
     
@@ -836,7 +840,6 @@ class Ontology(Namespace, _GraphManager):
         
       else:
         if   restriction_type:
-          #r = Restriction(restriction_property, restriction_type, restriction_cardinality, None, self, bnode)
           r = Restriction(restriction_property, restriction_type, None, None, self, bnode)
         elif Disjoint:
           r = Disjoint(members, self, bnode)
@@ -853,9 +856,12 @@ class Ontology(Namespace, _GraphManager):
             elif pred == owl_max_cardinality: restriction_type = MAX;     restriction_cardinality = self._to_python(obj, d)
             if restriction_type:
               r = Restriction(restriction_property, restriction_type, restriction_cardinality, None, self, bnode)
-            else:
-              s = ""
-              raise ValueError("Cannot parse blank node %s: unknown node type!")
+              break
+            #else:
+            #  s = ""
+            #  raise ValueError("Cannot parse blank node %s: unknown node type!")
+          else: # Not a blank
+            r = self.world._get_by_storid(bnode, main_onto = self)
             
     self._bnodes[bnode] = r
     return r

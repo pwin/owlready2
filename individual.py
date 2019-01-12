@@ -140,7 +140,9 @@ class Thing(metaclass = ThingClass):
     self.namespace.world._refactor(self.storid, "%s%s" % (self.namespace.base_iri, name))
   name = property(get_name, set_name)
   
-  def get_iri(self): return "%s%s" % (self.namespace.base_iri, self._name)
+  def get_iri(self):
+    if self.storid < 0: return ""
+    return "%s%s" % (self.namespace.base_iri, self._name)
   def set_iri(self, new_iri):
     splitted = new_iri.rsplit("#", 1)
     if len(splitted) == 2:
@@ -159,9 +161,8 @@ class Thing(metaclass = ThingClass):
         name      = name.name
       else:
         namespace = namespace or CURRENT_NAMESPACES[-1] or Class.namespace
-      if LOADING:
+      if LOADING or (name == ""):
         already_existing = None
-        #already_existing = namespace.world._entities.get(namespace.world._abbreviate("%s%s" % (namespace.base_iri, name)))
       else:
         already_existing = namespace.world["%s%s" % (namespace.base_iri, name)]
         
@@ -185,12 +186,16 @@ class Thing(metaclass = ThingClass):
           for attr, value in kargs.items(): setattr(already_existing, attr, value)
           
         return already_existing
-
+      
     return object.__new__(Class)
   
   def __init__(self, name = None, namespace = None, **kargs):
     self.namespace = namespace or CURRENT_NAMESPACES[-1] or self.__class__.namespace
-    if name:
+    if   isinstance(name, int):
+      is_new = True
+      iri = ""
+      self._name = ""
+    elif name:
       is_new = not "storid" in self.__dict__
       iri = "%s%s" % (self.namespace.base_iri, name)
       self._name = name
@@ -201,7 +206,8 @@ class Thing(metaclass = ThingClass):
       
     if is_new:
       self.__dict__["_equivalent_to"] = None
-      self.storid = self.namespace.world._abbreviate(iri)
+      if isinstance(name, int): self.storid = name or self.namespace.world.graph.new_blank_node()
+      else:                     self.storid = self.namespace.world._abbreviate(iri)
       self.namespace.world._entities[self.storid] = self
       if isinstance(self.__class__, FusionClass):
         self.__dict__["is_a"] = CallbackList(self.__class__.__bases__, self, Thing._instance_is_a_changed)
@@ -209,12 +215,12 @@ class Thing(metaclass = ThingClass):
         self.__dict__["is_a"] = CallbackList([self.__class__], self, Thing._instance_is_a_changed)
         
       if not LOADING:
-        self.namespace.ontology._add_obj_triple_spo(self.storid, rdf_type, owl_named_individual)
+        if self.storid > 0: self.namespace.ontology._add_obj_triple_spo(self.storid, rdf_type, owl_named_individual)
         for parent in self.is_a:
           self.namespace.ontology._add_obj_triple_spo(self.storid, rdf_type, parent.storid)
           
         for attr, value in kargs.items(): setattr(self, attr, value)
-        
+    
   def generate_default_name(self): return self.__class__.name.lower()
   
   def _get_is_instance_of(self):    return self.is_a

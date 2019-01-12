@@ -297,6 +297,7 @@ version 2 - 0.13
 version 2 - 0.14
 ****************
 
+* Support anonymous individuals, e.g. Thing(0)
 * Support several class property types : some, only, some + only, and direct relation
 * Automatically create defined classes via class properties
 * Optimize search() when only the number of returned elements is used
