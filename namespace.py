@@ -261,14 +261,14 @@ class _GraphManager(object):
           prop_vals.append((" %s" % k, v2, None))
         else:
           d = None
-          k2 = self.world._props.get(k)
-          if k2 is None:
+          Prop = self.world._props.get(k)
+          if Prop is None:
             k2 = _universal_iri_2_abbrev.get(k) or k
           else:
-            if k2.inverse_property:
-              k2 = (k2.storid, k2.inverse.storid)
+            if Prop.inverse_property:
+              k2 = (Prop.storid, Prop.inverse.storid)
             else:
-              k2 = k2.storid
+              k2 = Prop.storid
           if v is None:
             v2 = None
           else:
@@ -277,7 +277,9 @@ class _GraphManager(object):
             elif isinstance(v, _SearchList): v2 = v
             else:
               v2, d = self.world._to_rdf(v)
-              if ((not d is None) and (isinstance(v2, (int, float)))) or (_use_str_as_loc_str and (d == 60)): # A string, which can be associated to a language in RDF
+              if   Prop and (Prop._owl_type == owl_object_property): # Use "*" as a jocker for entity
+                d = None
+              elif ((not d is None) and (isinstance(v2, (int, float)))) or (_use_str_as_loc_str and (d == 60)): # A string, which can be associated to a language in RDF
                 d = "*"
           prop_vals.append((k2, v2, d))
           
@@ -579,6 +581,14 @@ class Ontology(Namespace, _GraphManager):
     self._imported_ontologies = CallbackList(l, self, Ontology._import_changed)
     self._import_changed(old)
   imported_ontologies = property(get_imported_ontologies, set_imported_ontologies)
+    
+  def get_python_module(self):
+    r = self._get_data_triple_sp_od(self.storid, owlready_python_module)
+    if r: return r[0]
+    return ""
+  def set_python_module(self, module_name):
+    self._set_data_triple_spod(self.storid, owlready_python_module, module_name, 0)
+  python_module = property(get_python_module, set_python_module)
     
   def _import_changed(self, old):
     old = set(old)
@@ -928,7 +938,7 @@ class Metadata(object):
         getattr(self, attr).reinit(values)
         
     else:
-      raise ValueError("Metadata can only used defined annotation properties!")
+      raise ValueError("Metadata can only use defined annotation properties!")
   
   
   

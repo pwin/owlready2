@@ -112,7 +112,7 @@ class EntityClass(type):
       Class = namespace.world._get_by_storid(storid)
       
     equivalent_to = obj_dict.pop("equivalent_to", None)
-      
+    
     if Class is None:
       _is_a = CallbackList(_is_a, None, MetaClass._class_is_a_changed)
       obj_dict.update(
@@ -122,16 +122,17 @@ class EntityClass(type):
         is_a           = _is_a,
         _equivalent_to = None,
       )
-
+      
       Class = namespace.world._entities[storid] = _is_a._obj = type.__new__(MetaClass, name, superclasses, obj_dict)
-          
+      
       if not LOADING:
         namespace.ontology._add_obj_triple_spo(storid, rdf_type, MetaClass._owl_type)
         for parent in _is_a: Class._add_is_a_triple(parent)
         
     else:
+      if not MetaClass is Class.__class__: Class.__class__ = MetaClass
       if (Class.is_a != _is_a) and (_is_a != (Thing,)): Class.is_a.extend([i for i in _is_a if not i in Class.is_a])
-    
+      
     if equivalent_to:
       if isinstance(equivalent_to, list): Class.equivalent_to.extend(equivalent_to)
       

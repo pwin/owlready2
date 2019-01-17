@@ -140,7 +140,8 @@ class Graph(BaseMainGraph):
       self.execute("""INSERT INTO store VALUES (6, 0, 300)""")
       self.execute("""CREATE TABLE objs (c INTEGER, s INTEGER, p INTEGER, o INTEGER)""")
       self.execute("""CREATE TABLE datas (c INTEGER, s INTEGER, p INTEGER, o BLOB, d INTEGER)""")
-      self.execute("""CREATE VIEW quads (c,s,p,o,d) AS SELECT c,s,p,o,NULL FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
+      #self.execute("""CREATE VIEW quads (c,s,p,o,d) AS SELECT c,s,p,o,NULL FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
+      self.execute("""CREATE VIEW quads AS SELECT c,s,p,o,NULL AS d FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
       
 #       self.execute("""CREATE TABLE equivs (rowid INTEGER, c INTEGER, s TEXT, o TEXT)""")
 #       self.db.cursor().executescript("""
@@ -221,7 +222,7 @@ class Graph(BaseMainGraph):
         self.execute("""DROP TABLE quads""")
         self.execute("""DROP INDEX IF EXISTS index_quads_s """)
         self.execute("""DROP INDEX IF EXISTS index_quads_o""")
-        self.execute("""CREATE VIEW quads (c,s,p,o,d) AS SELECT c,s,p,o,NULL FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
+        self.execute("""CREATE VIEW quads AS SELECT c,s,p,o,NULL AS d FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
         self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
         self.execute("""CREATE INDEX index_objs_po ON objs(p,o)""")
         self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
@@ -286,7 +287,7 @@ class Graph(BaseMainGraph):
         self.execute("""ALTER TABLE resources2 RENAME TO resources""")
         self.execute("""ALTER TABLE objs2 RENAME TO objs""")
         self.execute("""ALTER TABLE datas2 RENAME TO datas""")
-        self.execute("""CREATE VIEW quads (c,s,p,o,d) AS SELECT c,s,p,o,NULL FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
+        self.execute("""CREATE VIEW quads AS SELECT c,s,p,o,NULL AS d FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
         
         self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
         self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
@@ -347,7 +348,7 @@ class Graph(BaseMainGraph):
       
   def close(self):
     self.db.close()
-
+    
   def acquire_write_lock(self):
     self.lock.acquire()
     self.lock_level += 1

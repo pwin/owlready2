@@ -4039,7 +4039,24 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     l = world.search(type = n.Tomato, topping_of = world.search(has_topping = n.mon_frometon))
     assert set(l) == { n.ma_tomate }
     
+  def test_search_12(self):
+    world = self.new_world()
+    o = get_ontology("http://test.org/onto.owl")
     
+    with o:
+      class Actor(Thing): pass
+      class Locality(Thing): pass
+      class isAt(ObjectProperty): pass
+      
+      for name in ('actor1', 'actor2'):
+        loc = o.Locality(name + '_loc')
+        actor = o.Actor(name, isAt = [loc])
+        
+      AllDisjoint(o.Actor.instances())
+      AllDisjoint(o.Locality.instances())
+      
+    assert set(default_world.search(isAt = "*")) == {o.actor1, o.actor2}
+      
   def test_rdflib_1(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
