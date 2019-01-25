@@ -275,9 +275,9 @@ class Restriction(ClassConstruct):
   
   def __repr__(self):
     if (self.type == SOME) or (self.type == ONLY) or (self.type == VALUE) or (self.type == HAS_SELF):
-      return """%s.%s(%s)""" % (self.property, _restriction_type_2_label[self.type], self.value)
+      return """%s.%s(%s)""" % (self.property, _restriction_type_2_label[self.type], repr(self.value))
     else:
-      return """%s.%s(%s, %s)""" % (self.property, _restriction_type_2_label[self.type], self.cardinality, self.value)
+      return """%s.%s(%s, %s)""" % (self.property, _restriction_type_2_label[self.type], self.cardinality, repr(self.value))
     
   def _set_ontology(self, ontology):
     if isinstance(self.property, ClassConstruct): self.property._set_ontology(ontology)

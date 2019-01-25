@@ -123,102 +123,119 @@ class CallbackListWithLanguage(CallbackList):
       if isinstance(values, str): l.append(locstr(values, attr))
       else:                       l.extend(locstr(x, attr) for x in values)
       self.reinit(l)
-  
+      
 
-class LazyList(FirstList):
-  __slots__ = ["_populate"]
+class _LazyListMixin(list):
+  __slots__ = []
+  _PopulatedClass = FirstList
   
-  def __init__(self, populate):
+  def __init__(self):
     super().__init__()
-    self._populate = populate
+  
+  def _populate(self): raise NotImplementedError
   
   def __repr__(self):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().__repr__()
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return repr(self)
   
   def __str__(self):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().__str__()
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return str(self)
     
   def __iter__(self):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().__iter__()
-    
-  def __len__(self):
-    if self._populate: return self._lazy_len()
-    return super().__len__()
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return iter(self)
   
-  def _lazy_len(self):
-    FirstList.__init__(self, self._populate()); self._populate = None
-    return super().__len__()
+  def __len__(self):
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return len(self)
   
   def __eq__(self, o):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().__eq__(o)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return self == o
     
   def __ne__(self, o):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().__ne__(o)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return self != o
     
   def __getitem__(self, i):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().__getitem__(i)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return self[i]
     
   def __delitem__(self, i):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    super().__delitem__(i)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    del self[i]
     
   def __setitem__(self, i, x):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    super().__setitem__(i, x)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    self[i] = x
     
   def __iadd__(self, x):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    super().__iadd__(x)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    self += x
     
   def __imul__(self, x):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    super().__imul__(x)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    self *= x
     
   def pop(self, index):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().pop(index)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return self.pop(index)
     
   def count(self, e):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().count(e)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return self.count(e)
     
   def index(self, e):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().index(e)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return self.index(e)
     
   def reverse(self):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().reverse()
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return self.reverse()
   
   def sort(self, key = None, reverse = False):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().sort(key, reverse)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return self.sort(key, reverse)
     
   def append(self, e):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().append(e)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return self.append(e)
     
   def insert(self, index, e):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().insert(index, e)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return self.insert(index, e)
     
   def extend(self, l):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().extend(l)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return self.extend(l)
     
   def remove(self, e):
-    if self._populate: FirstList.__init__(self, self._populate()); self._populate = None
-    return super().remove(e)
+    list.__init__(self, self._populate())
+    self.__class__ = self._PopulatedClass
+    return self.remove(e)
     
   def clear(self):
-    if self._populate: self._populate = None
-    return super().clear()
+    self.__class__ = self._PopulatedClass
     
   
   

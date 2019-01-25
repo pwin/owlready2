@@ -21,13 +21,12 @@ import weakref
 
 from owlready2.namespace  import *
 from owlready2.entity     import *
-from owlready2.entity     import _inherited_property_value_restrictions
-from owlready2.individual import ValueList
 from owlready2.base       import _universal_abbrev_2_datatype, _universal_datatype_2_abbrev
 
+SymmetricProperty = () # Forward declaration
 
 _next_domain_range = None
-_check_superclasses = False
+#_check_superclasses = False
 
 _default_class_property_type = ["some"]
 def set_default_class_property_type(types):
@@ -39,21 +38,21 @@ class PropertyClass(EntityClass):
   _owl_equivalent   = owl_equivalentproperty
   _owl_disjointwith = owl_propdisjointwith
   
-  def __new__(MetaClass, name, superclasses, obj_dict):
-    if _check_superclasses:
-      nb_base = 0
-      if ObjectProperty     in superclasses: nb_base += 1
-      if DataProperty       in superclasses: nb_base += 1
-      if AnnotationProperty in superclasses: nb_base += 1
-      if nb_base > 1:
-        iri = "%s%s" % (obj_dict["namespace"].base_iri, name)
-        if (ObjectProperty in superclasses) and (DataProperty in superclasses):
-          raise TypeError("Property '%s' is both an ObjectProperty and a DataProperty!" % iri)
-        if (ObjectProperty in superclasses) and (AnnotationProperty in superclasses):
-          raise TypeError("Property '%s' is both an ObjectProperty and an AnnotationProperty!" % iri)
-        if (AnnotationProperty in superclasses) and (DataProperty in superclasses):
-          raise TypeError("Property '%s' is both an AnnotationProperty and a DataProperty!" % iri)
-    return EntityClass.__new__(MetaClass, name, superclasses, obj_dict)
+  # def __new__(MetaClass, name, superclasses, obj_dict):
+  #   if _check_superclasses:
+  #     nb_base = 0
+  #     if ObjectProperty     in superclasses: nb_base += 1
+  #     if DataProperty       in superclasses: nb_base += 1
+  #     if AnnotationProperty in superclasses: nb_base += 1
+  #     if nb_base > 1:
+  #       iri = "%s%s" % (obj_dict["namespace"].base_iri, name)
+  #       if (ObjectProperty in superclasses) and (DataProperty in superclasses):
+  #         raise TypeError("Property '%s' is both an ObjectProperty and a DataProperty!" % iri)
+  #       if (ObjectProperty in superclasses) and (AnnotationProperty in superclasses):
+  #         raise TypeError("Property '%s' is both an ObjectProperty and an AnnotationProperty!" % iri)
+  #       if (AnnotationProperty in superclasses) and (DataProperty in superclasses):
+  #         raise TypeError("Property '%s' is both an AnnotationProperty and a DataProperty!" % iri)
+  #   return EntityClass.__new__(MetaClass, name, superclasses, obj_dict)
     
   def __init__(Prop, name, bases, obj_dict):
     global _next_domain_range
@@ -77,7 +76,7 @@ class PropertyClass(EntityClass):
     type.__setattr__(Prop, "_property_chain", None)
     type.__setattr__(Prop, "_inverse_property", False)
     type.__setattr__(Prop, "_python_name", name)
-
+    
     _class_property_type = CallbackList(
       (o for o, d in Prop.namespace.world._get_data_triples_sp_od(Prop.storid, owlready_class_property_type)),
       Prop, PropertyClass._class_property_type_changed)
@@ -104,7 +103,8 @@ class PropertyClass(EntityClass):
       if not class_property_type is None:
         Prop.class_property_type = class_property_type
         
-      
+        
+        
   def _add_is_a_triple(Prop, base):
     if   base in _CLASS_PROPS: pass
     elif base in _TYPE_PROPS:  Prop.namespace.ontology._add_obj_triple_spo(Prop.storid, rdf_type       , base.storid)
@@ -211,7 +211,7 @@ class PropertyClass(EntityClass):
     if not issubclass_python(Annot, AnnotationProperty):
       raise AttributeError("Property can only have annotation property values!")
     
-    return ValueList(
+    return IndividualValueList(
       (Prop.namespace.ontology._to_python(o,d) for o,d in Prop.namespace.world._get_triples_sp_od(Prop.storid, Annot.storid)),
       Prop, Annot) # Do NOT cache in __dict__, to avoid inheriting annotations
   
@@ -248,19 +248,87 @@ class PropertyClass(EntityClass):
   def __le__(prop, value): return prop.some(ConstrainedDatatype(type(value), max_inclusive = value))
   def __gt__(prop, value): return prop.some(ConstrainedDatatype(type(value), min_exclusive = value))
   def __ge__(prop, value): return prop.some(ConstrainedDatatype(type(value), min_inclusive = value))
+
+  
+  def _get_value_for_individual(Prop, entity):
+    value = entity.namespace.world._get_triple_sp_od(entity.storid, Prop.storid)
+    if not value is None: return entity.namespace.ontology._to_python(*value)
+    
+  def _get_values_for_individual(Prop, entity):
+    return IndividualValueList((entity.namespace.ontology._to_python(o, d) for o, d in entity.namespace.world._get_triples_sp_od(entity.storid, Prop.storid)),
+                               entity, Prop)
+  
+  _get_value_for_class  = _get_value_for_individual
+  _get_values_for_class = _get_values_for_individual
+  
+  def _get_indirect_value_for_individual(Prop, entity):
+    values = Prop._get_indirect_values_for_individual(entity)
+    if   not values:       return None
+    elif len(values) == 1: return values[0]
+    return _most_specific(values)
+  
+  def _get_indirect_values_for_individual(Prop, entity):
+    world = entity.namespace.world
+    onto  = entity.namespace.ontology
+    Props = Prop.descendants()
+    
+    if   not isinstance(entity, EntityClass):
+      values = [onto._to_python(o, d) for P in Props for o, d in world._get_triples_sp_od(entity.storid, P.storid)]
+      values.extend(Prop._get_indirect_values_for_individual(entity.__class__))
+      
+    else:
+      storids = [ancestor.storid for ancestor in entity.ancestors()]
+      values = [onto._to_python(o, d) for storid in storids
+                                      for P in Props
+                                      for o, d in world._get_triples_sp_od(storid, P.storid)]
+    return values
+  
+  def _get_indirect_value_for_class(Prop, entity):
+    values = Prop._get_indirect_values_for_class(entity)
+    if   not values:       return None
+    elif len(values) == 1: return values[0]
+    return _most_specific(values)
+  
+  _get_indirect_values_for_class = _get_indirect_values_for_individual
+  
+  def _set_value_for_individual(Prop, entity, value):
+    if value is None: entity.namespace.ontology._del_triple_spod(entity.storid, Prop.storid, None, None)
+    else:             entity.namespace.ontology._set_triple_spod(entity.storid, Prop.storid, *entity.namespace.ontology._to_rdf(value))
+    if (not instance(entity, EntityClass)) and (Prop is entity.namespace.world._props.get(Prop._python_name)):
+      entity.__dict__[Prop.python_name] = [value]
+      
+  _set_value_for_class  = _set_value_for_individual
+  
+  def _set_values_for_individual(Prop, entity, values): Prop[entity].reinit(values)
+  _set_values_for_class = _set_values_for_individual
+  
+  def __getitem__(Prop, entity):
+    if isinstance(entity, EntityClass):
+      return Prop._get_values_for_class(entity)
+    else:
+      if Prop is entity.namespace.world._props.get(Prop._python_name): # use cached value
+        if Prop.is_functional_for(entity.__class__): return FunctionalIndividualValueList([getattr(entity, Prop._python_name)], entity, Prop)
+        else:                                        return getattr(entity, Prop._python_name)
+      else:
+        l = Prop._get_values_for_individual(entity)
+        if Prop.is_functional_for(entity.__class__): l.__class__ = FunctionalIndividualValueList
+        return l
+      
+  def __setitem__(Prop, entity, value):
+    if isinstance(entity, EntityClass):
+      Prop._set_values_for_class(entity, value)
+    else:
+      Prop._set_values_for_individual(entity, value)
+      
+
   
 _FUNCTIONAL_FOR_CACHE = weakref.WeakKeyDictionary()
 
 class Property(metaclass = PropertyClass):
-  namespace = owl
+  namespace = rdf
   
   @classmethod
   def is_functional_for(Prop, Class):
-    #if hasattr(Class, "_functional_for_cache"):
-    #  r = Class._functional_for_cache.get(Prop)
-    #  if not r is None: return r
-    #else:
-    #  type.__setattr__(Class, "_functional_for_cache", {})
     cache = _FUNCTIONAL_FOR_CACHE.get(Class)
     if cache is None:
       cache = _FUNCTIONAL_FOR_CACHE[Class] = {}
@@ -271,7 +339,7 @@ class Property(metaclass = PropertyClass):
     ranges  = set(Prop.range)
     singles = set()
     
-    for restriction in _inherited_property_value_restrictions(Class, Prop, set()):
+    for restriction in _inherited_properties_value_restrictions(Class, {Prop}, set()):
       if     restriction.type == ONLY:
         ranges.add(restriction.value)
       elif ((restriction.type == EXACTLY) or (restriction.type == MAX)) and (restriction.cardinality == 1):
@@ -283,7 +351,7 @@ class Property(metaclass = PropertyClass):
     cache[Prop] = r = not ranges.isdisjoint(singles)
     
     return r
-
+  
   @classmethod
   def get_relations(Prop):
     for s,p,o,d in Prop.namespace.world._get_triples_spod_spod(None, Prop.storid, None, ""):
@@ -305,51 +373,322 @@ class ReasoningPropertyClass(PropertyClass):
     Prop.namespace.world._reasoning_props[python_name] = Prop
     PropertyClass.set_python_name(Prop, python_name)
   python_name = property(PropertyClass.get_python_name, set_python_name)
-  
-  def __getitem__(Prop, entity):
-    if isinstance(entity, Thing):
-      return entity._get_instance_prop_value(Prop, Prop.python_name, True)
-    else:
-      return entity._get_class_prop_value(Prop, Prop.python_name, True)
     
   
 class ObjectPropertyClass(ReasoningPropertyClass):
   _owl_type = owl_object_property
-  
+
+  def __init__(Prop, name, bases, obj_dict):
+    super().__init__(name, bases, obj_dict)
+    
+    if issubclass_python(Prop, SymmetricProperty):
+      type.__setattr__(Prop, "_inverse_storid", Prop.storid)
+      
+    else:
+      for inverse_storid in Prop.namespace.world._get_obj_triples_sp_o(Prop.storid, owl_inverse_property):
+        if inverse_storid > 0: break
+      else:
+        for inverse_storid in Prop.namespace.world._get_obj_triples_po_s(owl_inverse_property, Prop.storid):
+          if inverse_storid > 0: break
+        else: inverse_storid = 0
+      #inverse_storid = Prop.namespace.world._get_obj_triples_sp_o(Prop.storid, owl_inverse_property) or Prop.namespace.world._get_obj_triples_po_s(owl_inverse_property, Prop.storid)
+      type.__setattr__(Prop, "_inverse_storid", inverse_storid or 0)
+      if inverse_storid: type.__setattr__(Prop, "_inverse_property", Prop.namespace.world._get_by_storid(inverse_storid))
+      else:              type.__setattr__(Prop, "_inverse_property", None)
+      
   def get_inverse_property(Prop):
-    if Prop._inverse_property is False:
-      inverse_storid = Prop.namespace.world._get_obj_triple_sp_o(Prop.storid, owl_inverse_property) or Prop.namespace.world._get_obj_triple_po_s(owl_inverse_property, Prop.storid)
-      if inverse_storid: Prop._inverse_property = Prop.namespace.world._get_by_storid(inverse_storid)
-      else:              Prop._inverse_property = None
     return Prop._inverse_property
   
   def set_inverse_property(Prop, value):
     Prop.namespace.ontology._set_obj_triple_spo(Prop.storid, owl_inverse_property, value and value.storid)
-    Prop._inverse_property = value
-    if value and not (value.inverse_property is Prop): value.inverse_property = Prop
-    
+    type.__setattr__(Prop, "_inverse_property", value)
+    if value:
+      type.__setattr__(Prop, "_inverse_storid", value.storid)
+      if not value._inverse_property is Prop: value.inverse_property = Prop
+    else:
+      type.__setattr__(Prop, "_inverse_storid", 0)
+      
   inverse_property = inverse = property(get_inverse_property, set_inverse_property)
   
+  def _class_is_a_changed(Prop, old):
+    super()._class_is_a_changed(old)
+    if   (SymmetricProperty in old) and (not SymmetricProperty in Prop.is_a):
+      if Prop._inverse_property: type.__setattr__(Prop, "_inverse_storid", Prop._inverse_property.storid)
+      else:                      type.__setattr__(Prop, "_inverse_storid", 0)
+    elif (SymmetricProperty in Prop.is_a) and (not SymmetricProperty in old):
+      type.__setattr__(Prop, "_inverse_storid", Prop.storid)
+      
+      
+  def _get_value_for_individual(Prop, entity):
+    value = (entity.namespace.world._get_obj_triple_sp_o(entity.storid, Prop.storid)
+         or (Prop._inverse_storid and
+             entity.namespace.world._get_obj_triple_po_s(Prop._inverse_storid, entity.storid)) )
+    if value:
+      return entity.namespace.ontology._to_python(value)
+    
+  def _get_value_for_class(Prop, entity):
+    if   Prop._class_property_relation: return Prop._get_value_for_individual(entity)
+    
+    elif Prop._class_property_some:
+      for r in _property_value_restrictions(entity, Prop):
+        if (r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1): return r.value
+        
+    elif Prop._class_property_only:
+      for r in _property_value_restrictions(Class, Prop):
+        if (r.type == ONLY):
+          for value in _flatten_only(r): return value
+          
+          
+  def _get_values_for_individual(Prop, entity):
+    if Prop._inverse_storid:
+      return IndividualValueList((entity.namespace.ontology._to_python(o)
+                                  for g in (entity.namespace.world._get_obj_triples_sp_o(entity.storid, Prop.storid),
+                                            entity.namespace.world._get_obj_triples_po_s(Prop._inverse_storid, entity.storid))
+                                  for o in g ), entity, Prop)
+    else:
+      return IndividualValueList((entity.namespace.ontology._to_python(o)
+                                  for o in  entity.namespace.world._get_obj_triples_sp_o(entity.storid, Prop.storid)),
+                                  entity, Prop)
+                                 
+  def _get_values_for_class(Prop, entity):
+    if   Prop._class_property_relation: return Prop._get_values_for_individual(entity)
+    
+    elif Prop._class_property_some:
+      return ClassValueList(set(r.value for r in _property_value_restrictions(entity, Prop)
+                                if (r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1)),
+                                entity, Prop)
+    
+    elif Prop._class_property_only:
+      return ClassValueList(set(x for r in _property_value_restrictions(entity, Prop)
+                                if (r.type == ONLY)
+                                for x in _flatten_only(r) ), entity, Prop)
+      
+                                 
+  def _get_indirect_values_for_individual(Prop, entity):
+    world = entity.namespace.world
+    onto  = entity.namespace.ontology
+    Props = Prop.descendants()
+    
+    prop_storids = []
+    values       = set()
+    for P in Props:
+      if issubclass(P, TransitiveProperty):
+        if P._inverse_storid: prop_storids.append((P.storid, P._inverse_storid))
+        else:                 prop_storids.append((P.storid, None))
+      else:
+        if P._inverse_storid:
+          values.update(onto._to_python(o) for g in (world._get_obj_triples_sp_o(entity.storid, P.storid), world._get_obj_triples_po_s(P._inverse_storid, entity.storid)) for o in g )
+        else:
+          values.update(onto._to_python(o) for o in  world._get_obj_triples_sp_o(entity.storid, P.storid) )
+          
+    if prop_storids:
+      already_applied_class = { entity.__class__ }
+      for o in world._get_obj_triples_transitive_sp_indirect(entity.storid, prop_storids):
+        o = onto._to_python(o)
+        values.add(o)
+        if not o.__class__ in already_applied_class:
+          values.update(Prop._get_indirect_values_for_class(o.__class__, True))
+          already_applied_class.add(o.__class__)
+          
+    values.update(Prop._get_indirect_values_for_class(entity.__class__, True))
+    
+    return list(values)
   
-class ObjectProperty(Property, metaclass = ObjectPropertyClass): pass
+  def _get_indirect_values_for_class(Prop, entity, transitive_exclude_self = False):
+    world = entity.namespace.world
+    onto  = entity.namespace.ontology
+    Props = Prop.descendants()
+    
+    if   Prop._class_property_relation:
+      storids = [ancestor.storid for ancestor in entity.ancestors()]
+      
+      prop_storids = []
+      values       = set()
+      for P in Props:
+        if issubclass_python(P, TransitiveProperty):
+          if P._inverse_storid: prop_storids.append((P.storid, P._inverse_storid))
+          else:                 prop_storids.append((P.storid, None))
+        else:
+          if P._inverse_storid:
+            values.update(onto._to_python(o) for storid in storids
+                                             for g in (world._get_obj_triples_sp_o(storid, P.storid),
+                                                       world._get_obj_triples_po_s(P._inverse_storid, storid))
+                                             for o in g )
+          else:
+            values.update(onto._to_python(o) for storid in storids
+                                             for o in  world._get_obj_triples_sp_o(storid, P.storid) )
+              
+      if prop_storids:
+        values.update(onto._to_python(o) for storid in storids
+                                         for o in world._get_obj_triples_transitive_sp_indirect(storid, prop_storids))
+        if transitive_exclude_self: values.discard(entity)
+
+
+    elif Prop._class_property_some:
+      if issubclass_python(Prop, TransitiveProperty):
+        values = set()
+        def walk(o):
+          values.add(o)
+          for r in _inherited_properties_value_restrictions(entity, Props, set()):
+            if   r.type == VALUE:
+              if not r.value in values:
+                values.add(r.value)
+                values.extend(Prop._get_indirect_values_for_individual(r.value))
+            elif (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1):
+              if not r.value in values:
+                walk(r.value)
+        walk(entity)
+        if transitive_exclude_self: values.discard(entity)
+        
+      else:
+        values = set(r.value for r in _inherited_properties_value_restrictions(entity, Props, set())
+                             if (r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1) )
+        
+    elif Prop._class_property_only: # Effect of transitivity on ONLY restrictions is unclear -- probably no effect?
+      values = set(x for r in _inherited_properties_value_restrictions(entity, Props, set())
+                     if (r.type == ONLY)
+                     for x in _flatten_only(r) )
+      
+    return list(values)
+  
+  def _set_value_for_individual(Prop, entity, value):
+    if value is None: entity.namespace.ontology._del_obj_triple_spo(entity.storid, Prop.storid, None)
+    else:             entity.namespace.ontology._set_obj_triple_spo(entity.storid, Prop.storid, value.storid)
+    if (not instance(entity, EntityClass)) and (Prop is entity.namespace.world._props.get(Prop._python_name)):
+      entity.__dict__[Prop.python_name] = value
+      
+  def _set_value_for_class (Prop, entity, value ): Prop._get_values_for_class(entity).reinit([value])
+  
+  
+class ObjectProperty(Property, metaclass = ObjectPropertyClass):
+  namespace = owl
 
 
 class DataPropertyClass(ReasoningPropertyClass):
   _owl_type = owl_data_property
   inverse_property = None
+  
+  def _get_value_for_individual(Prop, entity):
+    value = entity.namespace.world._get_data_triple_sp_od(entity.storid, Prop.storid)
+    if not value is None: return entity.namespace.ontology._to_python(*value)
+    
+  def _get_value_for_class(Prop, entity):
+    if   Prop._class_property_relation: Prop._get_value_for_individual(entity)
+    
+    elif Prop._class_property_some:
+        for r in _property_value_restrictions(entity, Prop):
+          if (r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1):
+            return r.value
+          
+    elif Prop._class_property_only:
+      for r in _property_value_restrictions(Class, Prop):
+        if (r.type == ONLY):
+          for value in _flatten_only(r): return value
+            
+  def _get_values_for_individual(Prop, entity):
+    return IndividualValueList((entity.namespace.ontology._to_python(o, d)
+                                for o, d in entity.namespace.world._get_data_triples_sp_od(entity.storid, Prop.storid)),
+                               entity, Prop)
+      
+  def _get_values_for_class(Prop, entity):
+    if   Prop._class_property_relation:
+      return Prop._get_values_for_individual(entity)
+    
+    elif Prop._class_property_some:
+      return ClassValueList(set(r.value for r in _property_value_restrictions(entity, Prop)
+                                if (r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1) ),
+                            entity, Prop)
+        
+    elif Prop._class_property_only:
+      return ClassValueList(set(x for r in _property_value_restrictions(entity, Prop)
+                                if (r.type == ONLY)
+                                for x in _flatten_only(r) ),
+                            entity, Prop)
+    
+    
+  def _get_indirect_value_for_individual(Prop, entity):
+    values = Prop._get_indirect_values_for_individual(entity)
+    if   len(values) == 0: return None
+    elif len(values) == 1: return values[0]
+    # XXX datatype
+    return _most_specific(values)
+  
+  def _get_indirect_value_for_class(Prop, entity):
+    values = Prop._get_indirect_values_for_class(entity)
+    if   len(values) == 0: return None
+    elif len(values) == 1: return values[0]
+    # XXX datatype
+    return _most_specific(values)
+  
+  def _get_indirect_values_for_individual(Prop, entity):
+    values = [entity.namespace.ontology._to_python(o, d)
+              for P in Prop.descendants()
+              for o, d in entity.namespace.world._get_data_triples_sp_od(entity.storid, P.storid)]
+    
+    values.extend(Prop._get_indirect_values_for_class(entity.__class__))
+    return values
 
-class DataProperty  (Property, metaclass = DataPropertyClass): pass
+  
+  def _get_indirect_values_for_class(Prop, entity):
+    Props = Prop.descendants()
+    
+    if   Prop._class_property_relation:
+      storids = [ancestor.storid for ancestor in entity.ancestors()]
+      return [ entity.namespace.ontology._to_python(o, d)
+               for storid in storids
+               for P in Props
+               for o, d in entity.namespace.world._get_data_triples_sp_od(storid, P.storid) ]
+      
+    elif Prop._class_property_some:
+      if issubclass_python(Prop, TransitiveProperty):
+        values = set()
+        def walk(o):
+          values.add(o)
+          for r in _inherited_properties_value_restrictions(entity, Props, set()):
+            if   r.type == VALUE:
+              if not r.value in values:
+                values.add(r.value)
+                values.extend(Prop._get_indirect_values_for_individual(r.value))
+            elif (r.type == SOME)  or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1):
+              if not r.value in values:
+                walk(r.value)
+        walk(entity)
+        return list(values)
+      
+      else:
+        return list(set(r.value for r in _inherited_properties_value_restrictions(entity, Props, set())
+                        if (r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1) ))
+      
+    elif Prop._class_property_only: # Effect of transitivity on ONLY restrictions is unclear -- probably no effect?
+      return list(set(x for r in _inherited_properties_value_restrictions(entity, Props, set())
+                      if (r.type == ONLY)
+                      for x in _flatten_only(r) ))
+    
+  def _set_value_for_individual(Prop, entity, value):
+    if value is None: entity.namespace.ontology._del_data_triple_spod(entity.storid, Prop.storid, None, None)
+    else:             entity.namespace.ontology._set_data_triple_spod(entity.storid, Prop.storid, *entity.namespace.ontology._to_rdf(value))
+    if (not instance(entity, EntityClass)) and (Prop is entity.namespace.world._props.get(Prop._python_name)):
+      entity.__dict__[Prop.python_name] = value
+      
+  def _set_value_for_class (Prop, entity, value ): Prop._get_values_for_class(entity).reinit([value])
+
+
+class DatatypeProperty(Property, metaclass = DataPropertyClass):
+  namespace = owl
+
+DataProperty = DatatypeProperty
 
 class FunctionalProperty(Property):
+  namespace = owl
   @classmethod
   def is_functional_for(Prop, o): return True
 
-class InverseFunctionalProperty(Property): pass
-class TransitiveProperty       (Property): pass
-class SymmetricProperty        (Property): pass
-class AsymmetricProperty       (Property): pass
-class ReflexiveProperty        (Property): pass
-class IrreflexiveProperty      (Property): pass
+class InverseFunctionalProperty(Property): namespace = owl
+class TransitiveProperty       (Property): namespace = owl
+class SymmetricProperty        (Property): namespace = owl
+class AsymmetricProperty       (Property): namespace = owl
+class ReflexiveProperty        (Property): namespace = owl
+class IrreflexiveProperty      (Property): namespace = owl
 
 _CLASS_PROPS = { DataProperty, ObjectProperty }
 _TYPE_PROPS  = { FunctionalProperty, InverseFunctionalProperty, TransitiveProperty, SymmetricProperty, AsymmetricProperty, ReflexiveProperty, IrreflexiveProperty }
@@ -474,3 +813,152 @@ def destroy_entity(e):
   e.namespace.world.graph.destroy_entity(e.storid, destroyer, relation_updater)
   
   e.namespace.world._entities.pop(e.storid, None)
+
+
+
+
+
+def _property_value_restrictions(x, Prop):
+  for parents in (x.is_a, x.equivalent_to.indirect()):
+    for r in parents:
+      if   isinstance(r, Restriction):
+        if (Prop is None) or (r.property is Prop): yield r
+        
+      elif isinstance(r, And):
+        for r2 in r.Classes:
+          if isinstance(r2, Restriction):
+            if (Prop is None) or (r2.property is Prop): yield r2
+            
+            
+
+
+def _inherited_properties_value_restrictions(x, Props, already):
+  if   isinstance(x, Restriction):
+    if x.property in Props: yield x
+    
+  elif isinstance(x, EntityClass) or isinstance(x, Thing):
+    # Need two passes in order to favor restriction on the initial class rather than those on the ancestor classes
+    parentss = (x.is_a, list(x.equivalent_to.indirect()))
+    for parents in parentss:
+      for parent in parents:
+        if isinstance(parent, Restriction):
+          if parent.property in Props: yield parent
+          
+    for parents in parentss:
+      for parent in parents:
+        if (not isinstance(parent, Restriction)) and (not parent in already):
+          already.add(parent)
+          yield from _inherited_properties_value_restrictions(parent, Props, already)
+          
+  elif isinstance(x, And):
+    for x2 in x.Classes:
+      yield from _inherited_properties_value_restrictions(x2, Props, already)
+      
+      
+def _flatten_only(r):
+  if isinstance(r.value, Or):
+    for i in r.value.Classes:
+      if isinstance(i, OneOf): yield from i.instances
+      else:                    yield i
+  else:
+    if isinstance(r.value, OneOf): yield from r.value.instances
+    else:                          yield r.value
+    
+
+def _most_specific(s):
+  best = None
+  for e in s:
+    if not isinstance(e, EntityClass): return e # Individuals are more specific than classes
+    if (best is None) or (issubclass_python(e, best)): best = e
+  return best
+
+
+    
+class IndividualValueList(CallbackListWithLanguage):
+  __slots__ = ["_Prop"]
+  def __init__(self, l, obj, Prop):
+    list.__init__(self, l)
+    self._obj  = obj
+    self._Prop = Prop
+    
+  # def transitive(self):
+  #   n = self._obj.namespace
+  #   if self._Prop.inverse_property:
+  #     for o in n.world._get_obj_triples_transitive_sp_indirect(self._obj.storid, [(self._Prop.storid, self._Prop.inverse_property.storid)]):
+  #       yield n.ontology._to_python(o)
+  #   else:
+  #     for o in n.world._get_obj_triples_transitive_sp(self._obj.storid, self._Prop.storid):
+  #       yield n.ontology._to_python(o)
+        
+  # def transitive_symmetric(self):
+  #   n = self._obj.namespace
+  #   for o in n.world._get_obj_triples_transitive_sym(self._obj.storid, self._Prop.storid):
+  #     yield n.ontology._to_python(o)
+      
+  # def symmetric(self):
+  #   yield from self
+  #   n = self._obj.namespace
+  #   for o in n.world._get_obj_triples_po_s(self._Prop.storid, self._obj.storid):
+  #     yield n.ontology._to_python(o)
+      
+  def indirect(self):
+    return self._Prop._get_indirect_values_for_individual(self._obj)
+
+  def _callback(self, obj, old):
+    old = set(old)
+    new = set(self)
+    inverse  = self._Prop.inverse_property
+    
+    if   self._Prop._owl_type == owl_object_property:
+      for removed in old - new:
+        obj.namespace.ontology._del_obj_triple_spo(obj.storid, self._Prop.storid, removed.storid)
+        if inverse:
+          obj.namespace.ontology._del_obj_triple_spo(removed.storid, inverse.storid, obj.storid) # Also remove inverse
+          removed.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
+          
+      for added in new - old:
+        obj.namespace.ontology._add_obj_triple_spo(obj.storid, self._Prop.storid, added.storid)
+        if inverse: added.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
+        
+    elif self._Prop._owl_type == owl_data_property:
+      for removed in old - new:
+        obj.namespace.ontology._del_data_triple_spod(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
+        
+      for added in new - old:
+        obj.namespace.ontology._add_data_triple_spod(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
+        
+    else: #self._Prop._owl_type == owl_annotation_property:
+      for removed in old - new:
+        if hasattr(removed, "storid"):
+          obj.namespace.ontology._del_obj_triple_spo(obj.storid, self._Prop.storid, removed.storid)
+        else:
+          obj.namespace.ontology._del_data_triple_spod(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
+          
+      for added in new - old:
+        if hasattr(added, "storid"):
+          obj.namespace.ontology._add_obj_triple_spo(obj.storid, self._Prop.storid, added.storid)
+        else:
+          obj.namespace.ontology._add_data_triple_spod(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
+
+class FunctionalIndividualValueList(IndividualValueList):
+  __slots__ = []
+  def _callback(self, obj, old):
+    super()._callback(obj, old)
+    if not isinstance(obj, EntityClass): # Update cache
+      if self: obj.__dict__[self._Prop.python_name] = self[0]
+      else:    obj.__dict__[self._Prop.python_name] = None
+      
+          
+class ClassValueList(CallbackListWithLanguage):
+  __slots__ = ["_Prop"]
+  def __init__(self, l, obj, Prop):
+    list.__init__(self, l)
+    self._obj  = obj
+    self._Prop = Prop
+    
+  def _callback(self, obj, old):
+    self._obj._on_class_prop_changed(self._Prop, old, self)
+    
+  def indirect(self):
+    return self._Prop._get_indirect_values_for_class(self._obj)
+  

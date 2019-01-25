@@ -1160,7 +1160,7 @@ class Test(BaseTest, unittest.TestCase):
       o3 = O(p = [o2])
       o4 = O(p = [o3])
 
-    r = set(o3.p.transitive())
+    r = set(o3.p.indirect())
     assert r == { o1, o2 }
     
   def test_individual_13(self):
@@ -1180,7 +1180,7 @@ class Test(BaseTest, unittest.TestCase):
       o5 = O(i = [o4], p = [o6])
       o7 = O()
       
-    r = set(o3.p.transitive())
+    r = set(o3.p.indirect())
     assert r == { o1, o2, o4, o5, o6 }
     
   def test_individual_14(self):
@@ -1199,11 +1199,8 @@ class Test(BaseTest, unittest.TestCase):
       o6 = O(p = [o5])
       o7 = O()
       
-    r = set(o3.p.transitive_symmetric())
+    r = set(o3.p.indirect())
     assert r == { o3, o1, o2, o4 }
-    
-    r = set(o3.p.symmetric())
-    assert r == { o2, o4 }
     
   def test_individual_15(self):
     world   = self.new_world()
@@ -1240,7 +1237,7 @@ class Test(BaseTest, unittest.TestCase):
       kidney           = BodyPart("kidney"          , part_of = [abdomen])
       
     assert left_ventricular.part_of == [heart]
-    assert set(left_ventricular.part_of.indirect()) == { heart, abdomen }
+    assert set(left_ventricular.INDIRECT_part_of) == { heart, abdomen }
     
   def test_individual_17(self):
     world   = self.new_world()
@@ -1688,13 +1685,13 @@ class Test(BaseTest, unittest.TestCase):
       o = O()
       
       class p(Thing >> Thing): pass
-      
+        
       class Q(Thing):
         is_a = [p.value(o), p.some(C)]
         
         
       q = Q()
-      
+
     assert q.p == []
     assert set(q.p.indirect()) == { o, C }
     
@@ -1785,6 +1782,66 @@ class Test(BaseTest, unittest.TestCase):
     assert kale.has_taste == []
     assert set(kale.has_taste.indirect()) == { bitter }
     
+  def test_prop_31(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class p(Thing >> Thing): pass
+      class q(Thing >> Thing, FunctionalProperty): pass
+      class p2(Thing >> str): pass
+      class q2(Thing >> str, FunctionalProperty): pass
+
+    c1 = C()
+    c2 = C()
+    c3 = C()
+    c4 = C()
+    
+    c1.p = [c2, c3]
+    assert set(p[c1]) == set([c2, c3])
+    assert p[c1] is c1.p
+      
+    p[c1] = [c2, c4]
+    assert set(p[c1]) == set([c2, c4])
+    assert set(c1.p) == set([c2, c4])
+    assert p[c1] is c1.p
+
+    p[c2] = [c4, c3]
+    assert set(p[c2]) == set([c4, c3])
+    assert p[c2] is c2.p
+    
+    c1.p2 = ["c2", "c3"]
+    assert set(p2[c1]) == set(["c2", "c3"])
+    assert p2[c1] is c1.p2
+    
+    p2[c1] = ["c2", "c4"]
+    assert set(p2[c1]) == set(["c2", "c4"])
+    assert set(c1.p2) == set(["c2", "c4"])
+    assert p2[c1] is c1.p2
+    
+    c1.q = c2
+    assert q[c1] == [c2]
+
+    q[c1] = [c4]
+    assert c1.q == c4
+     
+    c1.q2 = "c2"
+    assert q2[c1] == ["c2"]
+
+    q2[c1] = ["c4"]
+    assert c1.q2 == "c4"
+
+    C.label.append("a")
+    C.label.append("b")
+    C.label = ["c", "d"]
+    assert set(C.label) == set(["c", "d"])
+
+    C.label.append("a")
+    C.label.append("b")
+    label[C] = ["c", "d"]
+    assert set(C.label) == set(["c", "d"])
+    
     
   def test_prop_inverse_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -1860,6 +1917,31 @@ class Test(BaseTest, unittest.TestCase):
     c1.prop = [c2]
     assert iprop.inverse_property == prop
     assert c2.iprop == [c1]
+    
+  def test_prop_inverse_8(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    assert o.has_topping._inverse_storid == o.topping_of.storid
+    assert o.topping_of._inverse_storid == o.has_topping.storid
+
+    with o:
+      class s(ObjectProperty, SymmetricProperty): pass
+      
+    assert s._inverse_storid == s.storid
+    
+    with o:
+      class p(ObjectProperty): pass
+      
+    assert p._inverse_storid == 0
+    
+    p.is_a.append(SymmetricProperty)
+    
+    assert p._inverse_storid == p.storid
+    
+    p.is_a.remove(SymmetricProperty)
+      
+    assert p._inverse_storid == 0
+    
     
   def test_construct_not_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -2218,7 +2300,7 @@ class Test(BaseTest, unittest.TestCase):
     drug1 = Drug(active_principles = [acetaminophen])
     drug2 = Drug(active_principles = [amoxicillin, clavulanic_acid])
     drug3 = Drug(active_principles = [])
-    
+
     close_world(Drug)
     
     # Running the reasoner
@@ -2776,6 +2858,43 @@ I took a placebo
     assert comment[onto.d1, onto.p, 1] == ["Annotation on a triple with a datatype value."]
     assert onto.D.is_a[1].value.instances == [1, 2, 3]
     
+  def test_annotation_17(self):
+    w = self.new_world()
+    o = w.get_ontology("http://test.org/onto.owl")
+
+    with o:
+      class C1(Thing): pass
+      class C2(C1): pass
+      class label2(label): pass
+
+    assert isinstance(Thing.storid, int)
+    assert isinstance(Property.storid, int)
+    assert isinstance(ObjectProperty.storid, int)
+    assert isinstance(DataProperty.storid, int)
+    assert isinstance(AnnotationProperty.storid, int)
+    assert set(label2.ancestors()) == set([Property, AnnotationProperty, label, label2])
+    
+    C1.label  = ["label A",  "label B" ]
+    C1.label2 = ["label2 A", "label2 B"]
+    
+    assert set(C1.label ) == set(["label A",  "label B" ])
+    assert set(C1.label2) == set(["label2 A", "label2 B"])
+    
+    assert set(C1.INDIRECT_label ) == set(["label A",  "label B", "label2 A", "label2 B"])
+    assert set(C1.INDIRECT_label2) == set(["label2 A", "label2 B"])
+    assert set(C2.label ) == set()
+    assert set(C2.label2) == set()
+    assert set(C2.INDIRECT_label ) == set()
+    assert set(C2.INDIRECT_label2) == set()
+
+    c = C1()
+    c.label  = ["l A",  "l B" ]
+    c.label2 = ["l2 A", "l2 B"]
+    assert set(c.label ) == set(["l A",  "l B" ])
+    assert set(c.label2) == set(["l2 A", "l2 B"])
+    assert set(c.INDIRECT_label ) == set(["l A",  "l B", "l2 A", "l2 B"])
+    assert set(c.INDIRECT_label2) == set(["l2 A", "l2 B"])
+    
     
   def test_import_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/2/test_mixed.owl").load()
@@ -2958,7 +3077,7 @@ I took a placebo
         range    = [str]
     O.is_a.append(rel.value("test"))
     assert O.rel == "test"
-
+    
     bnode = O.is_a[-1].storid
     self.assert_triple(O.storid, rdfs_subclassof, bnode)
     self.assert_triple(bnode, rdf_type, owl_restriction)
@@ -3469,6 +3588,93 @@ I took a placebo
     assert Antihypertensive.has_for_indications       == [Hypertension]
     assert Antihypertensive.has_for_contraindications == [Pregnancy]
 
+  def test_class_prop_21(self):
+    onto = self.new_ontology()
+    
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      class p(Thing >> Thing): pass
+      class p2(p): pass
+
+    C.p2 = [D, E]
+    assert set(C.p2) == set([D, E])
+    assert set(C.p) == set()
+    assert set(C.INDIRECT_p) == set([D, E])
+    assert isinstance(C.INDIRECT_p, list)
+
+  def test_class_prop_22(self):
+    onto = self.new_ontology()
+    
+    with onto:
+      class C1(Thing): pass
+      class C2(C1): pass
+      class C3(C2): pass
+      class E(Thing): pass
+      class p(Thing >> Thing, FunctionalProperty): pass
+      
+    e = E()
+    C1.p = E
+    C2.p = e
+    assert C1.p == E
+    assert C2.p == e
+    assert C3.p == None
+    assert C1.INDIRECT_p == E
+    assert C2.INDIRECT_p == e
+    assert C3.INDIRECT_p == e
+
+  def test_class_prop_23(self):
+    onto = self.new_ontology()
+    
+    with onto:
+      class C1(Thing): pass
+      class C2(C1): pass
+      class C3(C2): pass
+      class E(Thing): pass
+      class p(Thing >> Thing, FunctionalProperty): pass
+      class p2(p): pass
+      
+    e = E()
+    C1.p = E
+    C2.p2 = e
+    assert C1.p == E
+    assert C2.p == None
+    assert C3.p == None
+    assert C1.INDIRECT_p == E
+    assert C2.INDIRECT_p == e
+    assert C3.INDIRECT_p == e
+    assert C1.p2 == None
+    assert C2.p2 == e
+    assert C3.p2 == None
+    assert C1.INDIRECT_p2 == None
+    assert C2.INDIRECT_p2 == e
+    assert C3.INDIRECT_p2 == e
+
+    c = C1()
+    assert c.p == None
+    assert c.INDIRECT_p == E
+    assert c.p2 == None
+    assert c.INDIRECT_p2 == None
+
+    c = C1(p = e)
+    assert c.p == e
+    assert c.INDIRECT_p == e
+    assert c.p2 == None
+    assert c.INDIRECT_p2 == None
+
+    c = C1(p2 = e)
+    assert c.p == None
+    assert c.INDIRECT_p == e
+    assert c.p2 == e
+    assert c.INDIRECT_p2 == e
+
+    c = C3()
+    assert c.p == None
+    assert c.INDIRECT_p == e
+    assert c.p2 == None
+    assert c.INDIRECT_p2 == e
+    
     
   def test_format_1(self):
     from owlready2.triplelite import _guess_format
@@ -4038,6 +4244,11 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
     l = world.search(type = n.Tomato, topping_of = world.search(has_topping = n.mon_frometon))
     assert set(l) == { n.ma_tomate }
+
+    sl = world.search(has_topping = n.mon_frometon)
+    l = world.search(type = n.Tomato, topping_of = sl)
+    assert set(l) == { n.ma_tomate }
+    assert isinstance(sl, owlready2.triplelite._SearchList)
     
   def test_search_12(self):
     world = self.new_world()

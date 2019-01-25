@@ -77,9 +77,9 @@ class AnnotationPropertyClass(PropertyClass):
   _owl_type = owl_annotation_property
   inverse_property = inverse = None
   
-  def __getitem__(Annot, index):
-    if isinstance(index, tuple):
-      source, property, target = index
+  def __getitem__(Annot, entity):
+    if isinstance(entity, tuple):
+      source, property, target = entity
       if hasattr(source,   "storid"):
         world = source.namespace.world # if Annot is in owl_world (e.g. comment), use the world of the source
         source_orig = source
@@ -96,20 +96,34 @@ class AnnotationPropertyClass(PropertyClass):
       return _AnnotList(l, source_orig, property, target, target_d, Annot.storid)
     
     else:
-      return getattr(index, Annot.python_name)
-    
+      if Annot is entity.namespace.world._props.get(Annot._python_name): # use cached value
+        return getattr(entity, Annot._python_name)
+      else:
+        return Annot._get_values_for_individual(entity)
+      
   def __setitem__(Annot, index, values):
     if not isinstance(values, list): values = [values]
     
-    if isinstance(index, tuple): Annot[index].reinit(values)
-    else: return setattr(index, Annot.python_name, values)
+    if isinstance(index, tuple):
+      Annot[index].reinit(values)
+    else:
+      return setattr(index, Annot.python_name, values)
     
   def __call__(Prop, type, c, *args):
     raise ValueError("Cannot create a property value restriction on an annotation property!")
+      
+  def _get_indirect_values_for_individual(Prop, entity):
+    values = [entity.namespace.ontology._to_python(o, d)
+              for P in Prop.descendants(world = entity.namespace.world)
+              for o, d in entity.namespace.world._get_triples_sp_od(entity.storid, P.storid)]
+    return values
   
-#type.__setattr__(DataProperty, "inverse_property", None)
+  _get_indirect_values_for_class = _get_indirect_values_for_individual
+  
 
 class AnnotationProperty(Property, metaclass = AnnotationPropertyClass):
+  namespace = owl
+  
   @classmethod
   def is_functional_for(Prop, o): return False
 

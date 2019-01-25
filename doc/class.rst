@@ -95,7 +95,7 @@ Creating equivalent classes
 
 The .equivalent_to Class attribute is a list of equivalent classes. It behaves like .is_a.
 
-To obtain all equivalent classes, including indirect ones (due to transitivity), use .equivalent_to.indirect().
+To obtain all equivalent classes, including indirect ones (due to transitivity), use .INDIRECT_equivalent_to.
 
 
 Creating Individuals
@@ -159,15 +159,13 @@ For a given Individual, the values of a property can be obtained with the usual
 ::
 
    >>> print(onto.my_drug.has_for_active_principle)
-   []
 
-Similarly, the .indirect() methods can be used to obtain a generator for all indirectely related entities
-(i.e. those asserted at the class level with restriction, or implied by transistive properties, etc):
+Property name can be prefixed with "INDIRECT_" to obtain all indirect relations
+(i.e. those asserted at the class level with restriction, or implied by transistive properties, or subproperties,etc):
 
 ::
 
-   >>> print(list(onto.my_drug.has_for_active_principle.indirect()))
-   []
+   >>> print(onto.my_drug.INDIRECT_has_for_active_principle)
 
    
 Introspecting Individuals
@@ -221,6 +219,15 @@ and then to add the other Class(ses) in its .is_a attribute:
 Owlready2 will automatically create a hidden Class that inherits from both Drug and BloodBasedProduct. This
 hidden class is visible in a_blood_based_drug.__class__, but not in a_blood_based_drug.is_a.
    
+
+Equivalent (identical, SameAs) individuals
+------------------------------------------
+
+The .equivalent_to Individual attribute is a list of equivalent individuals (corresponding to OWL SameAs relation).
+This list can be modified.
+
+To obtain all equivalent individuals, including indirect ones (due to transitivity), use .INDIRECT_equivalent_to.
+
 
 Destroying entities
 -------------------

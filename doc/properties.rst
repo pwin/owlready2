@@ -234,13 +234,13 @@ A subproperty can be created by subclassing a Property class.
 Obtaining indirect relations (considering subproperty, transitivity, etc)
 -------------------------------------------------------------------------
 
-The .indirect() method can be used to obtain a generator over all indirectly
+Property name can be prefixed by "INDIRECT_" to obtain all indirectly
 related entities. It takes into account:
 
- * subproperties,
- * transitive properties,
- * symmetric properties,
- * reflexive properties.
+ * transitive, symmetric and reflexive properties,
+ * property inheritance (i.e. subproperties),
+ * classes of an individual (i.e. values asserted at the class level),
+ * class inheritance (i.e. parent classes).
 
 ::
 
@@ -255,7 +255,7 @@ related entities. It takes into account:
    ... print(left_ventricular.part_of)
    [heart]
    
-   ... print(list(left_ventricular.part_of.indirect()))
+   ... print(left_ventricular.INDIRECT_part_of)
    [heart, abdomen]
 
 

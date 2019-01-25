@@ -57,7 +57,7 @@ owlready2.namespace.FusionClass             = FusionClass
 owlready2.namespace.AllDisjoint             = AllDisjoint
 owlready2.namespace.ConstrainedDatatype     = ConstrainedDatatype
 owlready2.namespace.Inverse                 = Inverse
-owlready2.namespace.ValueList               = ValueList
+owlready2.namespace.IndividualValueList     = IndividualValueList
 owlready2.entity.Thing              = Thing
 owlready2.entity.Nothing            = Nothing
 owlready2.entity.ClassConstruct     = ClassConstruct
@@ -70,7 +70,8 @@ owlready2.entity.ObjectPropertyClass= ObjectPropertyClass
 owlready2.entity.ObjectProperty     = ObjectProperty
 owlready2.entity.DataProperty       = DataProperty
 owlready2.entity.AnnotationProperty = AnnotationProperty
-owlready2.entity.ValueList          = ValueList
+owlready2.entity.ReasoningPropertyClass = ReasoningPropertyClass
+#owlready2.entity.ValueList          = ValueList
 owlready2.entity.AllDisjoint        = AllDisjoint
 owlready2.entity.Inverse            = Inverse
 owlready2.entity._FUNCTIONAL_FOR_CACHE = _FUNCTIONAL_FOR_CACHE
@@ -80,8 +81,14 @@ owlready2.prop.ConstrainedDatatype     = ConstrainedDatatype
 owlready2.prop.ClassConstruct          = ClassConstruct
 owlready2.prop.AnnotationProperty      = AnnotationProperty
 owlready2.prop.Thing                   = Thing
-owlready2.prop.ValueList               = ValueList
+#owlready2.prop.ValueList               = ValueList
 owlready2.prop._check_superclasses     = True
+
+owlready2.prop.ThingClass              = ThingClass
+owlready2.prop.And                     = And
+owlready2.prop.Or                      = Or
+owlready2.prop.OneOf                   = OneOf
+
 owlready2.individual._keep_most_specific = _keep_most_specific
 owlready2.individual.ClassConstruct      = ClassConstruct
 owlready2.individual.TransitiveProperty  = TransitiveProperty
@@ -99,7 +106,7 @@ LOADING.__exit__()
 # Not real property
 del owl_world._props["Property"]
 del owl_world._props["ObjectProperty"]
-del owl_world._props["DataProperty"]
+del owl_world._props["DatatypeProperty"]
 del owl_world._props["FunctionalProperty"]
 del owl_world._props["InverseFunctionalProperty"]
 del owl_world._props["TransitiveProperty"]

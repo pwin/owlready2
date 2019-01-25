@@ -175,9 +175,9 @@ class BaseSubGraph(BaseGraph):
         if len(self) == 0:
           self._add_obj_triple_raw_spo(self.onto.storid, rdf_type, owl_ontology)
         if current_line:
-          raise OwlReadyOntologyParsingError("NTriples parsing error in file %s, line %s." % (getattr(f, "name", "???"), current_line)) from e
+          raise OwlReadyOntologyParsingError("NTriples parsing error (or unrecognized file format) in file %s, line %s." % (getattr(f, "name", "???"), current_line)) from e
         else:
-          raise OwlReadyOntologyParsingError("NTriples parsing error in file %s." % getattr(f, "name", "???")) from e
+          raise OwlReadyOntologyParsingError("NTriples parsing error (or unrecognized file format) in file %s." % getattr(f, "name", "???")) from e
           
     elif format == "rdfxml":
       objs, datas, on_prepare_obj, on_prepare_data, insert_objs, insert_datas, new_blank, _abbreviate, on_finish = self.create_parse_func(getattr(f, "name", ""), delete_existing_triples)

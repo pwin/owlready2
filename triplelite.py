@@ -25,7 +25,7 @@ import owlready2
 from owlready2.base import *
 from owlready2.driver import BaseMainGraph, BaseSubGraph
 from owlready2.driver import _guess_format, _save
-from owlready2.util import FTS
+from owlready2.util import FTS, _LazyListMixin
 from owlready2.base import _universal_abbrev_2_iri
 
 def all_combinations(l):
@@ -1303,13 +1303,18 @@ SELECT DISTINCT x FROM transit""", (self.c, p, o, self.c, p)).fetchall(): yield 
 #    yield from r
 
 
-
+class _PopulatedSearchList(FirstList):
+  __slots__ = ["world", "prop_vals", "_c", "id", "tables", "conditions", "params", "alternatives", "excepts", "except_conditions", "except_params", "nested_searchs", "target"]
+  
 _NEXT_SEARCH_ID = 0
-class _SearchList(LazyList):
+class _SearchList(FirstList, _LazyListMixin):
+  __slots__ = ["world", "prop_vals", "_c", "id", "tables", "conditions", "params", "alternatives", "excepts", "except_conditions", "except_params", "nested_searchs", "target"]
+  _PopulatedClass = _PopulatedSearchList
+  
   def __init__(self, world, prop_vals, c = None):
     global _NEXT_SEARCH_ID
     
-    super().__init__(self._do_search)
+    super().__init__()
     self.world     = world
     self.prop_vals = prop_vals
     self._c         = c
@@ -1354,7 +1359,7 @@ class _SearchList(LazyList):
         
       elif k == " is_a":
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
-        if isinstance(v, _SearchList):
+        if isinstance(v, (_SearchList, _PopulatedSearchList)):
           self.conditions.append("(q%s.p = %s OR q%s.p = %s) AND q%s.o = q%s.s" % (i, rdf_type, i, rdfs_subclassof, i, v.target))
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
@@ -1364,7 +1369,7 @@ class _SearchList(LazyList):
           
       elif k == " type":
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
-        if isinstance(v, _SearchList):
+        if isinstance(v, (_SearchList, _PopulatedSearchList)):
           self.conditions.append("q%s.p = %s AND q%s.o = q%s.s" % (i, rdf_type, i, v.target))
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
@@ -1374,7 +1379,7 @@ class _SearchList(LazyList):
           
       elif k == " subclass_of":
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
-        if isinstance(v, _SearchList):
+        if isinstance(v, (_SearchList, _PopulatedSearchList)):
           self.conditions.append("q%s.p = %s AND q%s.o = q%s.s" % (i, rdfs_subclassof, i, v.target))
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
@@ -1391,18 +1396,18 @@ class _SearchList(LazyList):
             self.conditions  .append("q%s.c = ?" % i)
             self.params      .append(c)
             
-        if   v == "*":
-          cond1 = "q%s.s = q%s.s AND q%s.p = ?" % (i, self.target, i)
-          cond2 = "q%s.o = q%s.s AND q%s.p = ?" % (i, self.target, i)
-          params1 = [k[0]]
-          params2 = [k[1]]
-        elif isinstance(v, _SearchList):
+        if   isinstance(v, (_SearchList, _PopulatedSearchList)): # First, to avoid comparing v with "*", which would require to populate it!
           cond1 = "q%s.s = q%s.s AND q%s.p = ? AND q%s.o = q%s.s" % (i, self.target, i, i, v.target)
           cond2 = "q%s.o = q%s.s AND q%s.p = ? AND q%s.s = q%s.s" % (i, self.target, i, i, v.target)
           params1 = [k[0]]
           params2 = [k[1]]
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
+        elif v == "*":
+          cond1 = "q%s.s = q%s.s AND q%s.p = ?" % (i, self.target, i)
+          cond2 = "q%s.o = q%s.s AND q%s.p = ?" % (i, self.target, i)
+          params1 = [k[0]]
+          params2 = [k[1]]
         else:
           cond1 = "q%s.s = q%s.s AND q%s.p = ? AND q%s.o = ?" % (i, self.target, i, i)
           cond2 = "q%s.o = q%s.s AND q%s.p = ? AND q%s.s = ?" % (i, self.target, i, i)
@@ -1424,7 +1429,7 @@ class _SearchList(LazyList):
         else:
           self.conditions.append("q%s.p = ?" % i)
           self.params    .append(k)
-          if   isinstance(v, _SearchList):
+          if   isinstance(v, (_SearchList, _PopulatedSearchList)):
             self.conditions.append("q%s.o = q%s.s" % (i, v.target))
             self.params    .append(v)
             self.nested_searchs.append(v)
@@ -1496,12 +1501,18 @@ EXCEPT %s""" % (sql, "\nUNION ALL ".join("""SELECT candidates.s FROM candidates,
   def _do_search(self):
     sql, params = self.sql_request()
     return (self.world._get_by_storid(o) for (o,) in self.world.graph.execute(sql, params).fetchall())
-  
+  _populate = _do_search
+
+  def first(self):
+    sql, params = self.sql_request()
+    o = self.world.graph.execute(sql, params).fetchone()
+    if o: return self.world._get_by_storid(o[0])
+    
   def _do_search_rdf(self):
     sql, params = self.sql_request()
     return self.world.graph.execute(sql, params).fetchall()
   
-  def _lazy_len(self):
+  def __len__(self):
     sql, params = self.sql_request()
     sql = """select count(*) FROM (%s)""" % sql
     return self.world.graph.execute(sql, params).fetchone()[0]

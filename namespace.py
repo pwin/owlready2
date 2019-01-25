@@ -32,7 +32,7 @@ def set_log_level(x):
   global _LOG_LEVEL
   _LOG_LEVEL = x
   
-class Namespace(object):  
+class Namespace(object):
   def __init__(self, world_or_ontology, base_iri, name = None):
     if not(base_iri.endswith("#") or base_iri.endswith("/")): raise ValueError("base_iri must end with '#' or '/' !")
     name = name or base_iri[:-1].rsplit("/", 1)[-1]
@@ -78,6 +78,8 @@ class _GraphManager(object):
   
   def _get_obj_triple_sp_o(self, subject, predicate): return None
   def _get_obj_triple_po_s(self, predicate, object): return None
+  def _get_obj_triples_sp_o(self, subject, predicate): return []
+  def _get_obj_triples_po_s(self, predicate, object): return []
   def _get_data_triples_sp_od(self, subject, predicate): return []
   
   def _get_obj_triples_transitive_sp (self, subject, predicate, already = None): return set()
@@ -288,7 +290,7 @@ class _GraphManager(object):
     return _SearchList(self.world, prop_vals)
     
   def search_one(self, **kargs): return self.search(**kargs).first()
-    
+  
   
 onto_path = []
 
@@ -925,7 +927,7 @@ class Metadata(object):
   def __getattr__(self, attr):
     Prop = self.namespace.world._props.get(attr)
     values = [self.namespace.ontology._to_python(o, d) for o, d in self.namespace.world._get_triples_sp_od(self.storid, Prop.storid)]
-    values = ValueList(values, self, Prop)
+    values = IndividualValueList(values, self, Prop)
     self.__dict__[attr] = values
     return values
   
@@ -970,8 +972,8 @@ def _get_onto_file(base_iri, name, mode = "r", only_local = False):
 
 
 owl_world = World(filename = None)
+rdf       = owl_world.get_ontology("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 rdfs      = owl_world.get_ontology("http://www.w3.org/2000/01/rdf-schema#")
 owl       = owl_world.get_ontology("http://www.w3.org/2002/07/owl#")
 owlready  = owl_world.get_ontology("http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#")
 anonymous = owl_world.get_ontology("http://anonymous/")
-

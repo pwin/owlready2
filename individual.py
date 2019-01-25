@@ -39,97 +39,7 @@ class _EquivalentToList(CallbackList):
   indirect = transitive_symmetric
   
 
-class ValueList(CallbackListWithLanguage):
-  __slots__ = ["_Prop"]
-  def __init__(self, l, obj, Prop):
-    list.__init__(self, l)
-    self._obj  = obj
-    self._Prop = Prop
-    
-  def transitive(self):
-    n = self._obj.namespace
-    if self._Prop.inverse_property:
-      for o in n.world._get_obj_triples_transitive_sp_indirect(self._obj.storid, [(self._Prop.storid, self._Prop.inverse_property.storid)]):
-        yield n.ontology._to_python(o)
-    else:
-      for o in n.world._get_obj_triples_transitive_sp(self._obj.storid, self._Prop.storid):
-        yield n.ontology._to_python(o)
-        
-  def transitive_symmetric(self):
-    n = self._obj.namespace
-    for o in n.world._get_obj_triples_transitive_sym(self._obj.storid, self._Prop.storid):
-      yield n.ontology._to_python(o)
-      
-  def symmetric(self):
-    yield from self
-    n = self._obj.namespace
-    for o in n.world._get_obj_triples_po_s(self._Prop.storid, self._obj.storid):
-      yield n.ontology._to_python(o)
-      
-  def indirect(self):
-    if issubclass(self._Prop, ReflexiveProperty): yield self._obj
-    if (not issubclass(self._Prop, TransitiveProperty)) and (not issubclass(self._Prop, SymmetricProperty)):
-      for Prop in self._Prop.descendants():
-        yield from Prop[self._obj]
-        yield from Prop[self._obj.__class__].indirect()
-    else:
-      n = self._obj.namespace
-      prop_storids = []
-      for Prop in self._Prop.descendants():
-        if issubclass(Prop, TransitiveProperty):
-          if issubclass(Prop, SymmetricProperty):
-            prop_storids.append((Prop.storid, Prop.storid))
-          else:
-            if Prop.inverse_property: prop_storids.append((Prop.storid, Prop.inverse_property.storid))
-            else:                     prop_storids.append((Prop.storid, None))
-        else:
-          if issubclass(Prop, SymmetricProperty): yield from Prop[self._obj].symmetric()
-          else:                                   yield from Prop[self._obj]
-          yield from Prop[self._obj.__class__].indirect()
-          
-      if prop_storids:
-        for o in n.world._get_obj_triples_transitive_sp_indirect(self._obj.storid, prop_storids):
-          o = n.ontology._to_python(o)
-          yield o
-          yield from Prop[o.__class__].indirect()
-          
-        
-  def _callback(self, obj, old):
-    old = set(old)
-    new = set(self)
-    inverse  = self._Prop.inverse_property
-    
-    if   self._Prop._owl_type == owl_object_property:
-      for removed in old - new:
-        obj.namespace.ontology._del_obj_triple_spo(obj.storid, self._Prop.storid, removed.storid)
-        if inverse:
-          obj.namespace.ontology._del_obj_triple_spo(removed.storid, inverse.storid, obj.storid) # Also remove inverse
-          removed.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
-          
-      for added in new - old:
-        obj.namespace.ontology._add_obj_triple_spo(obj.storid, self._Prop.storid, added.storid)
-        if inverse: added.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
-        
-    elif self._Prop._owl_type == owl_data_property:
-      for removed in old - new:
-        obj.namespace.ontology._del_data_triple_spod(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
-        
-      for added in new - old:
-        obj.namespace.ontology._add_data_triple_spod(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
-        
-    else: #self._Prop._owl_type == owl_annotation_property:
-      for removed in old - new:
-        if hasattr(removed, "storid"):
-          obj.namespace.ontology._del_obj_triple_spo(obj.storid, self._Prop.storid, removed.storid)
-        else:
-          obj.namespace.ontology._del_data_triple_spod(obj.storid, self._Prop.storid, obj.namespace.ontology._to_rdf(removed)[0], None)
-          
-      for added in new - old:
-        if hasattr(added, "storid"):
-          obj.namespace.ontology._add_obj_triple_spo(obj.storid, self._Prop.storid, added.storid)
-        else:
-          obj.namespace.ontology._add_data_triple_spod(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
-          
+  
     
 class Thing(metaclass = ThingClass):
   namespace = owl
@@ -293,51 +203,25 @@ class Thing(metaclass = ThingClass):
       
       
   def __getattr__(self, attr):
-    Prop = self.namespace.world._props.get(attr)
-    if Prop is None:
-      if attr == "equivalent_to": return self.get_equivalent_to() # Needed
-      raise AttributeError("'%s' property is not defined." % attr)
-    return self._get_instance_prop_value(Prop, attr)
-  
-  def _get_instance_prop_value(self, Prop, attr, force_list = False):
-    if   Prop._owl_type == owl_object_property:
-      values = [self.namespace.ontology._to_python(o) for o in self.namespace.world._get_obj_triples_sp_o(self.storid, Prop.storid)]
-      if (not force_list) and Prop.is_functional_for(self.__class__):
-        if (not values) and Prop.inverse_property:
-          values = [self.namespace.ontology._to_python(s) for s in self.namespace.world._get_obj_triples_po_s(Prop.inverse_property.storid, self.storid)]
-        if   len(values) > 1:
-          try:    repr_self = repr(self)
-          except: repr_self = "<instance of %s>" % self.__class__
-          raise AttributeError("More than one value for %s.%s (storid %s), but the property if functional or the class has been restricted." % (repr_self, attr, self.storid))
-        elif not values: values = None
-        else:            values = values[0]
-        
+    if attr.startswith("INDIRECT_"):
+      Prop = self.namespace.world._props.get(attr[9:])
+      if not Prop:
+        if attr == "INDIRECT_equivalent_to": return list(self.get_equivalent_to().indirect())
+        raise AttributeError("'%s' property is not defined." % attr)
+      if Prop.is_functional_for(self.__class__):
+        return Prop._get_indirect_value_for_individual(self)
       else:
-        if Prop.inverse_property:
-          values.extend(self.namespace.ontology._to_python(s) for s in self.namespace.world._get_obj_triples_po_s(Prop.inverse_property.storid, self.storid))
-        values = ValueList(values, self, Prop)
-        
-    elif Prop._owl_type == owl_data_property:
-      values = [self.namespace.ontology._to_python(o, d) for o, d in self.namespace.world._get_data_triples_sp_od(self.storid, Prop.storid)]
-      if (not force_list) and Prop.is_functional_for(self.__class__):
-        if   len(values) > 1:
-          try:    repr_self = repr(self)
-          except: repr_self = "<instance of %s>" % self.__class__
-          print("* Owlready2 * WARNING: More than one value for %s.%s (storid %s), but the property if functional or the class has been restricted." % (repr_self, attr, self.storid), file = sys.stderr)
-          values = values[0]
-        elif not values: values = None
-        else:            values = values[0]
-        
-      else:
-        values = ValueList(values, self, Prop)
-        
-    else: #Prop._owl_type == owl_annotation_property:
-      values = [self.namespace.ontology._to_python(o, d) for o, d in self.namespace.world._get_triples_sp_od(self.storid, Prop.storid)]
-      values = ValueList(values, self, Prop)
+        return list(Prop._get_indirect_values_for_individual(self))
       
-    self.__dict__[attr] = values
-    return values
-  
+    else:
+      Prop = self.namespace.world._props.get(attr)
+      if not Prop:
+        if attr == "equivalent_to": return self.get_equivalent_to() # Needed
+        raise AttributeError("'%s' property is not defined." % attr)
+      if Prop.is_functional_for(self.__class__): self.__dict__[attr] = r = Prop._get_value_for_individual (self)
+      else:                                      self.__dict__[attr] = r = Prop._get_values_for_individual(self)
+      return r
+    
   def __setattr__(self, attr, value):
     if attr in SPECIAL_ATTRS:
       if   attr == "is_a":          self.is_a.reinit(value)
@@ -370,9 +254,7 @@ class Thing(metaclass = ThingClass):
               self.namespace.ontology._del_data_triple_spod(self.storid, Prop.storid, None, None)
             else:
               self.namespace.ontology._set_data_triple_spod(self.storid, Prop.storid, *self.namespace.ontology._to_rdf(value))
-          
-          #else: #Prop._owl_type == owl_annotation_property: # Annotation cannot be functional
-            
+              
         else:
           if not isinstance(value, list):
             if isinstance(Prop, AnnotationPropertyClass):

@@ -36,10 +36,6 @@ class _EquivalentToList(CallbackList):
       self._indirect = set( n.ontology._to_python(o, main_type = self._obj.__class__)
                             for o in n.world._get_obj_triples_transitive_sym(self._obj.storid, self._obj._owl_equivalent)
                             if o != self._obj.storid )
-      #self._indirect = set( n.ontology._to_python(o, main_type = self._obj.__class__)
-      #                      for o in n.world.get_equivs_s_o(self._obj.storid)
-      #                      if o != self._obj.storid )
-      
     yield from self._indirect
     
   indirect = transitive_symmetric
@@ -122,7 +118,7 @@ class EntityClass(type):
         is_a           = _is_a,
         _equivalent_to = None,
       )
-      
+
       Class = namespace.world._entities[storid] = _is_a._obj = type.__new__(MetaClass, name, superclasses, obj_dict)
       
       if not LOADING:
@@ -168,6 +164,9 @@ class EntityClass(type):
   def set_equivalent_to(Class, value): Class.equivalent_to.reinit(value)
   
   equivalent_to = property(get_equivalent_to, set_equivalent_to)
+  
+  def get_indirect_equivalent_to(Class): return list(Class.equivalent_to.indirect())
+  INDIRECT_equivalent_to = property(get_indirect_equivalent_to)
   
   def _class_equivalent_to_changed(Class, old):
     for Subclass in Class.descendants(True, True):
@@ -250,15 +249,14 @@ class EntityClass(type):
     return s
   
   def descendants(Class, include_self = True, only_loaded = False, world = None):
-    if Class is Thing:
+    s = set()
+    if Class.namespace.world is owl_world:
       if world is None:
         import owlready2
         world = owlready2.default_world
-      s = set(world.classes())
-      if include_self: s.add(Thing)
+      Class._fill_descendants(s, include_self, only_loaded, world, None)
     else:
-      s = set()
-      Class._fill_descendants(s, include_self, only_loaded)
+      Class._fill_descendants(s, include_self, only_loaded, Class.namespace.world, Class.namespace.ontology)
     return s
   
   def _fill_ancestors(Class, s, include_self):
@@ -273,26 +271,26 @@ class EntityClass(type):
         if not parent in s:
           parent._fill_ancestors(s, True)
           
-  def _fill_descendants(Class, s, include_self, only_loaded = False):
+  def _fill_descendants(Class, s, include_self, only_loaded, world, onto):
     if include_self:
       s.add(Class)
       for equivalent in Class.equivalent_to.indirect():
         if isinstance(equivalent, Class.__class__) and not equivalent in s:
-          equivalent._fill_descendants(s, True)
+          equivalent._fill_descendants(s, True, only_loaded, world, onto)
           
-    for x in Class.namespace.world._get_obj_triples_transitive_po(Class._rdfs_is_a, Class.storid):
+    for x in world._get_obj_triples_transitive_po(Class._rdfs_is_a, Class.storid):
       if not x < 0:
         if only_loaded:
-          descendant = Class.namespace.world._entities.get(x)
+          descendant = world._entities.get(x)
           if descendant is None: continue
         else:
-          descendant = Class.namespace.world._get_by_storid(x, None, Class.__class__, Class.namespace.ontology)
+          descendant = world._get_by_storid(x, None, Class.__class__, onto)
         if (descendant is Class): continue
         if not descendant in s:
           s.add(descendant)
           for equivalent in descendant.equivalent_to.indirect():
             if isinstance(equivalent, Class.__class__) and not equivalent in s:
-              equivalent._fill_descendants(s, True)
+              equivalent._fill_descendants(s, True, only_loaded, world, onto)
               
   def subclasses(Class, only_loaded = False, world = None):
     if Class is Thing:
@@ -308,41 +306,25 @@ class EntityClass(type):
         else:
           if only_loaded:
             subclass = world._entities.get(x)
-            if not subclass is None: yield subclass # r.append(subclass)
+            if not subclass is None: yield subclass
           else:
             yield world._get_by_storid(x, None, ThingClass)
-            #r.append(world._get_by_storid(x, None, ThingClass))
       return r
     
     else:
+      world = world or Class.namespace.world
       if only_loaded:
-        #r = []
-        for x in Class.namespace.world._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid):
+        for x in world._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid):
           if not x < 0:
-            subclass = Class.namespace.world._entities.get(x)
-            if not subclass is None: yield subclass #r.append(subclass)
-        #return r
-      
+            subclass = world._entities.get(x)
+            if not subclass is None: yield subclass
+            
       else:
-        #return [
-        #  Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
-        #  for x in Class.namespace.world._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid)
-        #  if not x < 0
-        #]
-        for x in Class.namespace.world._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid):
+        for x in world._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid):
           if not x < 0:
-            yield Class.namespace.world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
-      
+            yield world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
+            
   def constructs(Class, Prop = None):
-    #def _top_bn(onto, s):
-    #  try:
-    #    construct = onto._parse_bnode(s)
-    #    return construct
-    #  except:
-    #    for relation in [rdf_first, rdf_rest, owl_complementof, owl_unionof, owl_intersectionof, owl_onclass]:
-    #      s2 = Class.namespace.world._get_obj_triple_po_s(relation, s)
-    #      if not s2 is None:
-    #        return _top_bn(onto, s2)
     def _top_bn(onto, s):
       for relation in [rdf_first, rdf_rest, owl_complementof, owl_unionof, owl_intersectionof, owl_onclass, SOME, ONLY]:
         s2 = Class.namespace.world._get_obj_triple_po_s(relation, s)
@@ -399,13 +381,13 @@ class ThingClass(EntityClass):
         yield Prop
         
   def instances(Class, world = None):
-    if Class.namespace is owl:
+    if Class.namespace.world is owl_world:
       import owlready2
       return (world or owlready2.default_world).world.search(type = Class)
     return Class.namespace.world.search(type = Class)
   
   def direct_instances(Class, world = None):
-    if Class.namespace is owl:
+    if Class.namespace.world is owl_world:
       import owlready2
       world = world or owlready2.default_world
       return [world._get_by_storid(s, None, Thing) for s in world._get_obj_triples_po_s(rdf_type, Class.storid)]
@@ -440,78 +422,54 @@ class ThingClass(EntityClass):
     type.__setattr__(Class, "__defined_class", defined_class)
     if defined_class:
       Class.namespace.ontology._set_data_triple_spod(Class.storid, owlready_defined_class, *to_literal(True))
-      #parents, r = Class._get_defined_construct()
-      #for i in Class.is_a:
-      #  if isinstance(i, Restriction):
-      #    Class.is_a.append(i)
     else:
       Class.namespace.ontology._del_data_triple_spod(Class.storid, owlready_defined_class, "true", None)
-      #parents, r = Class._get_defined_construct()
-      #if r:
-      #  Class.equivalent_to.remove(r)
-      #  for i in r.Classes:
-      #    if isinstance(i, Restriction): Class.is_a.append(i)
   defined_class = property(get_defined_class, set_defined_class)
   
   def __getattr__(Class, attr):
+    if attr.startswith("INDIRECT_"):
+      Prop = Class.namespace.world._props.get(attr[9:])
+      if not Prop: raise AttributeError("'%s' property is not defined." % attr)
+      #if issubclass_python(Prop, AnnotationProperty): return Class.__getattr__(Prop.python_name)
+      if Prop.is_functional_for(Class): return Prop._get_indirect_value_for_class(Class)
+      else:                             return Prop._get_indirect_values_for_class(Class)
+      
+    else:
+      Prop = Class.namespace.world._props.get(attr)
+      if not Prop: raise AttributeError("'%s' property is not defined." % attr)
+      if issubclass_python(Prop, AnnotationProperty):
+        attr = "__%s" % attr # Do NOT cache as such in __dict__, to avoid inheriting annotations
+        values = Class.__dict__.get(attr)
+        if values is None:
+          values = Prop._get_values_for_class(Class)
+          type.__setattr__(Class, attr, values)
+        return values
+      
+      if Prop.is_functional_for(Class): return Prop._get_value_for_class (Class)
+      else:                             return Prop._get_values_for_class(Class)
+      
+      
+  def __setattr__(Class, attr, value):
+    if attr in SPECIAL_ATTRS:
+      super().__setattr__(attr, value)
+      return
+    
     Prop = Class.namespace.world._props.get(attr)
     if Prop is None: raise AttributeError("'%s' property is not defined." % attr)
-    return Class._get_class_prop_value(Prop, attr)
-  
-  def _get_class_prop_value(Class, Prop, attr, force_list = False):
-    if issubclass_python(Prop, AnnotationProperty):
-      # Do NOT cache as such in __dict__, to avoid inheriting annotations
-      attr = "__%s" % attr
+    
+    if   value is None:               value = []
+    elif not isinstance(value, list): value = [value]
+    
+    if isinstance(Prop, ReasoningPropertyClass):
+      Class._on_class_prop_changed(Prop, Prop._get_values_for_class(Class), value)
+    else:
+      attr = "__%s" % attr # Do NOT cache as such in __dict__, to avoid inheriting annotations
       values = Class.__dict__.get(attr)
       if values is None:
-        values = ValueList((Class.namespace.ontology._to_python(o, d) for o,d in Class.namespace.world._get_triples_sp_od(Class.storid, Prop.storid)), Class, Prop)
+        values = Prop._get_values_for_class(Class)
         type.__setattr__(Class, attr, values)
-      return values
+      values.reinit(value)
     
-    else:
-      if (not force_list) and Prop.is_functional_for(Class):
-        if Prop._class_property_some:
-          for r in _inherited_property_value_restrictions(Class, Prop, set()):
-            if (r.type == VALUE) or (r.type == SOME): return r.value
-            
-        if Prop._class_property_only:
-          for r in _inherited_property_value_restrictions(Class, Prop, set()):
-            if (r.type == ONLY): return next(_flatten_only(r), None)
-            
-        if Prop._class_property_relation:
-          if Prop._owl_type == owl_object_property:
-            values = [Class.namespace.ontology._to_python(o) for o in Class.namespace.world._get_obj_triples_sp_o(Class.storid, Prop.storid)]
-            if (not values) and Prop.inverse_property:
-              values = [Class.namespace.ontology._to_python(s) for s in Class.namespace.world._get_obj_triples_po_s(Prop.inverse_property.storid, Class.storid)]
-            if values: return values[0]
-          else:
-            values = [Class.namespace.ontology._to_python(o, d) for o, d in Class.namespace.world._get_data_triples_sp_od(Class.storid, Prop.storid)]
-            if values: return values[0]
-        return None
-      
-      else:
-        if   Prop._class_property_some:
-          return ClassValueList(
-            set(r.value for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()) for r in _property_value_restrictions(SuperClass, Prop, set()) if (r.type == VALUE) or (r.type == SOME)),
-            Class, Prop)
-        
-        elif Prop._class_property_only:
-          values = set()
-          for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()):
-            for r in _property_value_restrictions(SuperClass, Prop, set()):
-              if r.type == ONLY: values.update(_flatten_only(r))
-          return ClassValueList(values, Class, Prop)
-        
-        elif Prop._class_property_relation:
-          values = set()
-          for SuperClass in itertools.chain(Class.is_a, Class.equivalent_to.indirect()):
-            if Prop._owl_type == owl_object_property:
-              values.update(Class.namespace.ontology._to_python(o) for o in Class.namespace.world._get_obj_triples_sp_o(Class.storid, Prop.storid))
-              if Prop.inverse_property:
-                values.update(Class.namespace.ontology._to_python(s) for s in Class.namespace.world._get_obj_triples_po_s(Prop.inverse_property.storid, Class.storid))
-            else:
-              values.update(Class.namespace.ontology._to_python(o, d) for o, d in Class.namespace.world._get_data_triples_sp_od(Class.storid, Prop.storid))
-          return ClassValueList(values, Class, Prop)
         
   def inverse_restrictions(Class, Prop = None):
     for construct in Class.constructs():
@@ -663,86 +621,7 @@ class ThingClass(EntityClass):
             Class.namespace.ontology._add_data_triple_spod(Class.storid, Prop.storid, *Class.namespace.ontology._to_rdf(v))
           
           
-  def __setattr__(Class, attr, value):
-    if attr in SPECIAL_ATTRS:
-      super().__setattr__(attr, value)
-      return
-    
-    Prop = Class.namespace.world._props.get(attr)
-    
-    if Prop is None:
-      raise AttributeError("'%s' property is not defined." % attr)
-    
-    current_value = Class._get_class_prop_value(Prop, attr, True)
-    if   value is None:               value = []
-    elif not isinstance(value, list): value = [value]
-    current_value.reinit(value)
-    
-    #if Prop.is_functional_for(Class):
-    #  for r in _inherited_property_value_restrictions(Class, Prop, set()):
-    #    if (r.type == VALUE) or (r.type == SOME): old = [r.value]; break
-    #  else: old = []
-    #  if value is None: Class._on_class_prop_changed(Prop, old, [])
-    #  else:             Class._on_class_prop_changed(Prop, old, [value])
-    #  
-    #else:
-    #  if issubclass_python(Prop, AnnotationProperty):
-    #    if   value is None:               value = []
-    #    elif not isinstance(value, list): value = [value]
-    #  getattr(Class, attr).reinit(value)
-    
-
-class ClassValueList(CallbackListWithLanguage):
-  __slots__ = ["_Prop"]
-  def __init__(self, l, obj, Prop):
-    list.__init__(self, l)
-    self._obj  = obj
-    self._Prop = Prop
-    
-  def _callback(self, obj, old):
-    self._obj._on_class_prop_changed(self._Prop, old, self)
-    
-  def indirect(self):
-    if   self._Prop._class_property_some:
-      for r in _inherited_property_value_restrictions(self._obj, self._Prop, set()):
-        if (r.type == VALUE) or (r.type == SOME):
-          yield r.value
-          
-    elif self._Prop._class_property_only:
-      for r in _inherited_property_value_restrictions(self._obj, self._Prop, set()):
-        if (r.type == VALUE) or (r.type == ONLY):
-          yield from _flatten_only(r)
-          
-    elif self._Prop._class_property_relation:
-      for ancestor in self.ancestors():
-        if Prop._owl_type == owl_object_property:
-          for o in self.namespace.world._get_obj_triples_sp_o(Class.storid, Prop.storid):
-            yield self.namespace.ontology._to_python(o)
-          if Prop.inverse_property:
-            for s in self.namespace.world._get_obj_triples_po_s(Prop.inverse_property.storid, Class.storid):
-              yield self.namespace.ontology._to_python(s)
-        else:
-          for o, d in self.namespace.world._get_data_triples_sp_od(Class.storid, Prop.storid):
-            yield self.namespace.ontology._to_python(o, d)
             
-
-def _flatten_only(r):
-  if isinstance(r.value, Or):
-    for i in r.value.Classes:
-      if isinstance(i, OneOf): yield from i.instances
-      else:                    yield i
-  else:
-    if isinstance(r.value, OneOf): yield from r.value.instances
-    else:                          yield r.value
-    
-def _property_value_restrictions(x, Prop, already):
-  if   isinstance(x, Restriction):
-    if (Prop is None) or (x.property is Prop): yield x
-    
-  elif isinstance(x, And):
-    for x2 in x.Classes:
-      yield from _property_value_restrictions(x2, Prop, already)
-      
 
 
 def _inherited_property_value_restrictions(x, Prop, already):
@@ -750,21 +629,19 @@ def _inherited_property_value_restrictions(x, Prop, already):
     if (Prop is None) or (x.property is Prop): yield x
     
   elif isinstance(x, EntityClass) or isinstance(x, Thing):
-    #for parent in itertools.chain(x.is_a, x.equivalent_to.indirect()):
-    #  if not parent in already:
-    #    already.add(parent)
-    #    yield from _inherited_property_value_restrictions(parent, Prop, already)
-    
     # Need two passes in order to favor restriction on the initial class rather than those on the ancestor classes
-    for parent in itertools.chain(x.is_a, x.equivalent_to.indirect()):
-      if isinstance(parent, Restriction):
-        if (Prop is None) or (parent.property is Prop): yield parent
+    parentss = (x.is_a, list(x.equivalent_to.indirect()))
+    for parents in parentss:
+      for parent in parents:
+        if isinstance(parent, Restriction):
+          if (Prop is None) or (parent.property is Prop): yield parent
         
-    for parent in itertools.chain(x.is_a, x.equivalent_to.indirect()):
-      if (not isinstance(parent, Restriction)) and (not parent in already):
-        already.add(parent)
-        yield from _inherited_property_value_restrictions(parent, Prop, already)
-        
+    for parents in parentss:
+      for parent in parents:
+        if (not isinstance(parent, Restriction)) and (not parent in already):
+          already.add(parent)
+          yield from _inherited_property_value_restrictions(parent, Prop, already)
+          
   elif isinstance(x, And):
     for x2 in x.Classes:
       yield from _inherited_property_value_restrictions(x2, Prop, already)

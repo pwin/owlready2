@@ -297,9 +297,10 @@ version 2 - 0.13
 version 2 - 0.14
 ****************
 
-* Support anonymous individuals, e.g. Thing(0)
+* New implementation of property values; use INDIRECT_prop to get indirect values
 * Support several class property types : some, only, some + only, and direct relation
 * Automatically create defined classes via class properties
+* Support anonymous individuals, e.g. Thing(0)
 * Optimize search() when only the number of returned elements is used
 * Bugfixes:
   - Fix functional class properties with inheritance

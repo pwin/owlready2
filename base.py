@@ -222,7 +222,8 @@ _universal_abbrev("http://www.w3.org/2002/07/owl#versionInfo")
 HAS_SELF = _universal_abbrev("http://www.w3.org/2002/07/owl#hasSelf")
 
 owlready_class_property_type = _universal_abbrev("http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#class_property_type")
-owlready_defined_class = _universal_abbrev("http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#defined_class")
+owlready_defined_class       = _universal_abbrev("http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#defined_class")
+rdf_property                 = _universal_abbrev("http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")
 
 
 issubclass_python = issubclass
