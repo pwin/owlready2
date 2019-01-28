@@ -137,7 +137,7 @@ class Graph(BaseMainGraph):
       self.prop_fts         = set()
       
       self.execute("""CREATE TABLE store (version INTEGER, current_blank INTEGER, current_resource INTEGER)""")
-      self.execute("""INSERT INTO store VALUES (6, 0, 300)""")
+      self.execute("""INSERT INTO store VALUES (7, 0, 300)""")
       self.execute("""CREATE TABLE objs (c INTEGER, s INTEGER, p INTEGER, o INTEGER)""")
       self.execute("""CREATE TABLE datas (c INTEGER, s INTEGER, p INTEGER, o BLOB, d INTEGER)""")
       #self.execute("""CREATE VIEW quads (c,s,p,o,d) AS SELECT c,s,p,o,NULL FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
@@ -319,6 +319,22 @@ class Graph(BaseMainGraph):
         self.execute("""CREATE INDEX index_datas_op ON datas(o,p)""")
         
         self.execute("""UPDATE store SET version=6""")
+        self.db.commit()
+        
+      if version == 6:
+        print("* Owlready2 * Converting quadstore to internal format 7 (this can take a while)...", file = sys.stderr)
+        
+        prop_fts2 = { storid for (storid,) in self.execute("""SELECT storid FROM prop_fts;""") }
+        for prop_storid in prop_fts2:
+          self.execute("""DELETE FROM prop_fts WHERE storid = ?""", (prop_storid,))
+          self.execute("""DROP TABLE fts_%s""" % prop_storid)
+          self.execute("""DROP TRIGGER fts_%s_after_insert""" % prop_storid)
+          self.execute("""DROP TRIGGER fts_%s_after_delete""" % prop_storid)
+          self.execute("""DROP TRIGGER fts_%s_after_update""" % prop_storid)
+        self.prop_fts = set()
+        for prop_storid in prop_fts2: self.enable_full_text_search (prop_storid)
+        
+        self.execute("""UPDATE store SET version=7""")
         self.db.commit()
         
         
@@ -864,25 +880,45 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
     return cursor
       
   def get_fts_prop_storid(self): return self.prop_fts
+
+#   def enable_full_text_search(self, prop_storid):
+#     self.prop_fts.add(prop_storid)
+    
+#     self.execute("""INSERT INTO prop_fts VALUES (?)""", (prop_storid,));
+    
+#     self.execute("""CREATE VIRTUAL TABLE fts_%s USING fts5(o, d, content=datas, content_rowid=rowid)""" % prop_storid)
+#     self.execute("""INSERT INTO fts_%s(rowid, o) SELECT rowid, o FROM datas WHERE p=%s""" % (prop_storid, prop_storid))
+    
+#     self.db.cursor().executescript("""
+# CREATE TRIGGER fts_%s_after_insert AFTER INSERT ON datas WHEN new.p=%s BEGIN
+#   INSERT INTO fts_%s(rowid, o) VALUES (new.rowid, new.o);
+# END;
+# CREATE TRIGGER fts_%s_after_delete AFTER DELETE ON datas WHEN old.p=%s BEGIN
+#   INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', old.rowid, old.o);
+# END;
+# CREATE TRIGGER fts_%s_after_update AFTER UPDATE ON datas WHEN new.p=%s BEGIN
+#   INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', new.rowid, new.o);
+#   INSERT INTO fts_%s(rowid, o) VALUES (new.rowid, new.o);
+# END;""" % (prop_storid, prop_storid, prop_storid,   prop_storid, prop_storid, prop_storid, prop_storid,   prop_storid, prop_storid, prop_storid, prop_storid, prop_storid))
   
   def enable_full_text_search(self, prop_storid):
     self.prop_fts.add(prop_storid)
     
     self.execute("""INSERT INTO prop_fts VALUES (?)""", (prop_storid,));
     
-    self.execute("""CREATE VIRTUAL TABLE fts_%s USING fts5(o, d, content=datas, content_rowid=rowid)""" % prop_storid)
-    self.execute("""INSERT INTO fts_%s(rowid, o) SELECT rowid, o FROM datas WHERE p=%s""" % (prop_storid, prop_storid))
+    self.execute("""CREATE VIRTUAL TABLE fts_%s USING fts5(o, d, content=datas, content_rowid=s)""" % prop_storid)
+    self.execute("""INSERT INTO fts_%s(rowid, o) SELECT s, o FROM datas WHERE p=%s""" % (prop_storid, prop_storid))
     
     self.db.cursor().executescript("""
 CREATE TRIGGER fts_%s_after_insert AFTER INSERT ON datas WHEN new.p=%s BEGIN
-  INSERT INTO fts_%s(rowid, o) VALUES (new.rowid, new.o);
+  INSERT INTO fts_%s(rowid, o) VALUES (new.s, new.o);
 END;
 CREATE TRIGGER fts_%s_after_delete AFTER DELETE ON datas WHEN old.p=%s BEGIN
-  INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', old.rowid, old.o);
+  INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', old.s, old.o);
 END;
 CREATE TRIGGER fts_%s_after_update AFTER UPDATE ON datas WHEN new.p=%s BEGIN
-  INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', new.rowid, new.o);
-  INSERT INTO fts_%s(rowid, o) VALUES (new.rowid, new.o);
+  INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', new.s, new.o);
+  INSERT INTO fts_%s(rowid, o) VALUES (new.s, new.o);
 END;""" % (prop_storid, prop_storid, prop_storid,   prop_storid, prop_storid, prop_storid, prop_storid,   prop_storid, prop_storid, prop_storid, prop_storid, prop_storid))
   
   def disable_full_text_search(self, prop_storid):
@@ -1419,7 +1455,7 @@ class _SearchList(FirstList, _LazyListMixin):
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
         if isinstance(v, FTS):
           self.tables    .append("fts_%s" % k)
-          self.conditions.append("q%s.rowid = fts_%s.rowid" % (i, k))
+          self.conditions.append("q%s.s = fts_%s.rowid" % (self.target, k))
           self.conditions.append("fts_%s MATCH ?" % k)
           self.params    .append(v)
           if v.lang != "":

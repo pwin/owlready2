@@ -161,7 +161,7 @@ For a given Individual, the values of a property can be obtained with the usual
    >>> print(onto.my_drug.has_for_active_principle)
 
 Property name can be prefixed with "INDIRECT_" to obtain all indirect relations
-(i.e. those asserted at the class level with restriction, or implied by transistive properties, or subproperties,etc):
+(i.e. those asserted at the class level with restriction, implied by transistive properties, subproperties, equivalences, etc):
 
 ::
 

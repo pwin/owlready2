@@ -270,18 +270,23 @@ class PropertyClass(EntityClass):
   def _get_indirect_values_for_individual(Prop, entity):
     world = entity.namespace.world
     onto  = entity.namespace.ontology
-    Props = Prop.descendants()
     
     if   not isinstance(entity, EntityClass):
-      values = [onto._to_python(o, d) for P in Props for o, d in world._get_triples_sp_od(entity.storid, P.storid)]
-      values.extend(Prop._get_indirect_values_for_individual(entity.__class__))
-      
+      eqs    = list(entity.equivalent_to.self_and_indirect_equivalent())
+      values = { onto._to_python(o, d)
+                 for P    in Prop.descendants()
+                 for eq   in eqs
+                 for o, d in world._get_triples_sp_od(eq.storid, P.storid) }
+      for eq in eqs:
+        values.extend(Prop._get_indirect_values_for_individual(eq.__class__))
+        
     else:
       storids = [ancestor.storid for ancestor in entity.ancestors()]
-      values = [onto._to_python(o, d) for storid in storids
-                                      for P in Props
-                                      for o, d in world._get_triples_sp_od(storid, P.storid)]
-    return values
+      values = { onto._to_python(o, d)
+                 for P      in Prop.descendants()
+                 for storid in storids
+                 for o, d   in world._get_triples_sp_od(storid, P.storid) }
+    return list(values)
   
   def _get_indirect_value_for_class(Prop, entity):
     values = Prop._get_indirect_values_for_class(entity)
@@ -465,9 +470,11 @@ class ObjectPropertyClass(ReasoningPropertyClass):
       
                                  
   def _get_indirect_values_for_individual(Prop, entity):
-    world = entity.namespace.world
-    onto  = entity.namespace.ontology
-    Props = Prop.descendants()
+    world   = entity.namespace.world
+    onto    = entity.namespace.ontology
+    Props   = Prop.descendants()
+    eqs     = list(entity.equivalent_to.self_and_indirect_equivalent())
+    already_applied_class = set()
     
     prop_storids = []
     values       = set()
@@ -477,24 +484,39 @@ class ObjectPropertyClass(ReasoningPropertyClass):
         else:                 prop_storids.append((P.storid, None))
       else:
         if P._inverse_storid:
-          values.update(onto._to_python(o) for g in (world._get_obj_triples_sp_o(entity.storid, P.storid), world._get_obj_triples_po_s(P._inverse_storid, entity.storid)) for o in g )
+          values.update(onto._to_python(o)
+                        for eq in eqs
+                        for g in (world._get_obj_triples_sp_o(eq.storid, P.storid), world._get_obj_triples_po_s(P._inverse_storid, eq.storid))
+                        for o in g )
         else:
-          values.update(onto._to_python(o) for o in  world._get_obj_triples_sp_o(entity.storid, P.storid) )
+          values.update(onto._to_python(o)
+                        for eq in eqs
+                        for o in  world._get_obj_triples_sp_o(eq.storid, P.storid) )
           
     if prop_storids:
-      already_applied_class = { entity.__class__ }
-      for o in world._get_obj_triples_transitive_sp_indirect(entity.storid, prop_storids):
-        o = onto._to_python(o)
-        values.add(o)
-        if not o.__class__ in already_applied_class:
-          values.update(Prop._get_indirect_values_for_class(o.__class__, True))
-          already_applied_class.add(o.__class__)
-          
-    values.update(Prop._get_indirect_values_for_class(entity.__class__, True))
-    
+      for eq in eqs:
+        new_values = [onto._to_python(o) for o in world._get_obj_triples_transitive_sp_indirect(eq.storid, prop_storids)]
+        
+        for o in new_values:
+          values.add(o)
+          if not o.__class__ in already_applied_class:
+            values.update(Prop._get_indirect_values_for_class(o.__class__, True))
+            already_applied_class.add(o.__class__)
+          for o2 in o.equivalent_to.indirect():
+            if not ((o2 in new_values) or (o2 in values)):
+              values.add(o2)
+              if not o2.__class__ in already_applied_class:
+                values.update(Prop._get_indirect_values_for_class(o2.__class__, True))
+                already_applied_class.add(o2.__class__)
+                
+    for eq in eqs:
+      if not eq.__class__ in already_applied_class:
+        values.update(Prop._get_indirect_values_for_class(eq.__class__, True))
+        already_applied_class.add(eq.__class__)
+        
     return list(values)
   
-  def _get_indirect_values_for_class(Prop, entity, transitive_exclude_self = False):
+  def _get_indirect_values_for_class(Prop, entity, transitive_exclude_self = True):
     world = entity.namespace.world
     onto  = entity.namespace.ontology
     Props = Prop.descendants()
@@ -529,14 +551,20 @@ class ObjectPropertyClass(ReasoningPropertyClass):
         values = set()
         def walk(o):
           values.add(o)
-          for r in _inherited_properties_value_restrictions(entity, Props, set()):
+          for r in _inherited_properties_value_restrictions(o, Props, set()):
             if   r.type == VALUE:
               if not r.value in values:
-                values.add(r.value)
-                values.extend(Prop._get_indirect_values_for_individual(r.value))
+                for o2 in r.value.equivalent_to.self_and_indirect_equivalent():
+                  if not o2 in values:
+                    values.add(o2)
+                    values.update(Prop._get_indirect_values_for_individual(o2))
+                    
             elif (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1):
-              if not r.value in values:
-                walk(r.value)
+              if not r.value in values: walk(r.value)
+              
+          for e in o.equivalent_to.indirect():
+            if not e in values: walk(e)
+            
         walk(entity)
         if transitive_exclude_self: values.discard(entity)
         
@@ -548,7 +576,7 @@ class ObjectPropertyClass(ReasoningPropertyClass):
       values = set(x for r in _inherited_properties_value_restrictions(entity, Props, set())
                      if (r.type == ONLY)
                      for x in _flatten_only(r) )
-      
+
     return list(values)
   
   def _set_value_for_individual(Prop, entity, value):
@@ -621,9 +649,11 @@ class DataPropertyClass(ReasoningPropertyClass):
     return _most_specific(values)
   
   def _get_indirect_values_for_individual(Prop, entity):
+    eqs    = list(entity.equivalent_to.self_and_indirect_equivalent())
     values = [entity.namespace.ontology._to_python(o, d)
-              for P in Prop.descendants()
-              for o, d in entity.namespace.world._get_data_triples_sp_od(entity.storid, P.storid)]
+              for P    in Prop.descendants()
+              for eq   in eqs
+              for o, d in entity.namespace.world._get_data_triples_sp_od(eq.storid, P.storid)]
     
     values.extend(Prop._get_indirect_values_for_class(entity.__class__))
     return values
@@ -640,26 +670,10 @@ class DataPropertyClass(ReasoningPropertyClass):
                for o, d in entity.namespace.world._get_data_triples_sp_od(storid, P.storid) ]
       
     elif Prop._class_property_some:
-      if issubclass_python(Prop, TransitiveProperty):
-        values = set()
-        def walk(o):
-          values.add(o)
-          for r in _inherited_properties_value_restrictions(entity, Props, set()):
-            if   r.type == VALUE:
-              if not r.value in values:
-                values.add(r.value)
-                values.extend(Prop._get_indirect_values_for_individual(r.value))
-            elif (r.type == SOME)  or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1):
-              if not r.value in values:
-                walk(r.value)
-        walk(entity)
-        return list(values)
-      
-      else:
-        return list(set(r.value for r in _inherited_properties_value_restrictions(entity, Props, set())
-                        if (r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1) ))
-      
-    elif Prop._class_property_only: # Effect of transitivity on ONLY restrictions is unclear -- probably no effect?
+      return list(set(r.value for r in _inherited_properties_value_restrictions(entity, Props, set())
+                      if (r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1) ))
+    
+    elif Prop._class_property_only:
       return list(set(x for r in _inherited_properties_value_restrictions(entity, Props, set())
                       if (r.type == ONLY)
                       for x in _flatten_only(r) ))
@@ -836,23 +850,36 @@ def _inherited_properties_value_restrictions(x, Props, already):
   if   isinstance(x, Restriction):
     if x.property in Props: yield x
     
-  elif isinstance(x, EntityClass) or isinstance(x, Thing):
-    # Need two passes in order to favor restriction on the initial class rather than those on the ancestor classes
-    parentss = (x.is_a, list(x.equivalent_to.indirect()))
-    for parents in parentss:
-      for parent in parents:
-        if isinstance(parent, Restriction):
-          if parent.property in Props: yield parent
-          
-    for parents in parentss:
-      for parent in parents:
-        if (not isinstance(parent, Restriction)) and (not parent in already):
-          already.add(parent)
-          yield from _inherited_properties_value_restrictions(parent, Props, already)
-          
   elif isinstance(x, And):
     for x2 in x.Classes:
       yield from _inherited_properties_value_restrictions(x2, Props, already)
+      
+  elif isinstance(x, EntityClass) or isinstance(x, Thing):
+    already.add(x)
+    parents = [ parent
+                for parents in (x.is_a, list(x.equivalent_to.indirect()))
+                for parent in parents
+                if not parent in already ]
+    
+    # Need two passes in order to favor restriction on the initial class rather than those on the ancestor classes
+    for parent in parents:
+      if isinstance(parent, Restriction) and (parent.property in Props): yield parent
+      
+    for parent in parents:
+      if not isinstance(parent, Restriction):
+        yield from _inherited_properties_value_restrictions(parent, Props, already)
+        
+    #parentss = (x.is_a, list(x.equivalent_to.indirect()))
+    #for parents in parentss:
+    #  for parent in parents:
+    #    if isinstance(parent, Restriction) and (not parent in already):
+    #      if parent.property in Props: yield parent
+    #      
+    #for parents in parentss:
+    #  for parent in parents:
+    #    if (not isinstance(parent, Restriction)) and (not parent in already):
+    #      already.add(parent)
+    #      yield from _inherited_properties_value_restrictions(parent, Props, already)
       
       
 def _flatten_only(r):

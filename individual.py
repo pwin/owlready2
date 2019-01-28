@@ -28,17 +28,23 @@ class _EquivalentToList(CallbackList):
     CallbackList.__init__(self, l, obj, callback)
     self._indirect = None
     
-  def transitive_symmetric(self):
-    if self._indirect is None:
-      n = self._obj.namespace
-      self._indirect = set()
-      for o in n.world._get_obj_triples_transitive_sym(self._obj.storid, owl_equivalentindividual):
-        if o != self._obj.storid: self._indirect.add(n.ontology._to_python(o))
+  def _build_indirect(self):
+    n = self._obj.namespace
+    self._indirect = list({
+      n.ontology._to_python(o)
+      for o in n.world._get_obj_triples_transitive_sym(self._obj.storid, owl_equivalentindividual)
+      if o != self._obj.storid
+    })
+    
+  def indirect(self):
+    if self._indirect is None: self._build_indirect()
+    return self._indirect
+  
+  def self_and_indirect_equivalent(self):
+    yield self._obj
+    if self._indirect is None: self._build_indirect()
     yield from self._indirect
     
-  indirect = transitive_symmetric
-  
-
   
     
 class Thing(metaclass = ThingClass):
@@ -206,7 +212,10 @@ class Thing(metaclass = ThingClass):
     if attr.startswith("INDIRECT_"):
       Prop = self.namespace.world._props.get(attr[9:])
       if not Prop:
-        if attr == "INDIRECT_equivalent_to": return list(self.get_equivalent_to().indirect())
+        if attr == "INDIRECT_equivalent_to":
+          eq = self.equivalent_to
+          if eq._indirect is None: eq._build_indirect()
+          return eq._indirect
         raise AttributeError("'%s' property is not defined." % attr)
       if Prop.is_functional_for(self.__class__):
         return Prop._get_indirect_value_for_individual(self)

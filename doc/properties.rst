@@ -241,6 +241,7 @@ related entities. It takes into account:
  * property inheritance (i.e. subproperties),
  * classes of an individual (i.e. values asserted at the class level),
  * class inheritance (i.e. parent classes).
+ * equivalences (i.e. equivalent classes, identical "same-as" individuals,...)
 
 ::
 

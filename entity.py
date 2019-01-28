@@ -30,17 +30,22 @@ class _EquivalentToList(CallbackList):
     self._obj      = obj
     self._indirect = None
     
-  def transitive_symmetric(self):
-    if self._indirect is None:
-      n = self._obj.namespace
-      self._indirect = set( n.ontology._to_python(o, main_type = self._obj.__class__)
-                            for o in n.world._get_obj_triples_transitive_sym(self._obj.storid, self._obj._owl_equivalent)
-                            if o != self._obj.storid )
+  def _build_indirect(self):
+    n = self._obj.namespace
+    self._indirect = list(set( n.ontology._to_python(o, main_type = self._obj.__class__)
+                               for o in n.world._get_obj_triples_transitive_sym(self._obj.storid, self._obj._owl_equivalent)
+                               if o != self._obj.storid ))
+  
+  def indirect(self):
+    if self._indirect is None: self._build_indirect()
+    return self._indirect
+  
+  def self_and_indirect_equivalent(self):
+    yield self._obj
+    if self._indirect is None: self._build_indirect()
     yield from self._indirect
     
-  indirect = transitive_symmetric
-  
-  
+    
 class EntityClass(type):
   namespace = owlready
   
@@ -165,7 +170,10 @@ class EntityClass(type):
   
   equivalent_to = property(get_equivalent_to, set_equivalent_to)
   
-  def get_indirect_equivalent_to(Class): return list(Class.equivalent_to.indirect())
+  def get_indirect_equivalent_to(Class):
+    eq = Class.equivalent_to
+    if eq._indirect is None: eq._build_indirect()
+    return eq._indirect
   INDIRECT_equivalent_to = property(get_indirect_equivalent_to)
   
   def _class_equivalent_to_changed(Class, old):
@@ -179,14 +187,14 @@ class EntityClass(type):
       Class.namespace.ontology._del_obj_triple_spo(Class.storid, Class._owl_equivalent, x    .storid)
       if isinstance(x, ClassConstruct): x._set_ontology(None)
       else: # Invalidate it
-        if x.equivalent_to._indirect:
+        if not x.equivalent_to._indirect is None:
           for x2 in x.equivalent_to._indirect: x2._equivalent_to._indirect = None
           x._equivalent_to._indirect = None
       
     for x in new - old:
       if isinstance(x, ClassConstruct): x._set_ontology(Class.namespace.ontology)
       else: # Invalidate it
-        if x.equivalent_to._indirect:
+        if not x.equivalent_to._indirect is None:
           for x2 in x.equivalent_to._indirect: x2._equivalent_to._indirect = None
           x._equivalent_to._indirect = None
       Class.namespace.ontology._add_obj_triple_spo(Class.storid, Class._owl_equivalent, x.storid)
@@ -394,9 +402,10 @@ class ThingClass(EntityClass):
     return [Class.namespace.world._get_by_storid(s, None, Thing) for s in Class.namespace.world._get_obj_triples_po_s(rdf_type, Class.storid)]
   
   def get_class_properties(Class):
-    for construct in itertools.chain(Class.is_a, Class.equivalent_to.indirect()):
-      if isinstance(construct, Restriction) and ((construct.type == SOME) or (construct.type == VALUE)):
-        yield construct.property
+    for constructs in (Class.is_a, Class.equivalent_to.indirect()):
+      for construct in constructs:
+        if isinstance(construct, Restriction) and ((construct.type == SOME) or (construct.type == VALUE)):
+          yield construct.property
         
   def __and__(a, b): return And([a, b])
   def __or__ (a, b): return Or ([a, b])

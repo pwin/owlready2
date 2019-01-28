@@ -1842,6 +1842,131 @@ class Test(BaseTest, unittest.TestCase):
     label[C] = ["c", "d"]
     assert set(C.label) == set(["c", "d"])
     
+  def test_prop_31(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      class F(Thing): pass
+      class G(Thing): pass
+      class H(Thing): pass
+      class I(Thing): pass
+      class J(Thing): pass
+      class p(Thing >> Thing, TransitiveProperty): pass
+      
+    c = C()
+    d = D()
+    e = E()
+    f = F()
+    g = G()
+    h = H()
+    i = I()
+    j = J()
+    c.p = [d]
+    D.is_a.append(p.some(E))
+    E.is_a.append(p.value(f))
+    G.equivalent_to.append(E)
+    G.is_a.append(p.value(h))
+    i.equivalent_to.append(h)
+    h.p = [j]
+    
+    assert set(c.INDIRECT_p) == set([d, E, f, G, h, i, j])
+    assert set(d.INDIRECT_p) == set([E, f, G, h, i, j])
+    assert set(e.INDIRECT_p) == set([f, G, h, i, j])
+    
+  def test_prop_32(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      class F(Thing): pass
+      class G(Thing): pass
+      class H(Thing): pass
+      class I(Thing): pass
+      class J(Thing): pass
+      class p(Thing >> Thing, TransitiveProperty, SymmetricProperty): pass
+      
+    c = C()
+    d = D()
+    e = E()
+    f = F()
+    g = G()
+    h = H()
+    i = I()
+    j = J()
+    c.p = [d]
+    D.is_a.append(p.some(E))
+    E.is_a.append(p.value(f))
+    G.equivalent_to.append(E)
+    G.is_a.append(p.value(h))
+    i.equivalent_to.append(h)
+    h.p = [j]
+    
+    assert set(c.INDIRECT_p) == set([c, d, E, f, G, h, i, j])
+    assert set(d.INDIRECT_p) == set([c, d, E, f, G, h, i, j])
+    assert set(e.INDIRECT_p) == set([f, G, h, i, j])
+    
+  def test_prop_33(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      class F(Thing): pass
+      class J(Thing): pass
+      class p(Thing >> Thing): pass
+      
+    c = C()
+    d = D()
+    e = E()
+    f = F()
+    j = J()
+    c.p = [d]
+    c.equivalent_to.append(e)
+    F.equivalent_to.append(E)
+    F.is_a.append(p.some(j))
+    
+    assert set(e.INDIRECT_p) == set([d, j])
+    
+  def test_prop_34(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      class F(Thing): pass
+      class J(Thing): pass
+      class p(Thing >> str): pass
+      
+    c = C()
+    d = D()
+    e = E()
+    f = F()
+    j = J()
+    c.p = ["1"]
+    c.equivalent_to.append(e)
+    F.equivalent_to.append(E)
+    F.is_a.append(p.value("2"))
+    
+    c.label = "c"
+    e.label = "e"
+    
+    assert set(e.INDIRECT_p) == set(["1", "2"])
+    assert c.label == ["c"]
+    assert e.label == ["e"]
+    assert c.INDIRECT_label == ["c"]
+    assert e.INDIRECT_label == ["e"]
+    
     
   def test_prop_inverse_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
