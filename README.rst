@@ -297,6 +297,7 @@ version 2 - 0.13
 version 2 - 0.14
 ****************
 
+* UMLS support (owlready2.pymedtermino2 package)
 * New implementation of property values; use INDIRECT_prop to get indirect values
 * Support several class property types : some, only, some + only, and direct relation
 * Automatically create defined classes via class properties
