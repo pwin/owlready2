@@ -4533,8 +4533,22 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     """))
     assert set(l[0] for l in r) == { False }
     assert type(r[0][0]) is bool
+
+  def test_rdflib_5(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/test.owl")
+    with n:
+      class O(Thing): pass
+      class p(Thing >> str): pass
+      o1 = O(p = ["1", "2"])
+      n._add_data_triple_spod(o1.storid, p.storid, "3", 0)
+      
+    g = world.as_rdflib_graph()
+    s = set(g.triples((rdflib.URIRef(o1.iri), None, None)))
+    world.graph.dump()
+    assert len(s) == 5
     
-    
+      
   def test__refactor_1(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()

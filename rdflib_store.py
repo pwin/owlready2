@@ -79,7 +79,7 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
       else:                 o = URIRef(self.triplelite._unabbreviate(o))
     else:
       if   isinstance(d, str) and d.startswith("@"): o = Literal(o, lang = d[1:])
-      elif d == "":                                  o = Literal(o)
+      elif (d == "") or (d == 0):                    o = Literal(o)
       else:                                          o = Literal(o, datatype = URIRef(self.triplelite._unabbreviate(d)))
     return s,p,o
   
