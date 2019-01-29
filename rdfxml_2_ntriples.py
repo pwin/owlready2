@@ -312,7 +312,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
     else:
       parser.ParseFile(f)
   except Exception as e:
-    raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), parser.CurrentLineNumber, parser.CurrentColumnNumber)) from e
+    raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", getattr(f, "url", "???")), parser.CurrentLineNumber, parser.CurrentColumnNumber)) from e
   
   
   if triples_with_unnamed_bn:
@@ -368,7 +368,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
             o = rebuild_bn(content)
           on_prepare_obj(axiom_iri,p,o)
         except Exception as e:
-          raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), line, column)) from e
+          raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", getattr(f, "url", "???")), line, column)) from e
         
     
   return nb_triple

@@ -289,9 +289,10 @@ class Restriction(ClassConstruct):
     ontology._add_obj_triple_spo(self.storid, rdf_type, owl_restriction)
     ontology._add_obj_triple_spo(self.storid, owl_onproperty, self.property.storid)
     if (self.type == SOME) or (self.type == ONLY) or (self.type == VALUE) or (self.type == HAS_SELF):
-      o, d = ontology.world._to_rdf(self.value)
-      if d is None: ontology._add_obj_triple_spo  (self.storid, self.type, o)
-      else:         ontology._add_data_triple_spod(self.storid, self.type, o, d)
+      if not self.value is None:
+        o, d = ontology.world._to_rdf(self.value)
+        if d is None: ontology._add_obj_triple_spo  (self.storid, self.type, o)
+        else:         ontology._add_data_triple_spod(self.storid, self.type, o, d)
     else:
       if self.value is None:
         if not self.cardinality is None: ontology._add_data_triple_spod(self.storid, _qualified_2_non_qualified[self.type], self.cardinality, _non_negative_integer)

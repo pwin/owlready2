@@ -359,7 +359,7 @@ def parse_rdfxml(object f, list objs, list datas, object insert_objs, object ins
     else:
       parser.ParseFile(f)
   except Exception as e:
-    raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), parser.CurrentLineNumber, parser.CurrentColumnNumber)) from e
+    raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", getattr(f, "url", "???")), parser.CurrentLineNumber, parser.CurrentColumnNumber)) from e
   
   cdef object content_2_bns
   cdef int bn
@@ -425,7 +425,7 @@ def parse_rdfxml(object f, list objs, list datas, object insert_objs, object ins
           objs.append((axiom_iri, p, o))
           
         except Exception as e:
-          raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), line, column)) from e
+          raise OwlReadyOntologyParsingError("RDF/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", getattr(f, "url", "???")), line, column)) from e
         
     
   return nb_triple
@@ -873,7 +873,7 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
       parser.ParseFile(f)
       
   except Exception as e:
-    raise OwlReadyOntologyParsingError("OWL/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), parser.CurrentLineNumber, parser.CurrentColumnNumber)) from e
+    raise OwlReadyOntologyParsingError("OWL/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", getattr(f, "url", "???")), parser.CurrentLineNumber, parser.CurrentColumnNumber)) from e
   
   return nb_triple
 

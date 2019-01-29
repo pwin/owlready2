@@ -486,7 +486,7 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       parser.ParseFile(f)
       
   except Exception as e:
-    raise OwlReadyOntologyParsingError("OWL/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", "???"), parser.CurrentLineNumber, parser.CurrentColumnNumber)) from e
+    raise OwlReadyOntologyParsingError("OWL/XML parsing error in file %s, line %s, column %s." % (getattr(f, "name", getattr(f, "url", "???")), parser.CurrentLineNumber, parser.CurrentColumnNumber)) from e
   
   return nb_triple
 
