@@ -75,6 +75,7 @@ owlready2.entity.ReasoningPropertyClass = ReasoningPropertyClass
 owlready2.entity.AllDisjoint        = AllDisjoint
 owlready2.entity.Inverse            = Inverse
 owlready2.entity._FUNCTIONAL_FOR_CACHE = _FUNCTIONAL_FOR_CACHE
+owlready2.entity._property_value_restrictions = owlready2.prop._property_value_restrictions
 owlready2.disjoint.Or = Or
 owlready2.prop.Restriction             = Restriction
 owlready2.prop.ConstrainedDatatype     = ConstrainedDatatype
@@ -122,7 +123,7 @@ get_namespace = default_world.get_namespace
 
 
 def default_render_func(entity):
-  if entity.storid < 0: return "_:%s" % (-entity.storid)
+  if isinstance(entity.storid, int) and (entity.storid < 0): return "_:%s" % (-entity.storid)
   return "%s.%s" % (entity.namespace.name, entity.name)
 
 def set_render_func(func):

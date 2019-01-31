@@ -110,6 +110,8 @@ class BaseGraph(object):
     self.save(s, format)
     print(s.getvalue().decode("utf8"), file = file)
 
+  def __bool__(self): return True # To avoid that "if graph:" call __len__()
+  
 
 class BaseMainGraph(BaseGraph):
   def parse(self, f): raise NotImplementedError

@@ -19,32 +19,37 @@
 
 from owlready2 import *
 
-umls = get_ontology("http://umls/")
-umls.model    = umls.get_namespace("http://umls/model/")
-umls.CUI      = umls.get_namespace("http://umls/CUI/")
-umls._src     = umls.get_namespace("http://umls/SRC/")
+UMLS          = get_ontology("http://UMLS/")
+UMLS.model    = UMLS.get_namespace("http://UMLS/model/")
+#UMLS.CUI      = UMLS.get_namespace("http://UMLS/CUI/")
+UMLS._src     = UMLS.get_namespace("http://UMLS/SRC/")
 
 class UMLSOntology(Ontology):
-  def get_terminology(self, name): return self._src["V-%s" % name]
+  def get_terminology(self, name): return self._src["%s" % name]
   def get_unified_concept(self, cui): return 
   __getitem__ = get_terminology
-umls.__class__ = UMLSOntology
-  
-class UMLSConceptNamespace(Namespace):
-  pass
-umls.CUI.__class__ = UMLSConceptNamespace
+UMLS.__class__ = UMLSOntology
+
+#class UMLSConceptNamespace(Namespace):
+#  pass
+#UMLS.CUI.__class__ = UMLSConceptNamespace
 
 def _sort_by_name(x): return x.name
 
-class MetaOriginalConcept(ThingClass):
+class MetaConcept(ThingClass):
   def __new__(MetaClass, name, superclasses, obj_dict):
-    if superclasses == (Thing,): return ThingClass.__new__(MetaClass, name, superclasses, obj_dict)
-    else:                        return type.__new__(MetaClass, name, superclasses, obj_dict)
+    #if superclasses == (Thing,): return ThingClass.__new__(MetaClass, name, superclasses, obj_dict)
+    #else:                        return type.__new__(MetaClass, name, superclasses, obj_dict)
+    if LOADING:
+      return type.__new__(MetaClass, name, superclasses, obj_dict)
+    else:
+      return ThingClass.__new__(MetaClass, name, superclasses, obj_dict)
+      
     
   def __repr__(Class):
     terminology = Class.terminology
     if not terminology: return ThingClass.__repr__(Class)
-    return """%s["%s"] # %s\n""" % (terminology.name[2:], Class.name, Class.label.first())
+    return """%s["%s"] # %s\n""" % (terminology.name, Class.name, Class.label.first())
   
   def __getattr__(Class, attr):
     attr2 = "__%s" % attr
@@ -64,22 +69,21 @@ class MetaOriginalConcept(ThingClass):
       return r
     
     elif attr == "terminology":
-      r = Class.namespace.world._get_data_triple_sp_od(Class.storid, umls.model.terminology.storid)[0]
-      r = IRIS["http://umls/SRC/V-%s" % r]
+      r = Class.namespace.world._get_obj_triple_sp_o(Class.storid, UMLS.model.terminology.storid)
+      r = Class.namespace.world._get_by_storid(r)
       type.__setattr__(Class, "__terminology", r)
       return r
-      return None
     
     return ThingClass.__getattr__(Class, attr)
   
   def __getitem__(Class, code):
-    if Class.terminology.name == "V-SRC":
-      return Class.namespace.world["http://umls/%s/%s" % (Class.name[2:], code)]
+    if Class.terminology.name == "SRC":
+      return Class.namespace.world["http://UMLS/%s/%s" % (Class.name, code)]
     else:
-      return Class.namespace.world["http://umls/%s/%s" % (Class.terminology.name[2:], code)]
+      return Class.namespace.world["http://UMLS/%s/%s" % (Class.terminology.name, code)]
   
   def full_code(Class):
-    return u"%s:%s" % (Class.terminology.name[2:], Class.name)
+    return u"%s:%s" % (Class.terminology.name, Class.name)
 
   def has_concept(Class, code):
     return not Class[code] is None
@@ -117,42 +121,81 @@ class MetaOriginalConcept(ThingClass):
         
               
   def __rshift__(Class, destination_terminology):
-    if destination_terminology is Class.terminology: return Concepts([Class])
-    if destination_terminology is umls.concepts: return Class.unifieds
-    
-    if Class.terminology.name == "V-SRC":
+    if Class.terminology.name == "SRC": # Property creation
       return ThingClass.__rshift__(Class, destination_terminology)
-    dest = destination_terminology.name[2:]
     
-    return Concepts([
-      Class.namespace.world._get_by_storid(i)
-      for (i,) in Class.namespace.world.graph.execute(
+    return Class._map(_get_mapper(Class.terminology, destination_terminology))
+  
+  def _map(Class, mapper):
+    r = [ Class.namespace.world._get_by_storid(i) for i in mapper(Class.storid) ]
+    if r: return r
+    return [ i for parent in Class.parents for i in parent._map(mapper) ]
+  
+
+_MAPPERS = {}
+def _get_mapper(source, dest):
+  mapper = _MAPPERS.get((source, dest))
+  if not mapper:
+    if   source is dest: mapper = _no_op_mapper
+    elif source is _CUI: mapper = _create_from_cui_mapper(dest)
+    elif dest   is _CUI: mapper = _to_cui_mapper
+    else:                mapper = _create_cui_mapper(source, dest)
+    _MAPPERS[source, dest] = mapper
+  return mapper
+
+def _no_op_mapper(storid):
+  yield storid
+  
+def _create_from_cui_mapper(dest):
+  def _from_cui_mapper(storid, dest_storid = dest.storid):
+    for (i,) in UMLS.world.graph.execute(
+"""SELECT DISTINCT to3.o FROM objs to1, objs to2, objs to3
+WHERE to1.s=? AND to1.p=?
+AND to2.s=to1.o AND to2.p=? AND to2.o=?
+AND to3.s=to1.o AND to3.p=?
+""", (
+  storid, rdfs_subclassof,
+  owl_onproperty, UMLS.model.originals.storid,
+  SOME,
+  )):
+      if UMLS.world._get_obj_triple_sp_o(i, UMLS.model.terminology.storid) == dest_storid:
+        yield i
+  return _from_cui_mapper
+  
+def _to_cui_mapper(storid):
+  for (i,) in UMLS.world.graph.execute(
+"""SELECT DISTINCT tu2.o FROM objs t, objs tu1, objs tu2
+WHERE t.s=? AND t.p=?
+AND tu1.s=t.o AND tu1.p=? AND tu1.o=?
+AND tu2.s=t.o AND tu2.p=?
+""", (
+  storid, rdfs_subclassof,
+  owl_onproperty, UMLS.model.unifieds.storid,
+  SOME,
+  )):
+    yield i
+      
+def _create_cui_mapper(source, dest):
+  def _cui_mapper(storid, dest_storid = dest.storid):
+    for (i,) in UMLS.world.graph.execute(
 """SELECT DISTINCT to3.o FROM objs t, objs tu1, objs tu2, objs to1, objs to2, objs to3
 WHERE t.s=? AND t.p=?
-AND tu1.s = t.o AND tu1.p=? AND tu1.o=?
-AND tu2.s = t.o AND tu2.p=?
-AND to1.s = tu2.o AND to1.p=?
-AND to2.s = to1.o AND to2.p=? AND to2.o=?
-AND to3.s = to1.o AND to3.p=?
+AND tu1.s=t.o AND tu1.p=? AND tu1.o=?
+AND tu2.s=t.o AND tu2.p=?
+AND to1.s=tu2.o AND to1.p=?
+AND to2.s=to1.o AND to2.p=? AND to2.o=?
+AND to3.s=to1.o AND to3.p=?
 """, (
-  Class.storid, rdfs_subclassof,
-  owl_onproperty, umls.model.unifieds.storid,
+  storid, rdfs_subclassof,
+  owl_onproperty, UMLS.model.unifieds.storid,
   SOME,
   rdfs_subclassof,
-  owl_onproperty, umls.model.originals.storid,
+  owl_onproperty, UMLS.model.originals.storid,
   SOME,
-  ))
-      if default_world._get_data_triple_sp_od(i, umls.model.terminology.storid)[0] == dest
-    ])
-  
-  
-class MetaUnifiedConcept(ThingClass):
-  def __new__(MetaClass, name, superclasses, obj_dict):
-    if superclasses == (Thing,): return ThingClass.__new__(MetaClass, name, superclasses, obj_dict)
-    else:                        return type.__new__(MetaClass, name, superclasses, obj_dict)
-    
-  def __repr__(Class):
-    return """CUI["%s"] # %s\n""" % (Class.name, Class.label.first())
+  )):
+      if UMLS.world._get_obj_triple_sp_o(i, UMLS.model.terminology.storid) == dest_storid:
+        yield i
+  return _cui_mapper
 
 
 class MetaGroup(ThingClass):
@@ -164,16 +207,12 @@ class MetaGroup(ThingClass):
     return """<Group %s> # %s\n""" % (Class.name, " ; ".join("%s=%s" % (prop.label.first() or prop.name, ",".join(v.label.first() for v in prop[Class])) for prop in Class.get_class_properties()))
     
     
-with umls.model:
-  class OriginalConcept(Thing, metaclass = MetaOriginalConcept):
+with UMLS.model:
+  class Concept(Thing, metaclass = MetaConcept):
     pass
-  type.__setattr__(OriginalConcept, "__terminology", None)
-  type.__setattr__(OriginalConcept, "__children", [])
-  type.__setattr__(OriginalConcept, "__parents" , [])
-  
-  class UnifiedConcept(Thing, metaclass = MetaUnifiedConcept):
-    pass
-  type.__setattr__(UnifiedConcept, "terminology", "CUI")
+  type.__setattr__(Concept, "__terminology", None)
+  type.__setattr__(Concept, "__children", [])
+  type.__setattr__(Concept, "__parents" , [])
 
   class Group(Thing, metaclass = MetaGroup):
     pass
@@ -181,3 +220,4 @@ with umls.model:
 
 def Concepts(x): return set(x)
 
+_CUI = UMLS["CUI"]

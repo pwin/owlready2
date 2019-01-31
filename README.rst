@@ -59,14 +59,14 @@ Load an ontology from a local repository, or from Internet:
 Create new classes in the ontology, possibly mixing OWL constructs and Python methods:
 
 ::
-
-  >>> class NonVegetarianPizza(onto.Pizza):
-  ...   equivalent_to = [
-  ...     onto.Pizza
-  ...   & ( onto.has_topping.some(onto.MeatTopping)
-  ...     | onto.has_topping.some(onto.FishTopping)
-  ...     ) ]
-  ...   def eat(self): print("Beurk! I'm vegetarian!")
+  >>> with onto:
+  ...     class NonVegetarianPizza(onto.Pizza):
+  ...       equivalent_to = [
+  ...         onto.Pizza
+  ...       & ( onto.has_topping.some(onto.MeatTopping)
+  ...         | onto.has_topping.some(onto.FishTopping)
+  ...         ) ]
+  ...       def eat(self): print("Beurk! I'm vegetarian!")
 
 Access ontology class, and create new instances / individuals:
 

@@ -406,6 +406,11 @@ class ThingClass(EntityClass):
       for construct in constructs:
         if isinstance(construct, Restriction) and ((construct.type == SOME) or (construct.type == VALUE)):
           yield construct.property
+          
+    for storid in Class.namespace.world._get_triples_s_p(Class.storid):
+      Prop = Class.namespace.world._get_by_storid(storid)
+      if not Prop is None: # None is is-a,...
+        yield Prop
         
   def __and__(a, b): return And([a, b])
   def __or__ (a, b): return Or ([a, b])
@@ -543,7 +548,7 @@ class ThingClass(EntityClass):
         
         if only_instances: only_classes.append(OneOf(only_instances))
         if not only_classes:
-          if r2: r.Classes.remove(r2)
+          if r2 in r.Classes: r.Classes.remove(r2)
         else:
           if not r:
             r = And(parents)
@@ -564,7 +569,7 @@ class ThingClass(EntityClass):
     else:
       if Prop._class_property_some:
         if removed:
-          for r in list(_inherited_property_value_restrictions(Class, Prop, set())):
+          for r in list(_property_value_restrictions(Class, Prop)):
             if ((r.type == SOME) or (r.type == VALUE)) and (r.value in removed) and (r in Class.is_a):
               Class.is_a.remove(r)
               if r.type == VALUE:
@@ -583,16 +588,16 @@ class ThingClass(EntityClass):
               v.is_a.append(Inverse(Prop).some(Class))
             
       if Prop._class_property_only:
-        for r in list(_inherited_property_value_restrictions(Class, Prop, set())):
+        for r in _property_value_restrictions(Class, Prop):
           if (r.type == ONLY): break
         else: r = None
         
         only_classes   = [v for v in new if isinstance(v, EntityClass) or isinstance(v, ClassConstruct)]
         only_instances = [v for v in new if not v in only_classes]
-      
+        
         if only_instances: only_classes.append(OneOf(only_instances))
         if not only_classes:
-          if r: Class.is_a.remove(r)
+          if r in Class.is_a: Class.is_a.remove(r)
         else:
           if len(only_classes) == 1:
             if r: r.value = only_classes[0]

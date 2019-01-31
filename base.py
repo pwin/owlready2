@@ -54,7 +54,7 @@ def from_literal(o, d):
   if isinstance(d, str) and d.startswith("@"): return locstr(o, lang = d[1:])
   if d == 0: return o
   datatype, parser = _universal_abbrev_2_datatype_parser.get(d) or (None, None)
-  if parser is None: raise ValueError("Cannot read literal of datatype '%s'!" % repr(d))
+  if parser is None: raise ValueError("Cannot read literal of datatype %s!" % repr(d))
   return parser(o)
 
 _universal_abbrev_2_iri = {}
