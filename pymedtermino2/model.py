@@ -21,7 +21,6 @@ from owlready2 import *
 
 UMLS          = get_ontology("http://UMLS/")
 UMLS.model    = UMLS.get_namespace("http://UMLS/model/")
-#UMLS.CUI      = UMLS.get_namespace("http://UMLS/CUI/")
 UMLS._src     = UMLS.get_namespace("http://UMLS/SRC/")
 
 class UMLSOntology(Ontology):

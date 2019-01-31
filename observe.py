@@ -82,18 +82,18 @@ def start_observing(onto):
     onto._add_obj_triple_raw_spo   = onto._gen_triple_method_obj(onto.graph._add_obj_triple_raw_spo)
     onto._set_obj_triple_raw_spo   = onto._gen_triple_method_obj(onto.graph._set_obj_triple_raw_spo)
     onto._del_obj_triple_raw_spo   = onto._gen_triple_method_obj(onto.graph._del_obj_triple_raw_spo)
-    onto._add_data_triple_raw_spodd = onto._gen_triple_method_data(onto.graph._add_data_triple_raw_spodd)
-    onto._set_data_triple_raw_spodd = onto._gen_triple_method_data(onto.graph._set_data_triple_raw_spodd)
-    onto._del_data_triple_raw_spodd = onto._gen_triple_method_data(onto.graph._del_data_triple_raw_spodd)
+    onto._add_data_triple_raw_spod = onto._gen_triple_method_data(onto.graph._add_data_triple_raw_spod)
+    onto._set_data_triple_raw_spod = onto._gen_triple_method_data(onto.graph._set_data_triple_raw_spod)
+    onto._del_data_triple_raw_spod = onto._gen_triple_method_data(onto.graph._del_data_triple_raw_spod)
     
 def stop_observing(onto):
   onto.__class__ = Ontology
   onto._add_obj_triple_raw_spo   = onto._add_obj_triple_raw_spo
   onto._set_obj_triple_raw_spo   = onto._set_obj_triple_raw_spo
   onto._del_obj_triple_raw_spo   = onto._del_obj_triple_raw_spo
-  onto._add_data_triple_raw_spodd = onto._add_data_triple_raw_spodd
-  onto._set_data_triple_raw_spodd = onto._set_data_triple_raw_spodd
-  onto._del_data_triple_raw_spodd = onto._del_data_triple_raw_spodd
+  onto._add_data_triple_raw_spod = onto._add_data_triple_raw_spod
+  onto._set_data_triple_raw_spod = onto._set_data_triple_raw_spod
+  onto._del_data_triple_raw_spod = onto._del_data_triple_raw_spod
   
   
 

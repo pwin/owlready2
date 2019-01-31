@@ -158,8 +158,8 @@ class _GraphManager(object):
       print("* Owlready2 * DEL TRIPLE", s, p, o, file = sys.stderr)
       
   def _del_data_triple_spod(self, s = None, p = None, o = None, d = None):
-    if CURRENT_NAMESPACES[-1] is None: self._del_data_triple_raw_spodd(s, p, o, d)
-    else:   CURRENT_NAMESPACES[-1].ontology._del_data_triple_raw_spodd(s, p, o, d)
+    if CURRENT_NAMESPACES[-1] is None: self._del_data_triple_raw_spod(s, p, o, d)
+    else:   CURRENT_NAMESPACES[-1].ontology._del_data_triple_raw_spod(s, p, o, d)
     if _LOG_LEVEL > 1:
       if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
@@ -739,8 +739,8 @@ class Ontology(Namespace, _GraphManager):
       print("* Owlready2 * SET TRIPLE", s, p, o, file = sys.stderr)
       
   def _add_data_triple_spod(self, s, p, o, d):
-    if CURRENT_NAMESPACES[-1] is None: self._add_data_triple_raw_spodd(s, p, o, d)
-    else:   CURRENT_NAMESPACES[-1].ontology._add_data_triple_raw_spodd(s, p, o, d)
+    if CURRENT_NAMESPACES[-1] is None: self._add_data_triple_raw_spod(s, p, o, d)
+    else:   CURRENT_NAMESPACES[-1].ontology._add_data_triple_raw_spod(s, p, o, d)
     if _LOG_LEVEL > 1:
       if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
@@ -748,8 +748,8 @@ class Ontology(Namespace, _GraphManager):
       print("* Owlready2 * ADD TRIPLE", s, p, o, d, file = sys.stderr)
       
   def _set_data_triple_spod(self, s, p, o, d):
-    if CURRENT_NAMESPACES[-1] is None: self._set_data_triple_raw_spodd(s, p, o, d)
-    else:   CURRENT_NAMESPACES[-1].ontology._set_data_triple_raw_spodd(s, p, o, d)
+    if CURRENT_NAMESPACES[-1] is None: self._set_data_triple_raw_spod(s, p, o, d)
+    else:   CURRENT_NAMESPACES[-1].ontology._set_data_triple_raw_spod(s, p, o, d)
     if _LOG_LEVEL > 1:
       if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)

@@ -696,7 +696,7 @@ class Graph(BaseMainGraph):
         if o is None: self.execute("DELETE FROM objs WHERE s=? AND p=?", (s, p,))
         else:         self.execute("DELETE FROM objs WHERE s=? AND p=? AND o=?", (s, p, o,))
         
-  def _del_data_triple_raw_spodd(self, s, p, o, d):
+  def _del_data_triple_raw_spod(self, s, p, o, d):
     if s is None:
       if p is None:
         if o is None:   self.execute("DELETE FROM datas")
@@ -1101,17 +1101,17 @@ class SubGraph(BaseSubGraph):
         if o is None: self.execute("DELETE FROM objs WHERE c=? AND s=? AND p=?", (self.c, s, p,))
         else:         self.execute("DELETE FROM objs WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
         
-  def _set_data_triple_raw_spodd(self, s, p, o, d):
+  def _set_data_triple_raw_spod(self, s, p, o, d):
     if (s is None) or (p is None) or (o is None) or (d is None): raise ValueError
     self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=?", (self.c, s, p,))
     self.execute("INSERT INTO datas VALUES (?, ?, ?, ?, ?)", (self.c, s, p, o, d))
     
-  def _add_data_triple_raw_spodd(self, s, p, o, d):
+  def _add_data_triple_raw_spod(self, s, p, o, d):
     if (s is None) or (p is None) or (o is None) or (d is None): raise ValueError
     self.execute("INSERT INTO datas VALUES (?, ?, ?, ?, ?)", (self.c, s, p, o, d))
     
 
-  def _del_data_triple_raw_spodd(self, s, p, o, d):
+  def _del_data_triple_raw_spod(self, s, p, o, d):
     if s is None:
       if p is None:
         if o is None:   self.execute("DELETE FROM datas WHERE c=?", (self.c,))
