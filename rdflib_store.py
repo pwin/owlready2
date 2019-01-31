@@ -89,7 +89,7 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     if d is None:
       context.triplelite._add_obj_triple_raw_spo(s,p,o)
     else:
-      context.triplelite._add_data_triple_raw_spodd(s,p,o,d)
+      context.triplelite._add_data_triple_raw_spod(s,p,o,d)
     #super().add(xxx_todo_changeme, context, quoted)
     
   def remove(self, xxx_todo_changeme, context = None):
@@ -97,7 +97,7 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     if d is None:
       context.triplelite._del_obj_triple_raw_spo(s,p,o)
     else:
-      context.triplelite._del_data_triple_raw_spodd(s,p,o,d)
+      context.triplelite._del_data_triple_raw_spod(s,p,o,d)
     #super().remove(xxx_todo_changeme, context, quoted)
     
   def triples(self, triple_pattern, context = None):
