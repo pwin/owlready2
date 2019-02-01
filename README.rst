@@ -304,6 +304,7 @@ version 2 - 0.14
 * Support anonymous individuals, e.g. Thing(0)
 * Optimize search() when only the number of returned elements is used
 * Optimize FTS search() when using also non-FTS statements
+* Can restrict reasoning to a list of ontologies
 * Bugfixes:
   - Fix functional class properties with inheritance
   - Fix dupplicated instance list restrictions when calling close_world(ontology)
