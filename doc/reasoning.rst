@@ -103,6 +103,12 @@ For example, for placing all inferred facts in the 'onto' ontology:
 
 This allows saving the ontology with the inferred facts (using onto.save() as usual).
 
+The reasoner can also be limited to some ontologies:
+
+::
+
+   >>> sync_reasoner([onto1, onto2,...])
+
 To use Pellet instead of HermiT, just use the sync_reasoner_pellet() function instead.
 
 
