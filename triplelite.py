@@ -906,19 +906,19 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
     
     self.execute("""INSERT INTO prop_fts VALUES (?)""", (prop_storid,));
     
-    self.execute("""CREATE VIRTUAL TABLE fts_%s USING fts5(o, d, content=datas, content_rowid=s)""" % prop_storid)
-    self.execute("""INSERT INTO fts_%s(rowid, o) SELECT s, o FROM datas WHERE p=%s""" % (prop_storid, prop_storid))
+    self.execute("""CREATE VIRTUAL TABLE fts_%s USING fts5(s UNINDEXED, o, d UNINDEXED, content=datas, content_rowid=rowid)""" % prop_storid)
+    self.execute("""INSERT INTO fts_%s(s, o, d) SELECT s, o, d FROM datas WHERE p=%s""" % (prop_storid, prop_storid))
     
     self.db.cursor().executescript("""
 CREATE TRIGGER fts_%s_after_insert AFTER INSERT ON datas WHEN new.p=%s BEGIN
-  INSERT INTO fts_%s(rowid, o) VALUES (new.s, new.o);
+  INSERT INTO fts_%s(rowid, s, o, d) VALUES (new.rowid, new.s, new.o, new.d);
 END;
 CREATE TRIGGER fts_%s_after_delete AFTER DELETE ON datas WHEN old.p=%s BEGIN
-  INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', old.s, old.o);
+  INSERT INTO fts_%s(fts_%s, rowid, s, o, d) VALUES('delete', old.rowid, old.s, old.o, old.d);
 END;
 CREATE TRIGGER fts_%s_after_update AFTER UPDATE ON datas WHEN new.p=%s BEGIN
-  INSERT INTO fts_%s(fts_%s, rowid, o) VALUES('delete', new.s, new.o);
-  INSERT INTO fts_%s(rowid, o) VALUES (new.s, new.o);
+  INSERT INTO fts_%s(fts_%s, rowid, s, o, d) VALUES('delete', old.rowid, old.s, old.o, old.d);
+  INSERT INTO fts_%s(rowid, s, o, d) VALUES (new.rowid, new.s, new.o, new.d);
 END;""" % (prop_storid, prop_storid, prop_storid,   prop_storid, prop_storid, prop_storid, prop_storid,   prop_storid, prop_storid, prop_storid, prop_storid, prop_storid))
   
   def disable_full_text_search(self, prop_storid):
@@ -1108,10 +1108,7 @@ class SubGraph(BaseSubGraph):
     
   def _add_data_triple_raw_spod(self, s, p, o, d):
     if (s is None) or (p is None) or (o is None) or (d is None): raise ValueError
-    #if p == 552:
-    #  print(self.c, self.parent)
     self.execute("INSERT INTO datas VALUES (?, ?, ?, ?, ?)", (self.c, s, p, o, d))
-    #self.parent.db.cursor().execute("INSERT INTO datas VALUES (?, ?, ?, ?, ?)", (self.c, s, p, o, d))
     
   def _del_data_triple_raw_spod(self, s, p, o, d):
     if s is None:
@@ -1457,8 +1454,8 @@ class _SearchList(FirstList, _LazyListMixin):
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
         if isinstance(v, FTS):
           self.tables    .append("fts_%s" % k)
-          self.conditions.append("q%s.s = fts_%s.rowid" % (self.target, k))
-          self.conditions.append("fts_%s MATCH ?" % k)
+          self.conditions.append("q%s.s = fts_%s.s" % (self.target, k))
+          self.conditions.append("fts_%s.o MATCH ?" % k)
           self.params    .append(v)
           if v.lang != "":
             self.conditions.append("fts_%s.d = ?" % (k,))

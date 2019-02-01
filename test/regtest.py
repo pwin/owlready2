@@ -4554,7 +4554,6 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       
     g = world.as_rdflib_graph()
     s = set(g.triples((rdflib.URIRef(o1.iri), None, None)))
-    world.graph.dump()
     assert len(s) == 5
     
       
@@ -5326,7 +5325,7 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     world.full_text_search_properties.remove(p)
 
   def test_fts_3(self):
-    tmp = self.new_tmp_file()
+    tmp   = self.new_tmp_file()
     world = self.new_world()
     world.set_backend(filename = tmp)
     onto = world.get_ontology("http://test.org/t.owl#")
@@ -5350,16 +5349,13 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     
     world2 = self.new_world()
     world2.set_backend(filename = tmp)
-    
     assert set(world2.full_text_search_properties) == { world2["http://test.org/t.owl#p"], label }
     
     assert set(world2.search(p = FTS("rein"))) == { world2["http://test.org/t.owl#c1"], world2["http://test.org/t.owl#c2"] }
     assert set(world2.search(label = FTS("insuffisance*"))) == { world2["http://test.org/t.owl#c3"], world2["http://test.org/t.owl#c4"] }
     
   def test_fts_4(self):
-    tmp = self.new_tmp_file()
     world = self.new_world()
-    world.set_backend(filename = tmp)
     onto = world.get_ontology("http://test.org/t.owl#")
     with onto:
       class C(Thing): pass
@@ -5378,9 +5374,7 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     assert set(world.search(p = FTS("rein"))) == set()
     
   def test_fts_5(self):
-    tmp = self.new_tmp_file()
     world = self.new_world()
-    world.set_backend(filename = tmp)
     onto = world.get_ontology("http://test.org/t.owl#")
     with onto:
       class C(Thing): pass
@@ -5394,22 +5388,26 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     assert set(world.search(p = FTS("rein"))) == { c1 }
     
   def test_fts_6(self):
-    tmp = self.new_tmp_file()
     world = self.new_world()
-    world.set_backend(filename = tmp)
     onto = world.get_ontology("http://test.org/t.owl#")
     with onto:
       class C(Thing): pass
       
+    c1 = C(label = [locstr("Maladies du coeur", "fr"), locstr("Heart disorders", "en")])
+    
     world.full_text_search_properties.append(label)
     
-    c1 = C(label = [locstr("Maladies du coeur", "fr"), locstr("Heart disorders", "en")])
     c2 = C(label = [locstr("Maladies du rein", "fr"), locstr("Kidney disorders", "en")])
     
-    assert set(world.search(label = FTS("coeur"))) == { c1 }
+    assert set(world.search(label = FTS("coeur")))  == { c1 }
+    assert set(world.search(label = FTS("heart")))  == { c1 }
+    assert set(world.search(label = FTS("rein")))   == { c2 }
     assert set(world.search(label = FTS("kidney"))) == { c2 }
+    
     assert set(world.search(label = FTS("coeur", "fr"))) == { c1 }
     assert set(world.search(label = FTS("coeur", "en"))) == set()
+    assert set(world.search(label = FTS("heart", "fr"))) == set()
+    assert set(world.search(label = FTS("heart", "en"))) == { c1 }
 
     
 class Paper(BaseTest, unittest.TestCase):
