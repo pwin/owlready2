@@ -3608,17 +3608,26 @@ I took a placebo
       class d(DataProperty):   class_property_type = ["only"]
       class C1(Thing): pass
       class C2(Thing): pass
+      class O(Thing): pass
       c11 = C1()
       c12 = C1()
+      o1 = O()
+      o2 = O()
       class C3(Thing): pass
       class C4(C3): pass
       class C5(C4): pass
       
-    C3.p = [C1, C2, c11, c12]
-    C4.p = [C1, c11]
+    C3.p = [C1, C2, o1, o2]
+    C4.p = [C1, o1, c12]
     
     assert C5.p == []
-    assert set(C5.p.indirect()) == set([C1, c11])
+    assert set(C5.p.indirect()) == set([C1, o1, c12])
+      
+    C3.p = [C3, O]
+    C4.p = [C4, o1, o2]
+    
+    assert C5.p == []
+    assert set(C5.p.indirect()) == set([C4, o1, o2])
     
   def test_class_prop_19(self):
     onto = self.new_ontology()

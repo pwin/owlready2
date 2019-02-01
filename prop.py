@@ -577,10 +577,20 @@ class ObjectPropertyClass(ReasoningPropertyClass):
                              if (r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1) )
         
     elif Prop._class_property_only: # Effect of transitivity on ONLY restrictions is unclear -- probably no effect?
-      values = set(x for r in _inherited_properties_value_restrictions(entity, Props, set())
-                     if (r.type == ONLY)
-                     for x in _flatten_only(r) )
-
+      or_valuess = [set(_flatten_only(r)) for r in _inherited_properties_value_restrictions(entity, Props, set())
+                                          if (r.type == ONLY)]
+      values = or_valuess[0]
+      for or_values in or_valuess[1:]:
+        new_values = values & or_values
+        for vs1, vs2 in ((values, or_values), (or_values, values)):
+          vs2_classes = tuple(o for o in vs2 if isinstance(o, EntityClass))
+          for v in vs1 - vs2:
+            if isinstance(v, EntityClass):
+              if issubclass(v, vs2_classes): new_values.add(v)
+            else:
+              if isinstance(v, vs2_classes): new_values.add(v)
+        values = new_values
+        
     return list(values)
   
   def _set_value_for_individual(Prop, entity, value):
