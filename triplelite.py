@@ -907,7 +907,7 @@ SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
     self.execute("""INSERT INTO prop_fts VALUES (?)""", (prop_storid,));
     
     self.execute("""CREATE VIRTUAL TABLE fts_%s USING fts5(s UNINDEXED, o, d UNINDEXED, content=datas, content_rowid=rowid)""" % prop_storid)
-    self.execute("""INSERT INTO fts_%s(s, o, d) SELECT s, o, d FROM datas WHERE p=%s""" % (prop_storid, prop_storid))
+    self.execute("""INSERT INTO fts_%s(rowid, s, o, d) SELECT rowid, s, o, d FROM datas WHERE p=%s""" % (prop_storid, prop_storid))
     
     self.db.cursor().executescript("""
 CREATE TRIGGER fts_%s_after_insert AFTER INSERT ON datas WHEN new.p=%s BEGIN
@@ -920,7 +920,8 @@ CREATE TRIGGER fts_%s_after_update AFTER UPDATE ON datas WHEN new.p=%s BEGIN
   INSERT INTO fts_%s(fts_%s, rowid, s, o, d) VALUES('delete', old.rowid, old.s, old.o, old.d);
   INSERT INTO fts_%s(rowid, s, o, d) VALUES (new.rowid, new.s, new.o, new.d);
 END;""" % (prop_storid, prop_storid, prop_storid,   prop_storid, prop_storid, prop_storid, prop_storid,   prop_storid, prop_storid, prop_storid, prop_storid, prop_storid))
-  
+    
+    
   def disable_full_text_search(self, prop_storid):
     if not isinstance(prop_storid, int): prop_storid = prop_storid.storid
     self.prop_fts.discard(prop_storid)
