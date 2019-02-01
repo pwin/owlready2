@@ -212,8 +212,8 @@ class BaseSubGraph(BaseGraph):
     
     return onto_base_iri
  
-  def save(self, f, format = "rdfxml", **kargs):
-    self.parent.commit()
+  def save(self, f, format = "rdfxml", commit = True, **kargs):
+    if commit: self.parent.commit()
     _save(f, format, self, **kargs)
     
   
