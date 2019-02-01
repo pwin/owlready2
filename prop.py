@@ -23,9 +23,14 @@ from owlready2.namespace  import *
 from owlready2.entity     import *
 from owlready2.base       import _universal_abbrev_2_datatype, _universal_datatype_2_abbrev
 
+#_next_domain_range = None
+import contextvars
+_NEXT_DOMAIN_RANGE = contextvars.ContextVar("_NEXT_DOMAIN_RANGE", default = None)
+del contextvars
+
+
 SymmetricProperty = () # Forward declaration
 
-_next_domain_range = None
 #_check_superclasses = False
 
 _default_class_property_type = ["some"]
@@ -55,12 +60,11 @@ class PropertyClass(EntityClass):
   #   return EntityClass.__new__(MetaClass, name, superclasses, obj_dict)
     
   def __init__(Prop, name, bases, obj_dict):
-    global _next_domain_range
-    
-    if _next_domain_range:
-      domain         = [_next_domain_range[0]]
-      range          = [_next_domain_range[1]]
-      _next_domain_range = None
+    next_domain_range = _NEXT_DOMAIN_RANGE.get()
+    if next_domain_range:
+      domain         = [next_domain_range[0]]
+      range          = [next_domain_range[1]]
+      _NEXT_DOMAIN_RANGE.set(None)
     else:
       domain            = obj_dict.pop("domain", False)
       range             = obj_dict.pop("range", False)

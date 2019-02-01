@@ -24,8 +24,9 @@ from owlready2.prop      import *
 
 class AllDisjoint(object):
   def __init__(self, entities, ontology = None, bnode = None):
-    if not CURRENT_NAMESPACES[-1] is None: self.ontology = CURRENT_NAMESPACES[-1].ontology
-    else:                                  self.ontology = ontology or entities[0].namespace.ontology
+    #if not CURRENT_NAMESPACES[-1] is None: self.ontology = CURRENT_NAMESPACES[-1].ontology
+    #else:                                  self.ontology = ontology or entities[0].namespace.ontology
+    self.ontology = (CURRENT_NAMESPACES.get() and CURRENT_NAMESPACES.get()[-1]) or ontology or entities[0].namespace.ontology
     
     # For AllDisjoint, storid can be either:
     #   * a blank node, when at least 3 entities are involved

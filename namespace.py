@@ -24,8 +24,10 @@ from owlready2.base import _universal_abbrev_2_iri, _universal_iri_2_abbrev, _un
 
 from owlready2.triplelite import *
 
-CURRENT_NAMESPACES = [None]
-
+#CURRENT_NAMESPACES = [None]
+import contextvars
+CURRENT_NAMESPACES = contextvars.ContextVar("CURRENT_NAMESPACES", default = None)
+del contextvars
 
 _LOG_LEVEL = 0
 def set_log_level(x):
@@ -58,10 +60,14 @@ class Namespace(object):
   def __enter__(self):
     if self.ontology is None: raise ValueError("Cannot assert facts in this namespace: it is not linked to an ontology! (it is probably a global namespace created by get_namespace(); please use your_ontology.get_namespace() instead)")
     if self.world.graph: self.world.graph.acquire_write_lock()
-    CURRENT_NAMESPACES.append(self)
+    #CURRENT_NAMESPACES.append(self)
+    l = CURRENT_NAMESPACES.get()
+    if l is None: CURRENT_NAMESPACES.set([self])
+    else:         l.append(self)
     
   def __exit__(self, exc_type = None, exc_val = None, exc_tb = None):
-    del CURRENT_NAMESPACES[-1]
+    #del CURRENT_NAMESPACES[-1]
+    del CURRENT_NAMESPACES.get()[-1]
     if self.world.graph: self.world.graph.release_write_lock()
     
   def __repr__(self): return """%s.get_namespace("%s")""" % (self.ontology, self.base_iri)
@@ -149,8 +155,11 @@ class _GraphManager(object):
           yield bnode
           
   def _del_obj_triple_spo(self, s = None, p = None, o = None):
-    if CURRENT_NAMESPACES[-1] is None: self._del_obj_triple_raw_spo(s, p, o)
-    else:   CURRENT_NAMESPACES[-1].ontology._del_obj_triple_raw_spo(s, p, o)
+    #onto = CURRENT_NAMESPACES.get() or self
+    #if CURRENT_NAMESPACES[-1] is None: self._del_obj_triple_raw_spo(s, p, o)
+    #else:   CURRENT_NAMESPACES[-1].ontology._del_obj_triple_raw_spo(s, p, o)
+    l = CURRENT_NAMESPACES.get()
+    ((l and l[-1].ontology) or self)._del_obj_triple_raw_spo(s, p, o)
     if _LOG_LEVEL > 1:
       if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
@@ -158,8 +167,10 @@ class _GraphManager(object):
       print("* Owlready2 * DEL TRIPLE", s, p, o, file = sys.stderr)
       
   def _del_data_triple_spod(self, s = None, p = None, o = None, d = None):
-    if CURRENT_NAMESPACES[-1] is None: self._del_data_triple_raw_spod(s, p, o, d)
-    else:   CURRENT_NAMESPACES[-1].ontology._del_data_triple_raw_spod(s, p, o, d)
+    #if CURRENT_NAMESPACES[-1] is None: self._del_data_triple_raw_spod(s, p, o, d)
+    #else:   CURRENT_NAMESPACES[-1].ontology._del_data_triple_raw_spod(s, p, o, d)
+    l = CURRENT_NAMESPACES.get()
+    ((l and l[-1].ontology) or self)._del_data_triple_raw_spod(s, p, o, d)
     if _LOG_LEVEL > 1:
       if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
@@ -721,8 +732,13 @@ class Ontology(Namespace, _GraphManager):
       self.graph.save(file, format, **kargs)
       
   def _add_obj_triple_spo(self, s, p, o):
-    if CURRENT_NAMESPACES[-1] is None: self._add_obj_triple_raw_spo(s, p, o)
-    else:   CURRENT_NAMESPACES[-1].ontology._add_obj_triple_raw_spo(s, p, o)
+    #if CURRENT_NAMESPACES[-1] is None: self._add_obj_triple_raw_spo(s, p, o)
+    #else:   CURRENT_NAMESPACES[-1].ontology._add_obj_triple_raw_spo(s, p, o)
+    #l = CURRENT_NAMESPACES.get()
+    #if l: onto = l[-1].ontology
+    #else: onto = self
+    l = CURRENT_NAMESPACES.get()
+    ((l and l[-1].ontology) or self)._add_obj_triple_raw_spo(s, p, o)
     if _LOG_LEVEL > 1:
       if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
@@ -730,8 +746,10 @@ class Ontology(Namespace, _GraphManager):
       print("* Owlready2 * ADD TRIPLE", s, p, o, file = sys.stderr)
       
   def _set_obj_triple_spo(self, s, p, o):
-    if CURRENT_NAMESPACES[-1] is None: self._set_obj_triple_raw_spo(s, p, o)
-    else:   CURRENT_NAMESPACES[-1].ontology._set_obj_triple_raw_spo(s, p, o)
+    #if CURRENT_NAMESPACES[-1] is None: self._set_obj_triple_raw_spo(s, p, o)
+    #else:   CURRENT_NAMESPACES[-1].ontology._set_obj_triple_raw_spo(s, p, o)
+    l = CURRENT_NAMESPACES.get()
+    ((l and l[-1].ontology) or self)._set_obj_triple_raw_spo(s, p, o)
     if _LOG_LEVEL > 1:
       if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
@@ -739,8 +757,10 @@ class Ontology(Namespace, _GraphManager):
       print("* Owlready2 * SET TRIPLE", s, p, o, file = sys.stderr)
       
   def _add_data_triple_spod(self, s, p, o, d):
-    if CURRENT_NAMESPACES[-1] is None: self._add_data_triple_raw_spod(s, p, o, d)
-    else:   CURRENT_NAMESPACES[-1].ontology._add_data_triple_raw_spod(s, p, o, d)
+    #if CURRENT_NAMESPACES[-1] is None: self._add_data_triple_raw_spod(s, p, o, d)
+    #else:   CURRENT_NAMESPACES[-1].ontology._add_data_triple_raw_spod(s, p, o, d)
+    l = CURRENT_NAMESPACES.get()
+    ((l and l[-1].ontology) or self)._add_data_triple_raw_spod(s, p, o, d)
     if _LOG_LEVEL > 1:
       if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
@@ -748,8 +768,10 @@ class Ontology(Namespace, _GraphManager):
       print("* Owlready2 * ADD TRIPLE", s, p, o, d, file = sys.stderr)
       
   def _set_data_triple_spod(self, s, p, o, d):
-    if CURRENT_NAMESPACES[-1] is None: self._set_data_triple_raw_spod(s, p, o, d)
-    else:   CURRENT_NAMESPACES[-1].ontology._set_data_triple_raw_spod(s, p, o, d)
+    #if CURRENT_NAMESPACES[-1] is None: self._set_data_triple_raw_spod(s, p, o, d)
+    #else:   CURRENT_NAMESPACES[-1].ontology._set_data_triple_raw_spod(s, p, o, d)
+    l = CURRENT_NAMESPACES.get()
+    ((l and l[-1].ontology) or self)._set_data_triple_raw_spod(s, p, o, d)
     if _LOG_LEVEL > 1:
       if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)

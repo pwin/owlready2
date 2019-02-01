@@ -1108,9 +1108,11 @@ class SubGraph(BaseSubGraph):
     
   def _add_data_triple_raw_spod(self, s, p, o, d):
     if (s is None) or (p is None) or (o is None) or (d is None): raise ValueError
+    #if p == 552:
+    #  print(self.c, self.parent)
     self.execute("INSERT INTO datas VALUES (?, ?, ?, ?, ?)", (self.c, s, p, o, d))
+    #self.parent.db.cursor().execute("INSERT INTO datas VALUES (?, ?, ?, ?, ?)", (self.c, s, p, o, d))
     
-
   def _del_data_triple_raw_spod(self, s, p, o, d):
     if s is None:
       if p is None:

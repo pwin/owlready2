@@ -76,7 +76,7 @@ class Thing(metaclass = ThingClass):
         namespace = name.namespace
         name      = name.name
       else:
-        namespace = namespace or CURRENT_NAMESPACES[-1] or Class.namespace
+        namespace = namespace or (CURRENT_NAMESPACES.get() and CURRENT_NAMESPACES.get()[-1]) or Class.namespace
       if LOADING or (name == ""):
         already_existing = None
       else:
@@ -106,7 +106,7 @@ class Thing(metaclass = ThingClass):
     return object.__new__(Class)
   
   def __init__(self, name = None, namespace = None, **kargs):
-    self.namespace = namespace or CURRENT_NAMESPACES[-1] or self.__class__.namespace
+    self.namespace = namespace or (CURRENT_NAMESPACES.get() and CURRENT_NAMESPACES.get()[-1]) or self.__class__.namespace
     if   isinstance(name, int):
       is_new = True
       iri = ""

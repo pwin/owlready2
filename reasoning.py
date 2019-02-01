@@ -99,9 +99,9 @@ def sync_reasoner_hermit(x = None, debug = 1, keep_tmp_file = False):
   locked = world.graph.has_write_lock()
   if locked: world.graph.release_write_lock() # Not needed during reasoning
   
-  if   isinstance(x, Ontology): ontology = x
-  elif CURRENT_NAMESPACES[-1]:  ontology = CURRENT_NAMESPACES[-1].ontology
-  else:                         ontology = world.get_ontology(_INFERRENCES_ONTOLOGY)
+  if   isinstance(x, Ontology):  ontology = x
+  elif CURRENT_NAMESPACES.get(): ontology = CURRENT_NAMESPACES.get()[-1].ontology
+  else:                          ontology = world.get_ontology(_INFERRENCES_ONTOLOGY)
   
   tmp = tempfile.NamedTemporaryFile("wb", delete = False)
   world.save(tmp, format = "ntriples")
@@ -174,9 +174,9 @@ def sync_reasoner_pellet(x = None, debug = 1, keep_tmp_file = False):
   if   isinstance(x, World):    world = x
   elif isinstance(x, Ontology): world = x.world
   else:                         world = owlready2.default_world
-  if   isinstance(x, Ontology): ontology = x
-  elif CURRENT_NAMESPACES[-1]:  ontology = CURRENT_NAMESPACES[-1].ontology
-  else:                         ontology = world.get_ontology(_INFERRENCES_ONTOLOGY)
+  if   isinstance(x, Ontology):  ontology = x
+  elif CURRENT_NAMESPACES.get(): ontology = CURRENT_NAMESPACES.get()[-1].ontology
+  else:                          ontology = world.get_ontology(_INFERRENCES_ONTOLOGY)
   
   tmp = tempfile.NamedTemporaryFile("wb", delete = False)
   world.save(tmp, format = "ntriples")

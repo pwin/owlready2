@@ -308,8 +308,9 @@ version 2 - 0.14
   - Fix functional class properties with inheritance
   - Fix dupplicated instance list restrictions when calling close_world(ontology)
   - Fix use of '*' in search
-    
+  - Fix synchronization, using contextvars for global variables
 
+    
 Links
 -----
 

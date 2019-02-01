@@ -93,7 +93,7 @@ class EntityClass(type):
       return mro
     
   def __new__(MetaClass, name, superclasses, obj_dict):
-    namespace = obj_dict.get("namespace") or CURRENT_NAMESPACES[-1] or superclasses[0].namespace
+    namespace = obj_dict.get("namespace") or (CURRENT_NAMESPACES.get() and CURRENT_NAMESPACES.get()[-1]) or superclasses[0].namespace
     storid    = obj_dict.get("storid")    or namespace.world._abbreviate("%s%s" % (namespace.base_iri, name))
     
     if "is_a" in obj_dict:
@@ -418,7 +418,7 @@ class ThingClass(EntityClass):
   
   def __rshift__(Domain, Range):
     import owlready2.prop
-    owlready2.prop._next_domain_range = (Domain, Range)
+    owlready2.prop._NEXT_DOMAIN_RANGE.set((Domain, Range))
     if isinstance(Range, ThingClass) or isinstance(Range, ClassConstruct):
       return owlready2.prop.ObjectProperty
     else:

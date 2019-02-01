@@ -238,16 +238,19 @@ class _LazyListMixin(list):
     self.__class__ = self._PopulatedClass
     
   
-  
+
+
 class Environment(object):
   __slots__ = ["level"]
-  def __init__(self): self.level = 0
+  def __init__(self):
+    import contextvars
+    self.level = contextvars.ContextVar("%s_level" % self.__class__.__name__, default = 0)
     
-  def __repr__(self): return "<Environment, level %s>" % self.level
+  def __repr__(self): return "<%s, level %s>" % (self.__class__.__name__, self.level.get())
   
-  def __bool__(self): return self.level != 0
+  def __bool__(self): return self.level.get() != 0
   
-  def __enter__(self): self.level += 1
-    
-  def __exit__(self, exc_type = None, exc_val = None, exc_tb = None): self.level -= 1
+  def __enter__(self): self.level.set(self.level.get() + 1)
+  
+  def __exit__(self, exc_type = None, exc_val = None, exc_tb = None): self.level.set(self.level.get() - 1)
     
