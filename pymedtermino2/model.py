@@ -55,10 +55,7 @@ class MetaConcept(ThingClass):
     if not r is Ellipsis: return r
     
     if   attr == "children":
-      r = list(Class.subclasses())
-      r.sort(key = _sort_by_name)
-      type.__setattr__(Class, "__children", r)
-      return r
+      return sorted(Class.subclasses(), key = _sort_by_name)
     
     elif attr == "parents":
       r = [i for i in Class.is_a if isinstance(i, ThingClass)]
@@ -103,22 +100,20 @@ class MetaConcept(ThingClass):
         parent._fill_ancestor_concepts(l, s, True, no_double)
       
   def descendant_concepts(Class, include_self = True, no_double = True):
-    l = []
-    Class._fill_descendant_concepts(l, set(), include_self, no_double)
-    return l
+    return _DescendantList(Class, include_self, no_double)
   
-  def _fill_descendant_concepts(Class, l, s, include_self, no_double):
+  def _generate_descendant_concepts(Class, s, include_self, no_double):
     if include_self:
-      l.append(Class)
+      yield Class
       if no_double: s.add(Class)
       for equivalent in Class.equivalent_to.indirect():
         if isinstance(equivalent, Class.__class__) and not equivalent in s:
-          equivalent._fill_descendant_concepts(l, s, True, no_double)
+          yield from equivalent._generate_descendant_concepts(s, True, no_double)
           
-    for child in Class.children:
-      if not child in s: child._fill_descendant_concepts(l, s, True, no_double)
-        
-              
+    for child in sorted(Class.subclasses(), key = _sort_by_name):
+      if not child in s: yield from child._generate_descendant_concepts(s, True, no_double)
+      
+      
   def __rshift__(Class, destination_terminology):
     if Class.terminology.name == "SRC": # Property creation
       return ThingClass.__rshift__(Class, destination_terminology)
@@ -129,7 +124,31 @@ class MetaConcept(ThingClass):
     r = list(mapper(Class))
     if r: return r
     return [ i for parent in Class.parents for i in parent._map(mapper) ]
+
+
+
+
+from owlready2.util import _LazyListMixin
+
+class _PopulatedDescendantList(FirstList):
+  __slots__ = ["term", "include_self", "no_double"]
   
+
+class _DescendantList(FirstList, _LazyListMixin):
+  __slots__ = ["term", "include_self", "no_double"]
+  _PopulatedClass = _PopulatedDescendantList
+  
+  def __init__(self, term, include_self = True, no_double = True):
+    self.term         = term
+    self.include_self = include_self
+    self.no_double    = no_double
+    
+  def _populate(self):
+    return list(self.__iter__())
+  
+  def __iter__(self):
+    return self.term._generate_descendant_concepts(set(), True, self.no_double)
+
 
 _MAPPERS = {}
 def _get_mapper(source, dest):
