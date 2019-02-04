@@ -43,7 +43,6 @@ class MetaConcept(ThingClass):
     else:
       return ThingClass.__new__(MetaClass, name, superclasses, obj_dict)
     
-    
   def __repr__(Class):
     terminology = Class.terminology
     if not terminology: return ThingClass.__repr__(Class)
@@ -197,6 +196,23 @@ AND tu2.s=t.o AND tu2.p=?
       
 def _create_cui_mapper(source, dest):
   def _cui_mapper(c, dest_storid = dest.storid):
+    found = False
+    for (i,) in PYM.world.graph.execute(
+"""SELECT DISTINCT tm2.o FROM objs t, objs tm1, objs tm2, objs tt
+WHERE t.s=? AND t.p=?
+AND tm1.s=t.o AND tm1.p=? AND tm1.o=?
+AND tm2.s=t.o AND tm2.p=?
+AND tt.s=tm2.o AND tt.p=? AND tt.o=?
+""", (
+  c.storid, rdfs_subclassof,
+  owl_onproperty, PYM.mapped_to.storid,
+  SOME,
+  PYM.terminology.storid, dest_storid
+  )):
+      yield c.namespace.world._get_by_storid(i)
+      found = True
+    if found: return
+    
     for (i,) in PYM.world.graph.execute(
 """SELECT DISTINCT to3.o FROM objs t, objs tu1, objs tu2, objs to1, objs to2, objs to3
 WHERE t.s=? AND t.p=?
