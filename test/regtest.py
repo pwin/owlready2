@@ -4386,7 +4386,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
   def test_search_12(self):
     world = self.new_world()
-    o = get_ontology("http://test.org/onto.owl")
+    o = world.get_ontology("http://test.org/onto.owl")
     
     with o:
       class Actor(Thing): pass
@@ -4400,8 +4400,82 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       AllDisjoint(o.Actor.instances())
       AllDisjoint(o.Locality.instances())
       
-    assert set(default_world.search(isAt = "*")) == {o.actor1, o.actor2}
+    assert set(world.search(isAt = "*")) == {o.actor1, o.actor2}
+    
+  def test_search_13(self):
+    world = self.new_world()
+    o = world.get_ontology("http://test.org/onto.owl")
+    
+    with o:
+      class C(Thing): pass
+      class p(AnnotationProperty): pass
       
+      c1 = C()
+      c2 = C(p = ["a", "b"])
+      c3 = C(p = [1, 2])
+      c4 = C(p = [c1])
+      
+    assert set(world.search(p = "a")) == {c2}
+    assert set(world.search(p = "b")) == {c2}
+    assert set(world.search(p = "c")) == set()
+    assert set(world.search(p = 1)) == {c3}
+    assert set(world.search(p = 2)) == {c3}
+    assert set(world.search(p = c1)) == {c4}
+    assert set(world.search(p = 3)) == set()
+    assert set(world.search(p = "*")) == {c2, c3, c4}
+    assert set(world.search(type = C, p = None)) == {c1}
+    
+  def test_search_14(self):
+    world = self.new_world()
+    o = world.get_ontology("http://test.org/onto.owl")
+    
+    with o:
+      class C(Thing): pass
+      class p(DataProperty): pass
+      
+      c1 = C()
+      c2 = C(p = ["a", "b"])
+      c3 = C(p = [1, 2])
+      
+    assert set(world.search(p = "a")) == {c2}
+    assert set(world.search(p = "b")) == {c2}
+    assert set(world.search(p = "c")) == set()
+    assert set(world.search(p = 1)) == {c3}
+    assert set(world.search(p = 2)) == {c3}
+    assert set(world.search(p = 3)) == set()
+    assert set(world.search(p = "*")) == {c2, c3}
+    assert set(world.search(type = C, p = None)) == {c1}
+    
+  def test_search_15(self):
+    world = self.new_world()
+    o = world.get_ontology("http://test.org/onto.owl")
+    
+    with o:
+      class C(Thing): pass
+      class p(ObjectProperty): pass
+      class q(ObjectProperty): pass
+      class i(ObjectProperty): inverse = q
+      
+      c1 = C()
+      c2 = C(p = [c1])
+      c3 = C(p = [c1, c2])
+      
+    c1.q.append(c2)
+    c2.i.append(c3)
+    c3.q.append(c1)
+    
+    assert set(world.search(p = c1)) == {c2, c3}
+    assert set(world.search(p = c2)) == {c3}
+    assert set(world.search(p = c3)) == set()
+    assert set(world.search(p = "*")) == {c2, c3}
+    assert set(world.search(type = C, p = None)) == {c1}
+    
+    assert set(world.search(q = c1)) == {c3}
+    assert set(world.search(q = c2)) == {c1, c3}
+    assert set(world.search(q = c3)) == set()
+    assert set(world.search(q = "*")) == {c1, c3}
+    
+    
   def test_rdflib_1(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()

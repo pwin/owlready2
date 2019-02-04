@@ -19,19 +19,18 @@
 
 from owlready2 import *
 
-UMLS          = get_ontology("http://UMLS/")
-UMLS.model    = UMLS.get_namespace("http://UMLS/model/")
-UMLS._src     = UMLS.get_namespace("http://UMLS/SRC/")
+PYM          = get_ontology("http://PYM/")
+PYM._src     = PYM.get_namespace("http://PYM/SRC/")
 
-class UMLSOntology(Ontology):
+class PYMOntology(Ontology):
   def get_terminology(self, name): return self._src["%s" % name]
   def get_unified_concept(self, cui): return 
   __getitem__ = get_terminology
-UMLS.__class__ = UMLSOntology
+PYM.__class__ = PYMOntology
 
-#class UMLSConceptNamespace(Namespace):
+#class PYMConceptNamespace(Namespace):
 #  pass
-#UMLS.CUI.__class__ = UMLSConceptNamespace
+#PYM.CUI.__class__ = PYMConceptNamespace
 
 def _sort_by_name(x): return x.name
 
@@ -43,12 +42,12 @@ class MetaConcept(ThingClass):
       return type.__new__(MetaClass, name, superclasses, obj_dict)
     else:
       return ThingClass.__new__(MetaClass, name, superclasses, obj_dict)
-      
+    
     
   def __repr__(Class):
     terminology = Class.terminology
     if not terminology: return ThingClass.__repr__(Class)
-    return """%s["%s"] # %s\n""" % (terminology.name, Class.name, Class.label.first())
+    return """%s["%s"] # %s\n""" % ("PYM" if terminology.name == "SRC" else terminology.name, Class.name, Class.label.first())
   
   def __getattr__(Class, attr):
     attr2 = "__%s" % attr
@@ -68,7 +67,7 @@ class MetaConcept(ThingClass):
       return r
     
     elif attr == "terminology":
-      r = Class.namespace.world._get_obj_triple_sp_o(Class.storid, UMLS.model.terminology.storid)
+      r = Class.namespace.world._get_obj_triple_sp_o(Class.storid, PYM.terminology.storid)
       r = Class.namespace.world._get_by_storid(r)
       type.__setattr__(Class, "__terminology", r)
       return r
@@ -77,9 +76,9 @@ class MetaConcept(ThingClass):
   
   def __getitem__(Class, code):
     if Class.terminology.name == "SRC":
-      return Class.namespace.world["http://UMLS/%s/%s" % (Class.name, code)]
+      return Class.namespace.world["http://PYM/%s/%s" % (Class.name, code)]
     else:
-      return Class.namespace.world["http://UMLS/%s/%s" % (Class.terminology.name, code)]
+      return Class.namespace.world["http://PYM/%s/%s" % (Class.terminology.name, code)]
   
   def full_code(Class):
     return u"%s:%s" % (Class.terminology.name, Class.name)
@@ -89,7 +88,7 @@ class MetaConcept(ThingClass):
   
   def ancestor_concepts(Class, include_self = True, no_double = True):
     l = []
-    Class._fill_ancestor_concepts(l, { OriginalConcept }, include_self, no_double)
+    Class._fill_ancestor_concepts(l, { Concept }, include_self, no_double)
     return l
   
   def _fill_ancestor_concepts(Class, l, s, include_self, no_double):
@@ -97,7 +96,7 @@ class MetaConcept(ThingClass):
         l.append(Class)
         if no_double: s.add(Class)
         for equivalent in Class.equivalent_to.indirect():
-          if isinstance(equivalent, MetaOriginalConcept) and not equivalent in s:
+          if isinstance(equivalent, MetaConcept) and not equivalent in s:
             equivalent._fill_ancestor_concepts(l, s, True, no_double)
     for parent in Class.parents:
       parent._fill_ancestor_concepts(l, s, True, no_double)
@@ -126,7 +125,7 @@ class MetaConcept(ThingClass):
     return Class._map(_get_mapper(Class.terminology, destination_terminology))
   
   def _map(Class, mapper):
-    r = [ Class.namespace.world._get_by_storid(i) for i in mapper(Class.storid) ]
+    r = list(mapper(Class))
     if r: return r
     return [ i for parent in Class.parents for i in parent._map(mapper) ]
   
@@ -138,6 +137,8 @@ def _get_mapper(source, dest):
     if   source is dest: mapper = _no_op_mapper
     elif source is _CUI: mapper = _create_from_cui_mapper(dest)
     elif dest   is _CUI: mapper = _to_cui_mapper
+    elif (source.name == "ICD10_FRENCH_ATIH") and (dest.name == "ICD10"): mapper = _create_icd10_french_atih_2_icd10_mapper(dest)
+    elif (source.name == "ICD10") and (dest.name == "ICD10_FRENCH_ATIH"): mapper = _create_icd10_2_icd10_french_atih_mapper(dest)
     else:                mapper = _create_cui_mapper(source, dest)
     _MAPPERS[source, dest] = mapper
   return mapper
@@ -146,37 +147,37 @@ def _no_op_mapper(storid):
   yield storid
   
 def _create_from_cui_mapper(dest):
-  def _from_cui_mapper(storid, dest_storid = dest.storid):
-    for (i,) in UMLS.world.graph.execute(
+  def _from_cui_mapper(c, dest_storid = dest.storid):
+    for (i,) in PYM.world.graph.execute(
 """SELECT DISTINCT to3.o FROM objs to1, objs to2, objs to3
 WHERE to1.s=? AND to1.p=?
 AND to2.s=to1.o AND to2.p=? AND to2.o=?
 AND to3.s=to1.o AND to3.p=?
 """, (
-  storid, rdfs_subclassof,
-  owl_onproperty, UMLS.model.originals.storid,
+  c.storid, rdfs_subclassof,
+  owl_onproperty, PYM.originals.storid,
   SOME,
   )):
-      if UMLS.world._get_obj_triple_sp_o(i, UMLS.model.terminology.storid) == dest_storid:
-        yield i
+      if PYM.world._get_obj_triple_sp_o(i, PYM.terminology.storid) == dest_storid:
+        yield c.namespace.world._get_by_storid(i)
   return _from_cui_mapper
   
-def _to_cui_mapper(storid):
-  for (i,) in UMLS.world.graph.execute(
+def _to_cui_mapper(c):
+  for (i,) in PYM.world.graph.execute(
 """SELECT DISTINCT tu2.o FROM objs t, objs tu1, objs tu2
 WHERE t.s=? AND t.p=?
 AND tu1.s=t.o AND tu1.p=? AND tu1.o=?
 AND tu2.s=t.o AND tu2.p=?
 """, (
-  storid, rdfs_subclassof,
-  owl_onproperty, UMLS.model.unifieds.storid,
+  c.storid, rdfs_subclassof,
+  owl_onproperty, PYM.unifieds.storid,
   SOME,
   )):
-    yield i
+    yield c.namespace.world._get_by_storid(i)
       
 def _create_cui_mapper(source, dest):
-  def _cui_mapper(storid, dest_storid = dest.storid):
-    for (i,) in UMLS.world.graph.execute(
+  def _cui_mapper(c, dest_storid = dest.storid):
+    for (i,) in PYM.world.graph.execute(
 """SELECT DISTINCT to3.o FROM objs t, objs tu1, objs tu2, objs to1, objs to2, objs to3
 WHERE t.s=? AND t.p=?
 AND tu1.s=t.o AND tu1.p=? AND tu1.o=?
@@ -185,16 +186,46 @@ AND to1.s=tu2.o AND to1.p=?
 AND to2.s=to1.o AND to2.p=? AND to2.o=?
 AND to3.s=to1.o AND to3.p=?
 """, (
-  storid, rdfs_subclassof,
-  owl_onproperty, UMLS.model.unifieds.storid,
+  c.storid, rdfs_subclassof,
+  owl_onproperty, PYM.unifieds.storid,
   SOME,
   rdfs_subclassof,
-  owl_onproperty, UMLS.model.originals.storid,
+  owl_onproperty, PYM.originals.storid,
   SOME,
   )):
-      if UMLS.world._get_obj_triple_sp_o(i, UMLS.model.terminology.storid) == dest_storid:
-        yield i
+      if PYM.world._get_obj_triple_sp_o(i, PYM.terminology.storid) == dest_storid:
+        yield c.namespace.world._get_by_storid(i)
   return _cui_mapper
+
+def _create_icd10_french_atih_2_icd10_mapper(dest):
+  def _icd10_french_atih_2_icd10_mapper(c):
+    code = c.name
+    r = dest[code]
+    if r: yield r
+    else:
+      r = dest["%s.9" % code]
+      if r: yield r
+      elif code == "B95-B98": yield dest["B95-B97.9"]
+      elif code == "G10-G14": yield dest["G10-G13.9"]
+      elif code == "J09-J18": yield dest["J10-J18.9"]
+      elif code == "K55-K64": yield dest["K55-K63.9"]
+      elif code == "O94-O99": yield dest["O95-O99.9"]
+  return _icd10_french_atih_2_icd10_mapper
+
+def _create_icd10_2_icd10_french_atih_mapper(dest):
+  def _icd10_2_icd10_french_atih_mapper(c):
+    code = c.name
+    r = dest[code]
+    if r: yield r
+    elif code.endswith(".9"):
+      r = dest[code[:-2]]
+      if r: yield r
+      elif code == "B95-B97.9": yield dest["B95-B98"]
+      elif code == "G10-G13.9": yield dest["G10-G14"]
+      elif code == "J10-J18.9": yield dest["J09-J18"]
+      elif code == "K55-K63.9": yield dest["K55-K64"]
+      elif code == "O95-O99.9": yield dest["O94-O99"]
+  return _icd10_2_icd10_french_atih_mapper
 
 
 class MetaGroup(ThingClass):
@@ -206,7 +237,7 @@ class MetaGroup(ThingClass):
     return """<Group %s> # %s\n""" % (Class.name, " ; ".join("%s=%s" % (prop.label.first() or prop.name, ",".join(v.label.first() for v in prop[Class])) for prop in Class.get_class_properties()))
     
     
-with UMLS.model:
+with PYM:
   class Concept(Thing, metaclass = MetaConcept):
     pass
   type.__setattr__(Concept, "__terminology", None)
@@ -219,4 +250,4 @@ with UMLS.model:
 
 def Concepts(x): return set(x)
 
-_CUI = UMLS["CUI"]
+_CUI = PYM["CUI"]

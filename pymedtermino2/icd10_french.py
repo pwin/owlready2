@@ -18,18 +18,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import sys, os, types, zipfile, urllib.request
+import sys, os, io, types, zipfile, urllib.request
 from collections import defaultdict, Counter
 from owlready2 import *
 
 
 def import_icd10_french(atih_data = "https://www.atih.sante.fr/plateformes-de-transmission-et-logiciels/logiciels-espace-de-telechargement/telecharger/gratuit/11616/456"):
-  UMLS  = get_ontology("http://UMLS/").load()
-  ICD10 = UMLS["ICD10"]
+  PYM  = get_ontology("http://PYM/").load()
+  ICD10 = PYM["ICD10"]
   
   print("Importing ICD10_FRENCH_ATIH from %s..." % atih_data)
-  if atih_data.startswith("http:") or atih_data.startswith("https:"): f = urllib.request.urlopen(atih_data)
-  else:                                                               f = open(atih_data, "rb")
+  if atih_data.startswith("http:") or atih_data.startswith("https:"):
+    f = urllib.request.urlopen(atih_data)
+    f = io.BytesIO(f.read())
+  else:
+    f = open(atih_data, "rb")
   
   parents = []
   
@@ -39,11 +42,12 @@ def import_icd10_french(atih_data = "https://www.atih.sante.fr/plateformes-de-tr
     class psy    (AnnotationProperty): pass
     class ssr    (AnnotationProperty): pass
     
-  with onto.get_namespace("http://UMLS/SRC/"):
-    ICD10_FRENCH = types.new_class("ICD10_FRENCH_ATIH", (UMLS["SRC"],))
-    onto._set_obj_triple_spo(ICD10_FRENCH.storid, UMLS.model.terminology.storid, UMLS["SRC"].storid)
+  with onto.get_namespace("http://PYM/SRC/"):
+    ICD10_FRENCH = types.new_class("ICD10_FRENCH_ATIH", (PYM["SRC"],))
+    onto._set_obj_triple_spo  (ICD10_FRENCH.storid, PYM.terminology.storid, PYM["SRC"].storid)
+    onto._set_data_triple_spod(ICD10_FRENCH.storid, label.storid, "CIM10", "@fr")
     
-  with onto.get_namespace("http://UMLS/ICD10_FRENCH_ATIH/"):
+  with onto.get_namespace("http://PYM/ICD10_FRENCH_ATIH/"):
     for line in open(os.path.join(os.path.dirname(__file__), "icd10_french_group_name.txt")).read().split(u"\n"):
       line = line.strip()
       if line and not line.startswith("#"):
@@ -74,11 +78,11 @@ def import_icd10_french(atih_data = "https://www.atih.sante.fr/plateformes-de-tr
           
         icd10_french = types.new_class(code, (parent,))
         icd10_french.label = locstr(term, "fr")
-        onto._set_obj_triple_spo(icd10_french.storid, UMLS.model.terminology.storid, ICD10_FRENCH.storid)
+        onto._set_obj_triple_spo(icd10_french.storid, PYM.terminology.storid, ICD10_FRENCH.storid)
         if icd10:
           icd10.unifieds = icd10.unifieds
-          with UMLS:
-            for cui in icd10.unifieds: cui.originals.append(icd10_french)
+          #with PYM:
+          for cui in icd10.unifieds: cui.originals.append(icd10_french)
             
         parents.append((start, end, icd10_french))
         
@@ -113,19 +117,20 @@ def import_icd10_french(atih_data = "https://www.atih.sante.fr/plateformes-de-tr
         if term.startswith("*** SU16 *** "): term = term.replace("*** SU16 *** ", "")
         
         icd10_french = types.new_class(code, (parent,))
-        onto._set_obj_triple_spo(icd10_french.storid, UMLS.model.terminology.storid, ICD10_FRENCH.storid)
+        onto._set_obj_triple_spo(icd10_french.storid, PYM.terminology.storid, ICD10_FRENCH.storid)
         icd10_french.label = locstr(term, "fr")
         icd10_french.mco_had = [int(mco_had)]
         icd10_french.ssr     = [ssr]
         icd10_french.psy     = [int(psy)]
         if icd10:
           icd10_french.unifieds = icd10.unifieds
-          with UMLS:
-            for cui in icd10.unifieds: cui.originals.append(icd10_french)
-            
+          #with PYM:
+          for cui in icd10.unifieds: cui.originals.append(icd10_french)
+          
+  default_world.save()
         
         
 if __name__ == "__main__":
-  default_world.set_backend(filename = "/home/jiba/tmp/umls.sqlite3")
+  default_world.set_backend(filename = "/home/jiba/tmp/pym.sqlite3")
+  #import_icd10_french()
   import_icd10_french("/home/jiba/telechargements/base_med/NomenclatureCim10.zip")
-  default_world.save()

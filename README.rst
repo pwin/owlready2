@@ -305,6 +305,7 @@ version 2 - 0.14
 * Optimize search() when only the number of returned elements is used
 * Optimize FTS search() when using also non-FTS statements
 * Can restrict reasoning to a list of ontologies
+* Union searches (i.e. default_world.search(...) | default_world.search(...))
 * Bugfixes:
   - Fix functional class properties with inheritance
   - Fix dupplicated instance list restrictions when calling close_world(ontology)

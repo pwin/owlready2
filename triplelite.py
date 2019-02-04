@@ -1339,11 +1339,33 @@ SELECT DISTINCT x FROM transit""", (self.c, p, o, self.c, p)).fetchall(): yield 
 #    yield from r
 
 
+class _SearchMixin(list):
+  __slots__ = []
+  def _do_search(self):
+    sql, params = self.sql_request()
+    return (self.world._get_by_storid(o) for (o,) in self.world.graph.execute(sql, params).fetchall())
+  _populate = _do_search
+
+  def first(self):
+    sql, params = self.sql_request()
+    o = self.world.graph.execute(sql, params).fetchone()
+    if o: return self.world._get_by_storid(o[0])
+    
+  def _do_search_rdf(self):
+    sql, params = self.sql_request()
+    return self.world.graph.execute(sql, params).fetchall()
+  
+  def __len__(self):
+    sql, params = self.sql_request()
+    sql = """select count(*) FROM (%s)""" % sql
+    return self.world.graph.execute(sql, params).fetchone()[0]
+
+  
 class _PopulatedSearchList(FirstList):
   __slots__ = ["world", "prop_vals", "_c", "id", "tables", "conditions", "params", "alternatives", "excepts", "except_conditions", "except_params", "nested_searchs", "target"]
-  
+
 _NEXT_SEARCH_ID = 0
-class _SearchList(FirstList, _LazyListMixin):
+class _SearchList(FirstList, _SearchMixin, _LazyListMixin):
   __slots__ = ["world", "prop_vals", "_c", "id", "tables", "conditions", "params", "alternatives", "excepts", "except_conditions", "except_params", "nested_searchs", "target"]
   _PopulatedClass = _PopulatedSearchList
   
@@ -1376,11 +1398,10 @@ class _SearchList(FirstList, _LazyListMixin):
       n += 1
       i = "%s_%s" % (self.id, n)
       if n == 1: self.target = i
-      if d is None:
-        self.tables.append("objs q%s" % i)
-      else:
-        self.tables.append("datas q%s" % i)
-        
+      if   d is None:    self.tables.append("objs q%s" % i)
+      elif d == "quads": self.tables.append("quads q%s" % i)
+      else:              self.tables.append("datas q%s" % i)
+      
       if not c is None:
         self.conditions  .append("q%s.c = ?" % i)
         self.params      .append(c)
@@ -1478,7 +1499,8 @@ class _SearchList(FirstList, _LazyListMixin):
               
           elif isinstance(v, str) and ("*" in v):
             if   v == "*":
-              self.conditions.append("q%s.o GLOB '*'" % i)
+              #self.conditions.append("q%s.o GLOB '*'" % i)
+              pass
             else:
               self.conditions.append("q%s.o GLOB ?" % i)
               self.params    .append(v)
@@ -1492,12 +1514,14 @@ class _SearchList(FirstList, _LazyListMixin):
               
     if self.excepts:
       for except_p in self.excepts:  # Use only quads because it may contain several properties mixing objs and datas
-        self.except_conditions.append("quads.s = candidates.s AND quads.p = ?")
-        self.except_params    .append(except_p[0])
         if isinstance(except_p, tuple): # Prop with inverse
+          self.except_conditions.append("quads.s = candidates.s AND quads.p = ?")
           self.except_conditions.append("quads.o = candidates.s AND quads.p = ?")
+          self.except_params    .append(except_p[0])
           self.except_params    .append(except_p[1])
-
+        else:
+          self.except_conditions.append("quads.s = candidates.s AND quads.p = ?")
+          self.except_params    .append(except_p)
           
   def sql_request(self):
     tables     = self.tables     + [x for search in self.nested_searchs for x in search.tables]
@@ -1533,27 +1557,11 @@ EXCEPT %s""" % (sql, "\nUNION ALL ".join("""SELECT candidates.s FROM candidates,
       
     return sql, params
 
+  def __or__(self, other):
+    if isinstance(other, _UnionSearchList):
+      return _UnionSearchList(self.world, [self, *other.searches])
+    return _UnionSearchList(self.world, [self, other])
   
-  def _do_search(self):
-    sql, params = self.sql_request()
-    return (self.world._get_by_storid(o) for (o,) in self.world.graph.execute(sql, params).fetchall())
-  _populate = _do_search
-
-  def first(self):
-    sql, params = self.sql_request()
-    o = self.world.graph.execute(sql, params).fetchone()
-    if o: return self.world._get_by_storid(o[0])
-    
-  def _do_search_rdf(self):
-    sql, params = self.sql_request()
-    return self.world.graph.execute(sql, params).fetchall()
-  
-  def __len__(self):
-    sql, params = self.sql_request()
-    sql = """select count(*) FROM (%s)""" % sql
-    return self.world.graph.execute(sql, params).fetchone()[0]
-  
-    
   def dump(self):
     sql, params = self.sql_request()
     print("search debug:")
@@ -1566,3 +1574,32 @@ EXCEPT %s""" % (sql, "\nUNION ALL ".join("""SELECT candidates.s FROM candidates,
       print("  params    = ", params)
     print("  params    = ", params)
     
+
+
+
+class _PopulatedUnionSearchList(FirstList):
+  __slots__ = ["world", "searches"]
+  
+
+class _UnionSearchList(FirstList, _SearchMixin, _LazyListMixin):
+  __slots__ = ["world", "searches"]
+  _PopulatedClass = _PopulatedUnionSearchList
+  
+  def __init__(self, world, searches):
+    self.world    = world
+    self.searches = searches
+    
+  def sql_request(self):
+    sqls_params = [s.sql_request() for s in self.searches]
+    sql = "SELECT DISTINCT * FROM (\n%s\n)" % "\nUNION ALL\n".join(sql2 for (sql2, params2) in sqls_params)
+    
+    params = []
+    for (sql2, params2) in sqls_params: params.extend(params2)
+    
+    return sql, params
+
+  def __or__(self, other):
+    if isinstance(other, _UnionSearchList):
+      return _UnionSearchList(self.world, self.searches + other.searches)
+    return _UnionSearchList(self.world, self.searches + [other])
+

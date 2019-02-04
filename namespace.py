@@ -163,7 +163,7 @@ class _GraphManager(object):
     if _LOG_LEVEL > 1:
       if not s < 0: s = self._unabbreviate(s)
       if p: p = self._unabbreviate(p)
-      if o and not (o < 0 or o.startswith('"')): o = self._unabbreviate(o)
+      if o and not ((isinstance(o, int) and (o < 0)) or (isinstance(o, str) and o.startswith('"'))): o = self._unabbreviate(o)
       print("* Owlready2 * DEL TRIPLE", s, p, o, file = sys.stderr)
       
   def _del_data_triple_spod(self, s = None, p = None, o = None, d = None):
@@ -290,14 +290,15 @@ class _GraphManager(object):
             elif isinstance(v, _SearchList): v2 = v
             else:
               v2, d = self.world._to_rdf(v)
-              if   Prop and (Prop._owl_type == owl_object_property): # Use "*" as a jocker for entity
+              if   Prop and (Prop._owl_type == owl_object_property): # Use "*" as a jocker for object
                 d = None
+              elif Prop and (Prop._owl_type == owl_annotation_property) and (v2 == "*"): # Use "*" as a jocker for annotation
+                d = "quads"
               elif ((not d is None) and (isinstance(v2, (int, float)))) or (_use_str_as_loc_str and (d == 60)): # A string, which can be associated to a language in RDF
                 d = "*"
+                
           prop_vals.append((k2, v2, d))
           
-    #r = self.graph.search(prop_vals, debug = debug)
-    #return self.world._get_by_storid(o) for (o,) in r if not o < 0]
     return _SearchList(self.world, prop_vals)
     
   def search_one(self, **kargs): return self.search(**kargs).first()
