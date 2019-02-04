@@ -71,6 +71,7 @@ owlready2.entity.ObjectProperty     = ObjectProperty
 owlready2.entity.DataProperty       = DataProperty
 owlready2.entity.AnnotationProperty = AnnotationProperty
 owlready2.entity.ReasoningPropertyClass = ReasoningPropertyClass
+owlready2.entity.FunctionalProperty = FunctionalProperty
 #owlready2.entity.ValueList          = ValueList
 owlready2.entity.AllDisjoint        = AllDisjoint
 owlready2.entity.Inverse            = Inverse

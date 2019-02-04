@@ -289,11 +289,13 @@ class Thing(metaclass = ThingClass):
           yield Prop
           
   def get_properties(self):
+    l = []
     for storid in self.namespace.world._get_triples_s_p(self.storid):
       Prop = self.namespace.world._get_by_storid(storid)
       if not Prop is None: # None is is-a
-        yield Prop
-        
+        l.append(Prop)
+    return l
+  
   def __dir__(self):
     return set(object.__dir__(self)) | { Prop.python_name for Prop in self.get_properties() }
   

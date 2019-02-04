@@ -123,7 +123,7 @@ def parse_mrconso(PYM, terminologies, langs, importer, f, remnant = ""):
         
     if not orig in importer.orig_2_terminology:
       terminology_storid = importer._abbreviate("http://PYM/SRC/%s" % terminology)
-      importer.objs .append((orig, rdf_type, owl_class))
+      importer.objs.append((orig, rdf_type, owl_class))
       importer.objs.append((orig, PYM.terminology.storid, terminology_storid))
       importer.orig_2_terminology[orig] = terminology      
       importer.orig_2_terms      [orig] = []
@@ -145,49 +145,59 @@ def parse_mrconso(PYM, terminologies, langs, importer, f, remnant = ""):
     importer.check_insert()
 
   
-def parse_mrhier(PYM, terminologies, langs, importer, f, remnant = ""):
-  for line in f:
-    if remnant: line = "%s%s" % (remnant, line); remnant = ""
-    try:
-      cui1, aui1, cxn, parent_aui, terminology, rela, hier, hcd, cvf, _dropit = line.split("|")
-    except: return line
+# def parse_mrhier(PYM, terminologies, langs, importer, f, remnant = ""):
+#   for line in f:
+#     if remnant: line = "%s%s" % (remnant, line); remnant = ""
+#     try:
+#       cui1, aui1, cxn, parent_aui, terminology, rela, hier, hcd, cvf, _dropit = line.split("|")
+#     except: return line
     
-    parent_aui = hier.rsplit(".", 1)[-1]
+#     parent_aui = hier.rsplit(".", 1)[-1]
     
-    child_orig  = importer.aui_2_orig.get(aui1)
-    if not child_orig: continue
-    parent_orig = importer.aui_2_orig.get(parent_aui)
-    if not parent_orig: continue
+#     child_orig  = importer.aui_2_orig.get(aui1)
+#     if not child_orig: continue
+#     parent_orig = importer.aui_2_orig.get(parent_aui)
+#     if not parent_orig: continue
     
-    if (child_orig != parent_orig) and (child_orig in importer.orig_2_terminology):
-      importer.terminology_2_parents[importer.orig_2_terminology[child_orig]] [child_orig].add(parent_orig)
+#     if (child_orig != parent_orig) and (child_orig in importer.orig_2_terminology):
+#       importer.terminology_2_parents[importer.orig_2_terminology[child_orig]] [child_orig].add(parent_orig)
       
-    if importer.extract_cui:
-      child_cui  = importer._abbreviate("http://PYM/CUI/%s" % cui1)
-      #if child_cui in importer.cui_parents:
-      #  if parent_orig in importer.orig_2_cuis:
-      #    for parent_cui in importer.orig_2_cuis[parent_orig]:
-      #      if child_cui != parent_cui:
-      #        importer.cui_parents[child_cui][parent_cui] += 1
-      
-    importer.check_insert()
+#     importer.check_insert()
     
 
 def parse_mrrel(PYM, terminologies, langs, importer, f, remnant = ""):
+  if remnant == "":
+    remnant = ""
+    previous = [None] * 17
+  else:
+    remnant, previous = remnant_previous
+    
   for line in f:
     if remnant: line = "%s%s" % (remnant, line); remnant = ""
-    try:
-      cui1, aui1, stype1, rel, cui2, aui2, stype2, rela, rui, srui, \
-        terminology, sl, group_i, direct, suppress, cvf, _dropit = line.split("|")
-    except: return line
+    current = line.split("|")
+    if len(current) < 17: return line, previous
     
-    if (rel == "PAR") or (rel == "CHD"): continue # Done with MRHIER
+    current = [current[i] or previous[i] for i in range(len(previous))]
+    cui1, aui1, stype1, rel, cui2, aui2, stype2, rela, rui, srui, \
+      terminology, sl, group_i, direct, suppress, cvf, _dropit = current
     
-    if suppress in "OEY": continue
+    if suppress in "OEY":
+      previous = current
+      continue
     
+    cui1 = cui1 or previous[0]
     direct = direct == "Y"
     
-    if aui1:
+    if (rel == "PAR") or (rel == "CHD"):
+      if rel == "PAR": cui1, aui1, stype1 = cui2, aui2, stype2
+      
+      if aui1 and aui2:
+        orig1 = importer.aui_2_orig.get(aui1)
+        orig2 = importer.aui_2_orig.get(aui2)
+        if orig1 and (orig1 != orig2) and (orig2 in importer.orig_2_terminology):
+          importer.terminology_2_parents[importer.orig_2_terminology[orig2]] [orig2].add(orig1)
+          
+    else:
       orig1 = importer.aui_2_orig.get(aui1)
       orig2 = importer.aui_2_orig.get(aui2)
       if orig1 and orig2:
@@ -195,35 +205,31 @@ def parse_mrrel(PYM, terminologies, langs, importer, f, remnant = ""):
         prop = importer.get_prop((rela or rel), owl_object_property)
         importer.mkrel(orig2, prop, orig1, group_i, direct)
         
-    elif srui:
-      orig2 = importer.aui_2_orig.get(aui2)
-      if orig2:
-        terminology = terminology or importer.orig_2_terminology.get(orig2)
-        if terminology:
-          prop = importer.get_prop((rela or rel), owl_object_property)
-          if (terminology, srui) in importer.partial_relations:
-            inv_prop, orig1, inv_group_i, inv_direct = importer.partial_relations[terminology, srui]
-            if (not orig1 in importer.orig_2_terminology) or (not orig2 in importer.orig_2_terminology): continue
-            
-            importer.mkrel(orig2, prop, orig1, group_i, direct)
-            importer.mkrel(orig1, inv_prop, orig2, inv_group_i, inv_direct)
-            
-          else:
-            importer.partial_relations[terminology, srui] = prop, orig2, group_i, direct
-            
     importer.check_insert()
+    previous = current
     
     
 def parse_mrsat(PYM, terminologies, langs, importer, f, remnant = ""):
+  if remnant == "":
+    remnant = ""
+    previous = [None] * 14
+  else:
+    remnant, previous = remnant_previous
+    
   for line in f:
     if remnant: line = "%s%s" % (remnant, line); remnant = ""
-    try:
-      cui, lui, sui, metaui, stype, code, atui, satui, atn, terminology, \
-        atv, suppress, cvf, _dropit = line.split("|")
-    except: return line
+    current = line.split("|")
+    if len(current) < 14: return line, previous
     
-    if suppress in "OEY": continue
-    if importer.terminologies and (not terminology in importer.terminologies): continue
+    if not current[0]: current = [current[i] or previous[i] for i in range(len(previous))]
+    cui, lui, sui, metaui, stype, code, atui, satui, atn, terminology, atv, suppress, cvf, _dropit = current
+    
+    if suppress in "OEY":
+      previous = current
+      continue
+    if importer.terminologies and (not terminology in importer.terminologies):
+      previous = current
+      continue
     
     prop = importer.get_prop(atn.lower(), owl_annotation_property)
     
@@ -237,6 +243,7 @@ def parse_mrsat(PYM, terminologies, langs, importer, f, remnant = ""):
       importer.datas.append((orig, prop, atv, 0))
       
     importer.check_insert()
+    previous = current
     
     
 def parse_mrdef(PYM, terminologies, langs, importer, f, remnant = ""):
@@ -401,7 +408,12 @@ def finalize(PYM, importer):
         for parent in orig_parents:
           importer.objs.append((orig, rdfs_subclassof, parent))
       else:
-        importer.objs.append((orig, rdfs_subclassof, PYM.Concept.storid))
+        terminology = importer.orig_2_terminology[orig]
+        if terminology == "SRC":
+          importer.objs.append((orig, rdfs_subclassof, PYM.Concept.storid))
+        else:
+          importer.objs.append((orig, rdfs_subclassof, importer._abbreviate("http://PYM/SRC/%s" % terminology)))
+          
     importer.check_insert()
 
     for cycle in equivalences:
@@ -616,7 +628,6 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None):
     ("MRRANK",  parse_mrrank),
     ("MRCONSO", parse_mrconso),
     ("MRDEF"  , parse_mrdef),
-    ("MRHIER" , parse_mrhier),
     ("MRREL"  , parse_mrrel),
     ("MRSAT"  , parse_mrsat),
   ]
@@ -666,14 +677,15 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None):
   importer.force_insert()
   importer.on_finish()
   importer = None # Free memory
-  default_world.save()
+  #default_world.save()
   
   print("Indexing...")
   default_world.graph.set_indexed(True)
-  default_world.save()
-
+  PYM = get_ontology("http://PYM/").load()
+  
   import owlready2.pymedtermino2.model
-
+  default_world.save()
+  return PYM
 
 if __name__ == "__main__":
   if os.path.exists("/home/jiba/tmp/pym.sqlite3"): os.unlink("/home/jiba/tmp/pym.sqlite3")
@@ -688,8 +700,10 @@ if __name__ == "__main__":
               #langs = ["fr", "en"],
   )
   PYM = get_ontology("http://PYM/").load()
+  print("FTS Indexing...")
   default_world.full_text_search_properties.append(label)
   default_world.full_text_search_properties.append(PYM.synonyms)
+  default_world.save()
   
   # parents = defaultdict(list)
   # parents[1] = [2]

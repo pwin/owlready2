@@ -99,7 +99,8 @@ class MetaConcept(ThingClass):
           if isinstance(equivalent, MetaConcept) and not equivalent in s:
             equivalent._fill_ancestor_concepts(l, s, True, no_double)
     for parent in Class.parents:
-      parent._fill_ancestor_concepts(l, s, True, no_double)
+      if parent.terminology is Class.terminology:
+        parent._fill_ancestor_concepts(l, s, True, no_double)
       
   def descendant_concepts(Class, include_self = True, no_double = True):
     l = []
@@ -246,6 +247,14 @@ with PYM:
 
   class Group(Thing, metaclass = MetaGroup):
     pass
+
+#  class unifieds(ObjectProperty):
+#    @classmethod
+#    def is_functional_for(Prop, Class): return False
+    
+#  class originals(ObjectProperty):
+#    @classmethod
+#    def is_functional_for(Prop, Class): return False
       
 
 def Concepts(x): return set(x)

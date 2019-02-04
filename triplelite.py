@@ -341,7 +341,7 @@ class Graph(BaseMainGraph):
       self.prop_fts = { storid for (storid,) in self.execute("""SELECT storid FROM prop_fts;""") }
       
     self.current_changes = self.db.total_changes
-    self.select__abbreviate_method()
+    self.select_abbreviate_method()
 
 
     
@@ -373,7 +373,7 @@ class Graph(BaseMainGraph):
     self.lock.release()
   def has_write_lock(self): return self.lock_level
   
-  def select__abbreviate_method(self):
+  def select_abbreviate_method(self):
     nb = self.execute("SELECT count(*) FROM resources").fetchone()[0]
     if nb < 100000:
       iri_storid = self.execute("SELECT iri, storid FROM resources").fetchall()
@@ -1053,7 +1053,7 @@ class SubGraph(BaseSubGraph):
       else:
         cur.execute("UPDATE ontologies SET last_update=? WHERE c=?", (date, self.c,))
         
-      self.parent.select__abbreviate_method()
+      self.parent.select_abbreviate_method()
       
       return onto_base_iri
     

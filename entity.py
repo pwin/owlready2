@@ -402,16 +402,17 @@ class ThingClass(EntityClass):
     return [Class.namespace.world._get_by_storid(s, None, Thing) for s in Class.namespace.world._get_obj_triples_po_s(rdf_type, Class.storid)]
   
   def get_class_properties(Class):
-    for constructs in (Class.is_a, Class.equivalent_to.indirect()):
-      for construct in constructs:
-        if isinstance(construct, Restriction) and ((construct.type == SOME) or (construct.type == VALUE)):
-          yield construct.property
-          
+    l = list(set(construct.property
+                 for constructs in (Class.is_a, Class.equivalent_to.indirect())
+                 for construct in constructs
+                 if isinstance(construct, Restriction) and ((construct.type == SOME) or (construct.type == VALUE))
+    ))
     for storid in Class.namespace.world._get_triples_s_p(Class.storid):
       Prop = Class.namespace.world._get_by_storid(storid)
       if not Prop is None: # None is is-a,...
-        yield Prop
-        
+        l.append(Prop)
+    return l
+  
   def __and__(a, b): return And([a, b])
   def __or__ (a, b): return Or ([a, b])
   def __invert__(a): return Not(a)
@@ -444,9 +445,9 @@ class ThingClass(EntityClass):
     if attr.startswith("INDIRECT_"):
       Prop = Class.namespace.world._props.get(attr[9:])
       if not Prop: raise AttributeError("'%s' property is not defined." % attr)
-      #if issubclass_python(Prop, AnnotationProperty): return Class.__getattr__(Prop.python_name)
-      if Prop.is_functional_for(Class): return Prop._get_indirect_value_for_class(Class)
-      else:                             return Prop._get_indirect_values_for_class(Class)
+      #if Prop.is_functional_for(Class): return Prop._get_indirect_value_for_class(Class)
+      if issubclass(Prop, FunctionalProperty): return Prop._get_indirect_value_for_class(Class)
+      else:                                    return Prop._get_indirect_values_for_class(Class)
       
     else:
       Prop = Class.namespace.world._props.get(attr)
@@ -459,8 +460,9 @@ class ThingClass(EntityClass):
           type.__setattr__(Class, attr, values)
         return values
       
-      if Prop.is_functional_for(Class): return Prop._get_value_for_class (Class)
-      else:                             return Prop._get_values_for_class(Class)
+      #if Prop.is_functional_for(Class): return Prop._get_value_for_class (Class)
+      if issubclass(Prop, FunctionalProperty): return Prop._get_value_for_class (Class)
+      else:                                    return Prop._get_values_for_class(Class)
       
       
   def __setattr__(Class, attr, value):
