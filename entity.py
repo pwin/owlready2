@@ -352,7 +352,10 @@ class EntityClass(type):
           yield construct
           
 def issubclass_owlready(Class, Parent_or_tuple):
-  if issubclass_python(Class, Parent_or_tuple): return True
+  try:
+    if issubclass_python(Class, Parent_or_tuple): return True
+  except TypeError: return False
+  
   if isinstance(Class, EntityClass):
     if not isinstance(Parent_or_tuple, tuple): Parent_or_tuple = (Parent_or_tuple,)
     parent_storids = { Parent.storid for Parent in Parent_or_tuple }
@@ -405,8 +408,10 @@ class ThingClass(EntityClass):
     l = list(set(construct.property
                  for constructs in (Class.is_a, Class.equivalent_to.indirect())
                  for construct in constructs
-                 if isinstance(construct, Restriction) and ((construct.type == SOME) or (construct.type == VALUE))
-    ))
+                 if isinstance(construct, Restriction) and (
+            (construct.property._class_property_some and ((construct.type == SOME) or (construct.type == VALUE)))
+         or (construct.property._class_property_only and  (construct.type == ONLY))
+    )))
     for storid in Class.namespace.world._get_triples_s_p(Class.storid):
       Prop = Class.namespace.world._get_by_storid(storid)
       if not Prop is None: # None is is-a,...

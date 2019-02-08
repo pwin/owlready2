@@ -611,7 +611,7 @@ class _Importer(object):
     return bnode0
     
     
-def import_umls(umls_zip_filename, terminologies = None, langs = None):
+def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index = True):
   if terminologies:
     terminologies = set(terminologies)
   if langs:
@@ -683,6 +683,11 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None):
   default_world.graph.set_indexed(True)
   PYM = get_ontology("http://PYM/").load()
   
+  if fts_index:
+    print("FTS Indexing...")
+    default_world.full_text_search_properties.append(label)
+    default_world.full_text_search_properties.append(PYM.synonyms)
+    
   import owlready2.pymedtermino2.model
   default_world.save()
   return PYM
@@ -699,11 +704,6 @@ if __name__ == "__main__":
               terminologies = ["ICD10", "SNOMEDCT_US", "CUI"],
               #langs = ["fr", "en"],
   )
-  PYM = get_ontology("http://PYM/").load()
-  print("FTS Indexing...")
-  default_world.full_text_search_properties.append(label)
-  default_world.full_text_search_properties.append(PYM.synonyms)
-  default_world.save()
   
   # parents = defaultdict(list)
   # parents[1] = [2]
