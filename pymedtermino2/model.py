@@ -160,7 +160,7 @@ class _DescendantList(FirstList, _LazyListMixin):
     return list(self.__iter__())
   
   def __iter__(self):
-    return self.term._generate_descendant_concepts(set(), True, self.no_double)
+    return self.term._generate_descendant_concepts(set(), self.include_self, self.no_double)
 
 
 _MAPPERS = {}
@@ -170,10 +170,10 @@ def _get_mapper(source, dest):
     if   source is dest: mapper = _no_op_mapper
     elif source is _CUI: mapper = _create_from_cui_mapper(dest)
     elif dest   is _CUI: mapper = _to_cui_mapper
-    elif (source.name == "ICD10_FRENCH_ATIH") and (dest.name == "ICD10"): mapper = _create_icd10_french_atih_2_icd10_mapper(dest)
-    elif (source.name == "ICD10") and (dest.name == "ICD10_FRENCH_ATIH"): mapper = _create_icd10_2_icd10_french_atih_mapper(dest)
-    elif (source.name == "ICD10_FRENCH_ATIH"): mapper = _chain_mapper(_get_mapper(PYM["ICD10_FRENCH_ATIH"], PYM["ICD10"]), _get_mapper(PYM["ICD10"], dest))
-    elif (dest.name   == "ICD10_FRENCH_ATIH"): mapper = _chain_mapper(_get_mapper(source, PYM["ICD10"]), _get_mapper(PYM["ICD10"], PYM["ICD10_FRENCH_ATIH"]))
+    elif (source.name == "CIM10") and (dest.name == "ICD10"): mapper = _create_icd10_french_atih_2_icd10_mapper(dest)
+    elif (source.name == "ICD10") and (dest.name == "CIM10"): mapper = _create_icd10_2_icd10_french_atih_mapper(dest)
+    elif (source.name == "CIM10"): mapper = _chain_mapper(_get_mapper(PYM["CIM10"], PYM["ICD10"]), _get_mapper(PYM["ICD10"], dest))
+    elif (dest.name   == "CIM10"): mapper = _chain_mapper(_get_mapper(source, PYM["ICD10"]), _get_mapper(PYM["ICD10"], PYM["CIM10"]))
     else:                mapper = _create_cui_mapper(source, dest)
     _MAPPERS[source, dest] = mapper
   return mapper

@@ -350,7 +350,7 @@ class Graph(BaseMainGraph):
     if indexed:
       #self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
       self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
-      self.execute("""CREATE INDEX index_objs_op ON objs(o,p)""")
+      self.execute("""CREATE INDEX index_objs_op ON objs(o,p,c)""") # c is for onto.classes(), etc
       self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
       self.execute("""CREATE INDEX index_datas_op ON datas(o,p)""")
       for onto in self.world.ontologies.values():

@@ -27,7 +27,7 @@ def import_icd10_french(atih_data = "https://www.atih.sante.fr/plateformes-de-tr
   PYM  = get_ontology("http://PYM/").load()
   ICD10 = PYM["ICD10"]
   
-  print("Importing ICD10_FRENCH_ATIH from %s..." % atih_data)
+  print("Importing CIM10 from %s..." % atih_data)
   if atih_data.startswith("http:") or atih_data.startswith("https:"):
     f = urllib.request.urlopen(atih_data)
     f = io.BytesIO(f.read())
@@ -43,11 +43,11 @@ def import_icd10_french(atih_data = "https://www.atih.sante.fr/plateformes-de-tr
     class ssr    (AnnotationProperty): pass
     
   with onto.get_namespace("http://PYM/SRC/"):
-    ICD10_FRENCH = types.new_class("ICD10_FRENCH_ATIH", (PYM["SRC"],))
+    ICD10_FRENCH = types.new_class("CIM10", (PYM["SRC"],))
     onto._set_obj_triple_spo  (ICD10_FRENCH.storid, PYM.terminology.storid, PYM["SRC"].storid)
     onto._set_data_triple_spod(ICD10_FRENCH.storid, label.storid, "CIM10", "@fr")
     
-  with onto.get_namespace("http://PYM/ICD10_FRENCH_ATIH/"):
+  with onto.get_namespace("http://PYM/CIM10/"):
     for line in open(os.path.join(os.path.dirname(__file__), "icd10_french_group_name.txt")).read().split(u"\n"):
       line = line.strip()
       if line and not line.startswith("#"):
