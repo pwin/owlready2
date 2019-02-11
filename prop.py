@@ -565,10 +565,11 @@ class ObjectPropertyClass(ReasoningPropertyClass):
                     
             elif (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1):
               if not r.value in values: walk(r.value)
+
+          if isinstance(o, ThingClass):
+            for e in o.equivalent_to.indirect():
+              if not e in values: walk(e)
               
-          for e in o.equivalent_to.indirect():
-            if not e in values: walk(e)
-            
         walk(entity)
         if transitive_exclude_self: values.discard(entity)
         

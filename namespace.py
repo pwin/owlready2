@@ -128,6 +128,34 @@ class _GraphManager(object):
         r.append((s,p,o))
       return r
     
+  # def get_triples_rdf(self, s = None, p = None, o = None, d = None):
+  #   if s is None: s2 = None
+  #   else:         s2 = self.world._abbreviate(s)
+  #   if p is None:            p2 = None
+  #   elif isinstance(p, int): p2 = p
+  #   else:                    p2 = self.world._abbreviate(p)
+  #   if o is None: o2, d2 = None, None
+  #   else:         o2, d2 = self.world._to_rdf(o)
+    
+  #   r = []
+  #   for s3, p3, o3, d3 in self._get_triples_spod_spod(s2, p2, o2, d2):
+  #     if not o is None:
+  #       r.append((s or self.world._unabbreviate(s3),
+  #                 p or self.world._unabbreviate(p3),
+  #                 o, d))
+  #     else:
+  #       if d3 is None:
+  #         r.append((s or self.world._unabbreviate(s3),
+  #                   p or self.world._unabbreviate(p3),
+  #                   self.world._unabbreviate(o3),
+  #                   None))
+  #       else:
+  #         r.append((s or self.world._unabbreviate(s3),
+  #                   p or self.world._unabbreviate(p3),
+  #                   from_literal(o3, d3),
+  #                   self.world._unabbreviate(d3) if isinstance(d3, int) else d3))
+  #   return r
+  
   def _refactor(self, storid, new_iri): pass
   
   def _get_annotation_axioms(self, source, property, target, target_d):
@@ -250,7 +278,7 @@ class _GraphManager(object):
       yield self._parse_bnode(s)
       
   def disjoints(self): return itertools.chain(self.disjoint_classes(), self.disjoint_properties(), self.different_individuals())
-
+  
   def general_axioms(self):
     for s in itertools.chain(self._get_obj_triples_po_s(rdf_type, owl_restriction),
                              self._get_obj_triples_po_s(rdf_type, owl_class),
@@ -308,8 +336,28 @@ onto_path = []
 
 owl_world = None
 
-_cache = [None] * (2 ** 16) #50000
+_cache = [None] * (2 ** 16)
 _cache_index = 0
+
+def _clear_cache():
+  import gc
+  global _cache, _cache_index
+
+  d = weakref.WeakKeyDictionary()
+  for i in _cache:
+    if i is None: break
+    d[i] = 1
+  
+  _cache = [None] * len(_cache)
+  _cache_index = 0
+
+  gc.collect()
+  gc.collect()
+  gc.collect()
+  
+  for i in d.keys():
+    pass
+  
 
 class World(_GraphManager):
   def __init__(self, backend = "sqlite", filename = ":memory:", dbname = "owlready2_quadstore", **kargs):
