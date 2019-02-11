@@ -287,7 +287,7 @@ class _GraphManager(object):
         sub = self._get_obj_triple_po_s(rdfs_subclassof, s)
         if sub is None: yield self._parse_bnode(s)
         
-  def search(self, _use_str_as_loc_str = True, debug = False, **kargs):
+  def search(self, _use_str_as_loc_str = True, **kargs):
     from owlready2.triplelite import _SearchList
     
     prop_vals = []
