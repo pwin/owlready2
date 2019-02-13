@@ -1013,6 +1013,29 @@ class Test(BaseTest, unittest.TestCase):
 
     assert O2.p == C2
       
+  def test_class_26(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test.owl")
+    
+    with onto:
+      class Bactery(Thing): pass
+      class Grouping(Thing): pass
+      class p(Bactery >> Grouping): pass
+      
+      
+      class Listeria(Bactery):
+        p = [Grouping]
+        pass
+      
+      class Listeria(Bactery):
+        is_a = [
+          p.some(Grouping),
+        ]
+        
+    assert set(Listeria.is_a) == set([Bactery, p.some(Grouping)])
+    assert len(Listeria.is_a) == 2
+      
+    
   def test_individual_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
 

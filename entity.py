@@ -108,13 +108,17 @@ class EntityClass(type):
     if LOADING:
       Class = namespace.world._entities.get (storid)
     else:
-      for base in _is_a:
-        if isinstance(base, ClassConstruct): base._set_ontology(namespace.ontology)
+      #for base in _is_a:
+      #  if isinstance(base, ClassConstruct): base._set_ontology(namespace.ontology)
       Class = namespace.world._get_by_storid(storid)
       
     equivalent_to = obj_dict.pop("equivalent_to", None)
     
     if Class is None:
+      if not LOADING:
+        for base in _is_a:
+          if isinstance(base, ClassConstruct): base._set_ontology(namespace.ontology)
+          
       _is_a = CallbackList(_is_a, None, MetaClass._class_is_a_changed)
       obj_dict.update(
         _name          = name,
@@ -123,7 +127,7 @@ class EntityClass(type):
         is_a           = _is_a,
         _equivalent_to = None,
       )
-
+      
       Class = namespace.world._entities[storid] = _is_a._obj = type.__new__(MetaClass, name, superclasses, obj_dict)
       
       if not LOADING:
@@ -132,8 +136,9 @@ class EntityClass(type):
         
     else:
       if not MetaClass is Class.__class__: Class.__class__ = MetaClass
-      if (Class.is_a != _is_a) and (_is_a != (Thing,)): Class.is_a.extend([i for i in _is_a if not i in Class.is_a])
-      
+      if (Class.is_a != _is_a) and (_is_a != (Thing,)):
+        Class.is_a.extend([i for i in _is_a if not i in Class.is_a])
+        
     if equivalent_to:
       if isinstance(equivalent_to, list): Class.equivalent_to.extend(equivalent_to)
       
