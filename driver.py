@@ -62,7 +62,7 @@ class BaseGraph(object):
     
   def save(self, f, format = "pretty-xml"): raise NotImplementedError
   
-  def _abbreviate  (self, iri): return iri
+  def _abbreviate  (self, iri, create_if_missing = True): return iri
   def _unabbreviate(self, iri): return iri
   
   def _get_obj_triples_transitive_sp(self, s, p, already = None):

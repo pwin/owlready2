@@ -422,20 +422,21 @@ class Graph(BaseMainGraph):
   def ontologies_iris(self):
     for (iri,) in self.execute("SELECT iri FROM ontologies").fetchall(): yield iri
       
-  def _abbreviate_sql(self, iri):
+  def _abbreviate_sql(self, iri, create_if_missing = True):
     r = self.execute("SELECT storid FROM resources WHERE iri=? LIMIT 1", (iri,)).fetchone()
     if r: return r[0]
-    self.current_resource += 1
-    storid = self.current_resource
-    self.execute("INSERT INTO resources VALUES (?,?)", (storid, iri))
-    return storid
-  
+    if create_if_missing:
+      self.current_resource += 1
+      storid = self.current_resource
+      self.execute("INSERT INTO resources VALUES (?,?)", (storid, iri))
+      return storid
+    
   def _unabbreviate_sql(self, storid):
     return self.execute("SELECT iri FROM resources WHERE storid=? LIMIT 1", (storid,)).fetchone()[0]
   
-  def _abbreviate_dict(self, iri):
+  def _abbreviate_dict(self, iri, create_if_missing = True):
     storid = self._abbreviate_d.get(iri)
-    if storid is None:
+    if (storid is None) and create_if_missing:
       self.current_resource += 1
       storid = self._abbreviate_d[iri] = self.current_resource
       self._unabbreviate_d[storid] = iri

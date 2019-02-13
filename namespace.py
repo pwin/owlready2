@@ -77,7 +77,7 @@ class Namespace(object):
   
 
 class _GraphManager(object):
-  def _abbreviate  (self, iri):
+  def _abbreviate  (self, iri, create_if_missing = True):
     return _universal_iri_2_abbrev.get(iri, iri)
   def _unabbreviate(self, abb):
     return _universal_abbrev_2_iri.get(abb, abb)
@@ -465,10 +465,12 @@ class World(_GraphManager):
     
   
   def get(self, iri):
-    return self._entities.get(self._abbreviate(iri))
+    return self._entities.get(self._abbreviate(iri, False))
   
   def __getitem__(self, iri):
-    return self._get_by_storid(self._abbreviate(iri), iri)
+    storid = self._abbreviate(iri, False)
+    if storid is None: return None
+    return self._get_by_storid(storid, iri)
   
   def _get_by_storid(self, storid, full_iri = None, main_type = None, main_onto = None, trace = None, default_to_none = True):
     entity = self._entities.get(storid)

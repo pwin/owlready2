@@ -285,6 +285,16 @@ class Test(BaseTest, unittest.TestCase):
     with o2:
       class B(Thing): pass
     
+  def test_world_9(self):
+    world = self.new_world()
+    o1 = world.get_ontology("http://test.org/t1.owl")
+    
+    n1 = world.graph._abbreviate("xxx1")
+    o1.missing_entity
+    n2 = world.graph._abbreviate("xxx2")
+    
+    assert n2 == n1 + 1
+    
     
   def test_ontology_1(self):
     o1 = get_ontology("http://test/test_ontology_1_1.owl")
