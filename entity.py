@@ -410,17 +410,31 @@ class ThingClass(EntityClass):
     return [Class.namespace.world._get_by_storid(s, None, Thing) for s in Class.namespace.world._get_obj_triples_po_s(rdf_type, Class.storid)]
   
   def get_class_properties(Class):
-    l = list(set(construct.property
-                 for constructs in (Class.is_a, Class.equivalent_to.indirect())
-                 for construct in constructs
-                 if isinstance(construct, Restriction) and (
-            (construct.property._class_property_some and ((construct.type == SOME) or (construct.type == VALUE)))
-         or (construct.property._class_property_only and  (construct.type == ONLY))
-    )))
+    l = set()
+    for r in _property_value_restrictions(Class, None):
+      if   r.property._class_property_some and ((r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1)):
+        l.add(r.property)
+      elif r.property._class_property_only and  (r.type == ONLY):
+        l.add(r.property)
+        
     for storid in Class.namespace.world._get_triples_s_p(Class.storid):
       Prop = Class.namespace.world._get_by_storid(storid)
       if not Prop is None: # None is is-a,...
-        l.append(Prop)
+        l.add(Prop)
+    return l
+  
+  def INDIRECT_get_class_properties(Class):
+    l = set()
+    for r in _inherited_properties_value_restrictions(Class, None, set()):
+      if   r.property._class_property_some and ((r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1)):
+        l.add(r.property)
+      elif r.property._class_property_only and  (r.type == ONLY):
+        l.add(r.property)
+        
+    for storid in Class.namespace.world._get_triples_s_p(Class.storid):
+      Prop = Class.namespace.world._get_by_storid(storid)
+      if not Prop is None: # None is is-a,...
+        l.add(Prop)
     return l
   
   def __and__(a, b): return And([a, b])
@@ -672,4 +686,3 @@ def _inherited_property_value_restrictions(x, Prop, already):
     for x2 in x.Classes:
       yield from _inherited_property_value_restrictions(x2, Prop, already)
       
-

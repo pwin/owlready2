@@ -367,8 +367,8 @@ class Property(metaclass = PropertyClass):
       s = Prop.namespace.world._get_by_storid(s)
       o = Prop.namespace.ontology._to_python(o, d)
       yield s, o
-        
-        
+      
+      
 class ReasoningPropertyClass(PropertyClass):
   def __init__(Prop, name, bases, obj_dict):
     super().__init__(name, bases, obj_dict)
@@ -863,7 +863,7 @@ def _property_value_restrictions(x, Prop):
 
 def _inherited_properties_value_restrictions(x, Props, already):
   if   isinstance(x, Restriction):
-    if x.property in Props: yield x
+    if (Props is None) or (x.property in Props): yield x
     
   elif isinstance(x, And):
     for x2 in x.Classes:
@@ -878,7 +878,7 @@ def _inherited_properties_value_restrictions(x, Props, already):
     
     # Need two passes in order to favor restriction on the initial class rather than those on the ancestor classes
     for parent in parents:
-      if isinstance(parent, Restriction) and (parent.property in Props): yield parent
+      if isinstance(parent, Restriction) and ((Props is None) or (parent.property in Props)): yield parent
       
     for parent in parents:
       if not isinstance(parent, Restriction):

@@ -96,7 +96,7 @@ class AnnotationPropertyClass(PropertyClass):
       return _AnnotList(l, source_orig, property, target, target_d, Annot.storid)
     
     else:
-      if Annot is entity.namespace.world._props.get(Annot._python_name): # use cached value
+      if Annot is entity.namespace.world._props.get(Annot._python_name) and not isinstance(entity, ClassConstruct): # use cached value
         r = getattr(entity, Annot._python_name)
         if isinstance(r, list): return r # May not be a list if hacked (e.g. Concept.terminology)
       return Annot._get_values_for_individual(entity)

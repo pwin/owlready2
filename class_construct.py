@@ -44,7 +44,7 @@ class ClassConstruct(object):
         self._create_triples(ontology)
       elif ontology and self.ontology:
         raise OwlReadySharedBlankNodeError("A ClassConstruct cannot be shared by two ontologies, because it correspond to a RDF blank node. Please create a dupplicate.")
-    self.ontology = ontology
+    self.ontology = self.namespace = ontology
     if self.ontology: self.ontology._bnodes[self.storid] = self
     
   def destroy(self): self._destroy_triples()

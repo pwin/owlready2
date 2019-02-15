@@ -3053,7 +3053,20 @@ I took a placebo
     assert set(c.INDIRECT_label ) == set(["l A",  "l B", "l2 A", "l2 B"])
     assert set(c.INDIRECT_label2) == set(["l2 A", "l2 B"])
     
+  def test_annotation_18(self):
+    w = self.new_world()
+    o = w.get_ontology("http://test.org/onto.owl")
+
+    with o:
+      class p(ObjectProperty): pass
+      class C(Thing):
+        is_a = [p.some(Thing)]
+        
+      comment[C.is_a[-1]].append("A comment on a restriction.")
+
+    assert comment[C.is_a[-1]] == ["A comment on a restriction."]
     
+      
   def test_import_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/2/test_mixed.owl").load()
     
@@ -3842,6 +3855,32 @@ I took a placebo
     assert c.p2 == None
     assert c.INDIRECT_p2 == e
     
+  def test_class_prop_24(self):
+    onto = self.new_ontology()
+    
+    with onto:
+      class Form(Thing): pass
+      class Round(Form): pass
+      class Color(Thing): pass
+      class Bactery(Thing): pass
+      class has_form(Bactery >> Form): pass
+      class has_color(Bactery >> Color): pass
+      class Coque(Bactery):
+        is_a = [has_color.some(Color)]
+      class Staph(Coque):
+        equivalent_to = [Coque & has_form.some(Round)]
+        comment = ["Test"]
+        
+    staph = Staph()
+    staph.label = "my staph"
+    
+    assert set(Staph.get_class_properties()) == set([comment, has_form])
+    assert set(Staph.INDIRECT_get_class_properties()) == set([comment, has_form, has_color])
+    assert set(staph.INDIRECT_get_properties()) == set([label, comment, has_form, has_color])
+    assert Staph.has_form == [Round]
+    assert Staph.has_color == []
+    assert Staph.INDIRECT_has_form == [Round]
+    assert Staph.INDIRECT_has_color == [Color]
     
   def test_format_1(self):
     from owlready2.triplelite import _guess_format

@@ -77,6 +77,7 @@ owlready2.entity.AllDisjoint        = AllDisjoint
 owlready2.entity.Inverse            = Inverse
 owlready2.entity._FUNCTIONAL_FOR_CACHE = _FUNCTIONAL_FOR_CACHE
 owlready2.entity._property_value_restrictions = owlready2.prop._property_value_restrictions
+owlready2.entity._inherited_properties_value_restrictions = owlready2.prop._inherited_properties_value_restrictions
 owlready2.disjoint.Or = Or
 owlready2.prop.Restriction             = Restriction
 owlready2.prop.ConstrainedDatatype     = ConstrainedDatatype
@@ -90,6 +91,7 @@ owlready2.prop.ThingClass              = ThingClass
 owlready2.prop.And                     = And
 owlready2.prop.Or                      = Or
 owlready2.prop.OneOf                   = OneOf
+owlready2.annotation.ClassConstruct    = ClassConstruct
 
 owlready2.individual._keep_most_specific = _keep_most_specific
 owlready2.individual.ClassConstruct      = ClassConstruct

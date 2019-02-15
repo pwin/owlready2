@@ -440,12 +440,9 @@ class World(_GraphManager):
       self._rdflib_store = owlready2.rdflib_store.TripleLiteRDFlibStore(self)
     return self._rdflib_store.main_graph
 
-  def sparql_query(self, sparql):
-    g = self.as_rdflib_graph()
-    r = g.query(sparql)
-    for row in r:
-      yield tuple(g.store._2_python(x) for x in row)
-      
+  def sparql_query(self, sparql, *args, **kargs):
+    yield from self.as_rdflib_graph().query_owlready(sparql, *args, **kargs)
+    
       
   def get_ontology(self, base_iri):
     if (not base_iri.endswith("/")) and (not base_iri.endswith("#")):

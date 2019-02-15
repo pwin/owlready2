@@ -289,11 +289,16 @@ class Thing(metaclass = ThingClass):
           yield Prop
           
   def get_properties(self):
-    l = []
+    l = set()
     for storid in self.namespace.world._get_triples_s_p(self.storid):
       Prop = self.namespace.world._get_by_storid(storid)
       if not Prop is None: # None is is-a
-        l.append(Prop)
+        l.add(Prop)
+    return l
+  
+  def INDIRECT_get_properties(self):
+    l = self.get_properties()
+    l.update(self.__class__.INDIRECT_get_class_properties())
     return l
   
   def __dir__(self):
