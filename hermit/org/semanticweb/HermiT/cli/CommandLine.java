@@ -131,14 +131,18 @@ public class CommandLine {
         final boolean classifyOPs;
         final boolean classifyDPs;
         final boolean classifyIs;
+        final boolean classifyPVs;
+        final boolean classifyDs;
         final boolean prettyPrint;
         final String outputLocation;
 
-        public ClassifyAction(boolean classifyClasses, boolean classifyOPs, boolean classifyDPs, boolean classifyIs, boolean prettyPrint, String outputLocation) {
+        public ClassifyAction(boolean classifyClasses, boolean classifyOPs, boolean classifyDPs, boolean classifyIs, boolean classifyPVs, boolean classifyDs, boolean prettyPrint, String outputLocation) {
             this.classifyClasses=classifyClasses;
             this.classifyOPs=classifyOPs;
             this.classifyDPs=classifyDPs;
             this.classifyIs=classifyIs;
+            this.classifyPVs=classifyPVs;
+            this.classifyDs=classifyDs;
             this.prettyPrint=prettyPrint;
             this.outputLocation=outputLocation;
         }
@@ -152,8 +156,18 @@ public class CommandLine {
                 inferences.add(InferenceType.DATA_PROPERTY_HIERARCHY);
             if (classifyIs)
                 inferences.add(InferenceType.CLASS_ASSERTIONS);
+            if (classifyPVs) {
+                inferences.add(InferenceType.OBJECT_PROPERTY_ASSERTIONS);
+                inferences.add(InferenceType.DATA_PROPERTY_ASSERTIONS);
+            }
+            if (classifyDs) {
+                inferences.add(InferenceType.SAME_INDIVIDUAL);
+                inferences.add(InferenceType.DIFFERENT_INDIVIDUALS);
+                inferences.add(InferenceType.DISJOINT_CLASSES);
+            }
             status.log(2,"Classifying...");
-            hermit.precomputeInferences(inferences.toArray(new InferenceType[0]));
+            //hermit.precomputeInferences(inferences.toArray(new InferenceType[0]));
+            hermit.precomputeInferences(InferenceType.CLASS_HIERARCHY, InferenceType.OBJECT_PROPERTY_HIERARCHY, InferenceType.DATA_PROPERTY_HIERARCHY, InferenceType.CLASS_ASSERTIONS,InferenceType.OBJECT_PROPERTY_ASSERTIONS,InferenceType.SAME_INDIVIDUAL,InferenceType.DISJOINT_CLASSES,InferenceType.DATA_PROPERTY_ASSERTIONS,InferenceType.DIFFERENT_INDIVIDUALS);
             if (output!=null) {
                 if (outputLocation!=null)
                     status.log(2,"Writing results to "+outputLocation);
@@ -162,7 +176,7 @@ public class CommandLine {
                 if (prettyPrint)
                     hermit.printHierarchies(output, classifyClasses, classifyOPs, classifyDPs);
                 else
-                    hermit.dumpHierarchies(output, classifyClasses, classifyOPs, classifyDPs);
+                  hermit.dumpHierarchies(output, classifyClasses, classifyOPs, classifyDPs, classifyPVs);
                 if (classifyIs) {
                     for(OWLNamedIndividual namedIndividual : hermit.getRootOntology().getIndividualsInSignature()) {
                         for (Node<OWLClass> node : hermit.getTypes(namedIndividual, true)) {
@@ -239,7 +253,7 @@ public class CommandLine {
                             output.println("\t"+iri);
                     }
                     else
-                        output.println("\t"+prefixes._abbreviateIRI(classInSet.getIRI().toString()));
+                        output.println("\t"+prefixes.abbreviateIRI(classInSet.getIRI().toString()));
             output.flush();
         }
     }
@@ -281,7 +295,7 @@ public class CommandLine {
                             output.println("\t"+iri);
                     }
                     else
-                        output.println("\t"+prefixes._abbreviateIRI(classInSet.getIRI().toString()));
+                        output.println("\t"+prefixes.abbreviateIRI(classInSet.getIRI().toString()));
             output.flush();
         }
     }
@@ -306,7 +320,7 @@ public class CommandLine {
             if (ignoreOntologyPrefixes)
                 output.println("Classes equivalent to '"+conceptName+"':");
             else
-                output.println("Classes equivalent to '"+prefixes._abbreviateIRI(conceptName)+"':");
+                output.println("Classes equivalent to '"+prefixes.abbreviateIRI(conceptName)+"':");
             for (OWLClass classInSet : classes)
                 if (ignoreOntologyPrefixes) {
                     String iri=classInSet.getIRI().toString();
@@ -316,7 +330,7 @@ public class CommandLine {
                         output.println("\t"+iri);
                 }
                 else
-                    output.println("\t"+prefixes._abbreviateIRI(classInSet.getIRI().toString()));
+                    output.println("\t"+prefixes.abbreviateIRI(classInSet.getIRI().toString()));
             output.flush();
         }
     }
@@ -422,6 +436,8 @@ public class CommandLine {
         new Option('O',"classifyOPs",kActions,"classify the object properties of the ontology, optionally writing taxonomy to a file if -o (--output) is used"),
         new Option('D',"classifyDPs",kActions,"classify the data properties of the ontology, optionally writing taxonomy to a file if -o (--output) is used"),
         new Option('I',"classifyIs",kActions,"classify the instances of the ontology, optionally writing taxonomy to a file if -o (--output) is used"),
+        new Option('Y',"classifyPVs",kActions,"classify the asserted property values"),
+        new Option('Z',"classifyDs",kActions,"classify the disjoint classes, same as and different individuals"),
         new Option('P',"prettyPrint",kActions,"when writing the classified hierarchy to a file, create a proper ontology and nicely indent the axioms according to their leven in the hierarchy"),
         new Option('k',"consistency",kActions,false,"CLASS","check satisfiability of CLASS (default owl:Thing)"),
         new Option('d',"direct",kActions,"restrict next subs/supers call to only direct sub/superclasses"),
@@ -432,7 +448,7 @@ public class CommandLine {
         new Option(kDumpPrefixes,"print-prefixes",kActions,"output prefix names available for use in identifiers"),
         new Option('E',"checkEntailment",kActions,"check whether the premise (option premise) ontology entails the conclusion ontology (option conclusion)"),
 
-        new Option('N',"no-prefixes",kPrefixes,"do not _abbreviate or expand identifiers using prefixes defined in input ontology"),
+        new Option('N',"no-prefixes",kPrefixes,"do not abbreviate or expand identifiers using prefixes defined in input ontology"),
         new Option('p',"prefix",kPrefixes,true,"PN=IRI","use PN as an abbreviation for IRI in identifiers"),
         new Option(kDefaultPrefix,"prefix",kPrefixes,true,"IRI","use IRI as the default identifier prefix"),
 
@@ -459,6 +475,8 @@ public class CommandLine {
             boolean classifyOPs=false;
             boolean classifyDPs=false;
             boolean classifyIs=false;
+            boolean classifyPVs=false;
+            boolean classifyDs=false;
             boolean prettyPrint=false;
             Collection<Action> actions=new LinkedList<Action>();
             URI base;
@@ -591,6 +609,14 @@ public class CommandLine {
                         break;
                     case 'I': {
                         classifyIs=true;
+                    }
+                        break;
+                    case 'Y': {
+                        classifyPVs=true;
+                    }
+                        break;
+                    case 'Z': {
+                        classifyDs=true;
                     }
                         break;
                     case 'P': {
@@ -749,7 +775,7 @@ public class CommandLine {
             if (verbosity>3)
                 config.monitor=new Timer(new PrintWriter(System.err));
             if (classifyClasses || classifyOPs || classifyDPs || classifyIs)
-                actions.add(new ClassifyAction(classifyClasses, classifyOPs, classifyDPs, classifyIs, prettyPrint, resultsFileLocation));
+                actions.add(new ClassifyAction(classifyClasses, classifyOPs, classifyDPs, classifyIs, classifyPVs, classifyDs, prettyPrint, resultsFileLocation));
             for (IRI ont : ontologies) {
                 didSomething=true;
                 status.log(2,"Processing "+ont.toString());

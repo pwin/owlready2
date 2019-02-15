@@ -2558,6 +2558,20 @@ I took a placebo
     assert set(p3.is_a) == {PersonneAgée}
     assert set(p4.is_a) == {PersonneAgée, PersonneGrande}
     
+  def test_reasoning_7(self):
+    world = self.new_world()
+    onto  = world.get_ontology("file:///home/jiba/tmp/onto2.owl").load()
+
+    assert onto.t2 .prop == []
+    assert onto.t22.prop == []
+    
+    sync_reasoner(world, infer_property_values = True, debug = 0)
+
+    assert onto.t2 .prop == [onto.o]
+    assert onto.t22.prop == [onto.o]
+    
+    
+    
     
   def test_disjoint_1(self):
     world = self.new_world()
@@ -5785,6 +5799,7 @@ for Class in [Test, Paper]:
   if Class:
     for name, func in list(Class.__dict__.items()):
       if name.startswith("test_reasoning"):
+        if name == "test_reasoning_7": continue # Not yet supported by Pellet
         def test_pellet(self, func = func):
           global sync_reasoner
           sync_reasoner = sync_reasoner_pellet

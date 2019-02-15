@@ -1,4 +1,7 @@
 /*
+cd ./owlready2/hermit
+/usr/lib/jvm/java-7-openjdk/bin/javac -cp .:HermiT.jar ./org/semanticweb/HermiT/cli/CommandLine.java ./org/semanticweb/HermiT/Reasoner.java ./org/semanticweb/HermiT/hierarchy/HierarchyDumperFSS.java ./org/semanticweb/HermiT/hierarchy/InstanceManager.java
+
 javac -cp ./antibio_arcenciel/owlready_cas_dut_1/owlapi-3.4.3.jar ./owlready2/test/Bench.java
 java -cp ./antibio_arcenciel/owlready_cas_dut_1/owlapi-3.4.3.jar:./owlready2/test Bench > /dev/null
 

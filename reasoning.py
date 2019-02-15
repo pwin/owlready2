@@ -27,6 +27,8 @@ from owlready2.class_construct import *
 from owlready2.individual      import *
 
 _HERMIT_RESULT_REGEXP = re.compile("^([A-Za-z]+)\\( ((?:<(?:[^>]+)>\s*)+) \\)$", re.MULTILINE)
+_HERMIT_PROP_REGEXP   = re.compile("^<([^>]+)> \\(known instances:\s*(.*?)\s*\\|\s*possible instances:\s*(.*?)\s*\\)", re.MULTILINE)
+
 
 _HERE = os.path.dirname(__file__)
 _HERMIT_CLASSPATH = os.pathsep.join([os.path.join(_HERE, "hermit"), os.path.join(_HERE, "hermit", "HermiT.jar")])
@@ -91,7 +93,7 @@ def _keep_most_specific(s, consider_equivalence = True):
   return r
 
 
-def sync_reasoner_hermit(x = None, debug = 1, keep_tmp_file = False):
+def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, keep_tmp_file = False):
   if   isinstance(x, World):    world = x
   elif isinstance(x, Ontology): world = x.world
   elif isinstance(x, list):     world = x[0].world
@@ -111,6 +113,7 @@ def sync_reasoner_hermit(x = None, debug = 1, keep_tmp_file = False):
     world.save(tmp, format = "ntriples")
   tmp.close()
   command = [owlready2.JAVA_EXE, "-Xmx2000M", "-cp", _HERMIT_CLASSPATH, "org.semanticweb.HermiT.cli.CommandLine", "-c", "-O", "-D", "-I", "file:///%s" % tmp.name.replace('\\','/')]
+  if infer_property_values: command.append("-Y")
   if debug:
     import time
     print("* Owlready2 * Running HermiT...", file = sys.stderr)
@@ -162,12 +165,26 @@ def sync_reasoner_hermit(x = None, debug = 1, keep_tmp_file = False):
             new_equivs[concept_storid1].append(concept_storid2)
             entity_2_type[concept_storid1] = _OWL_2_TYPE[owl_relation]
             
-            
+  if infer_property_values:
+    inferred_obj_relations = []
+    for prop_iri, knowns, possibles in _HERMIT_PROP_REGEXP.findall(output):
+      prop = world[prop_iri]
+      if prop is None: continue
+      knowns = knowns[1:-1] # Remove first and last parenthesese
+      for pair in knowns.split(")("):
+        a, b = pair[1:-1].split(">, <", 1)
+        a_storid = ontology._abbreviate(a, False)
+        b_storid = ontology._abbreviate(b, False)
+        if (not a_storid is None) and (not b_storid is None) and (not world._has_obj_triple_spo(a, prop.storid, b)):
+          inferred_obj_relations.append((a_storid, prop, b_storid))
+          
   if not keep_tmp_file: os.unlink(tmp.name)
   
   if locked: world.graph.acquire_write_lock() # re-lock when applying results
   
   _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, entity_2_type)
+  if infer_property_values:
+    _apply_inferred_obj_relations(world, ontology, debug, inferred_obj_relations)
   
   if debug: print("* Owlready * (NB: only changes on entities loaded in Python are shown, other changes are done but not listed)", file = sys.stderr)
 
@@ -331,4 +348,19 @@ def _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, en
           for added   in new - old:
             if not added in new_is_a: new_is_a.append(added)
           child_eq.is_a.reinit(new_is_a)
+
           
+def _apply_inferred_obj_relations(world, ontology, debug, relations):
+  for a_storid, prop, b_storid in relations:
+    ontology._add_obj_triple_spo(a_storid, prop.storid, b_storid)
+    
+    a = world._entities.get(a_storid)
+    if not a is None:
+      if prop._python_name in a.__dict__:
+        delattr(a, prop._python_name)
+
+    if prop._inverse_property:
+      b = world._entities.get(b_storid)
+      if not b is None:
+        if prop._inverse_property._python_name in b.__dict__:
+          delattr(b, prop._inverse_property._python_name)
