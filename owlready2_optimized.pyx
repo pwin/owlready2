@@ -830,7 +830,11 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
       objs.append((bn, _abbreviate("http://www.w3.org/2002/07/owl#inverseOf"), prop))
       
       stack[-2:] = [bn]
-    
+      
+    elif (tag == "http://www.w3.org/2002/07/owl#SameIndividual"):
+      objs.append((stack[-2], _abbreviate("http://www.w3.org/2002/07/owl#sameAs"), stack[-1]))
+      del stack[-2:]
+      
     if len(objs ) > 800000: insert_objs()
     if len(datas) > 800000: insert_datas()
       

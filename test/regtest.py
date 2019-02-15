@@ -2570,7 +2570,17 @@ I took a placebo
     assert onto.t2 .prop == [onto.o]
     assert onto.t22.prop == [onto.o]
     
+  def test_reasoning_8(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.lesfleursdunormal.fr/static/_downloads/pizza_onto.owl").load()
     
+    assert onto.pizza1.has_topping == [onto.meatTopping1]
+    assert onto.pizza2.has_topping == []
+    
+    sync_reasoner(world, infer_property_values = True, debug = 1)
+    
+    assert onto.pizza1.has_topping == [onto.meatTopping1]
+    assert onto.pizza2.has_topping == [onto.meatTopping1]
     
     
   def test_disjoint_1(self):
@@ -5800,6 +5810,7 @@ for Class in [Test, Paper]:
     for name, func in list(Class.__dict__.items()):
       if name.startswith("test_reasoning"):
         if name == "test_reasoning_7": continue # Not yet supported by Pellet
+        if name == "test_reasoning_8": continue # Not yet supported by Pellet
         def test_pellet(self, func = func):
           global sync_reasoner
           sync_reasoner = sync_reasoner_pellet

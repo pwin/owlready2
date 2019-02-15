@@ -27,7 +27,7 @@ from owlready2.class_construct import *
 from owlready2.individual      import *
 
 _HERMIT_RESULT_REGEXP = re.compile("^([A-Za-z]+)\\( ((?:<(?:[^>]+)>\s*)+) \\)$", re.MULTILINE)
-_HERMIT_PROP_REGEXP   = re.compile("^<([^>]+)> \\(known instances:\s*(.*?)\s*\\|\s*possible instances:\s*(.*?)\s*\\)", re.MULTILINE)
+_HERMIT_PROP_REGEXP   = re.compile("^<([^>]+)> \\(known instances:\s*(.*?)(?:\s*\\|\s*)possible instances:\s*(.*?)\s*\\)", re.MULTILINE)
 
 
 _HERE = os.path.dirname(__file__)
@@ -175,7 +175,9 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
         a, b = pair[1:-1].split(">, <", 1)
         a_storid = ontology._abbreviate(a, False)
         b_storid = ontology._abbreviate(b, False)
-        if (not a_storid is None) and (not b_storid is None) and (not world._has_obj_triple_spo(a, prop.storid, b)):
+        if ((not a_storid is None) and (not b_storid is None) and
+            (not world._has_obj_triple_spo(a_storid, prop.storid, b_storid)) and
+            ((not prop._inverse_property) or (not world._has_obj_triple_spo(b_storid, prop._inverse_storid, a_storid)))):
           inferred_obj_relations.append((a_storid, prop, b_storid))
           
   if not keep_tmp_file: os.unlink(tmp.name)
@@ -356,9 +358,12 @@ def _apply_inferred_obj_relations(world, ontology, debug, relations):
     
     a = world._entities.get(a_storid)
     if not a is None:
+      if debug:
+        b = world._entities.get(b_storid)
+        if not b is None: print("* Owlready * Adding realtion %s %s %s" % (a, prop.name, b))
       if prop._python_name in a.__dict__:
         delattr(a, prop._python_name)
-
+        
     if prop._inverse_property:
       b = world._entities.get(b_storid)
       if not b is None:

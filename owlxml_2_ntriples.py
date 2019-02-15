@@ -452,6 +452,9 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       
       objs[-2:] = [bn]
     
+    elif (tag == "http://www.w3.org/2002/07/owl#SameIndividual"):
+      on_prepare_obj(objs[-2], "http://www.w3.org/2002/07/owl#sameAs", objs[-1])
+      del objs[-2:]
       
   def characters(content):
     nonlocal current_content
