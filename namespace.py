@@ -24,10 +24,7 @@ from owlready2.base import _universal_abbrev_2_iri, _universal_iri_2_abbrev, _un
 
 from owlready2.triplelite import *
 
-#CURRENT_NAMESPACES = [None]
-import contextvars
-CURRENT_NAMESPACES = contextvars.ContextVar("CURRENT_NAMESPACES", default = None)
-del contextvars
+CURRENT_NAMESPACES = ContextVar("CURRENT_NAMESPACES", default = None)
 
 _LOG_LEVEL = 0
 def set_log_level(x):

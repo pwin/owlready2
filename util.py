@@ -237,14 +237,24 @@ class _LazyListMixin(list):
   def clear(self):
     self.__class__ = self._PopulatedClass
     
-  
+
+try:
+  from contextvars import ContextVar
+except ImportError:
+  import threading
+  local = threading.local()
+  class ContextVar(object):
+    def __init__(self, name, default = None):
+      self.name    = name
+      self.default = default
+    def get(self): return getattr(local, self.name, self.default)
+    def set(self, value): return setattr(local, self.name, value)
 
 
 class Environment(object):
   __slots__ = ["level"]
   def __init__(self):
-    import contextvars
-    self.level = contextvars.ContextVar("%s_level" % self.__class__.__name__, default = 0)
+    self.level = ContextVar("%s_level" % self.__class__.__name__, default = 0)
     
   def __repr__(self): return "<%s, level %s>" % (self.__class__.__name__, self.level.get())
   

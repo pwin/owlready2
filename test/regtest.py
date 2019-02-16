@@ -2577,7 +2577,7 @@ I took a placebo
     assert onto.pizza1.has_topping == [onto.meatTopping1]
     assert onto.pizza2.has_topping == []
     
-    sync_reasoner(world, infer_property_values = True, debug = 1)
+    sync_reasoner(world, infer_property_values = True, debug = 0)
     
     assert onto.pizza1.has_topping == [onto.meatTopping1]
     assert onto.pizza2.has_topping == [onto.meatTopping1]

@@ -23,10 +23,7 @@ from owlready2.namespace  import *
 from owlready2.entity     import *
 from owlready2.base       import _universal_abbrev_2_datatype, _universal_datatype_2_abbrev
 
-#_next_domain_range = None
-import contextvars
-_NEXT_DOMAIN_RANGE = contextvars.ContextVar("_NEXT_DOMAIN_RANGE", default = None)
-del contextvars
+_NEXT_DOMAIN_RANGE = ContextVar("_NEXT_DOMAIN_RANGE", default = None)
 
 
 SymmetricProperty = () # Forward declaration
