@@ -109,6 +109,12 @@ The reasoner can also be limited to some ontologies:
 
    >>> sync_reasoner([onto1, onto2,...])
 
+If you also want to infer object property values, use the "infer_property_values" parameter:
+
+::
+
+   >>> sync_reasoner(infer_property_values = True)
+
 To use Pellet instead of HermiT, just use the sync_reasoner_pellet() function instead.
 
 

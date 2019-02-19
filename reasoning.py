@@ -29,6 +29,8 @@ from owlready2.individual      import *
 _HERMIT_RESULT_REGEXP = re.compile("^([A-Za-z]+)\\( ((?:<(?:[^>]+)>\s*)+) \\)$", re.MULTILINE)
 _HERMIT_PROP_REGEXP   = re.compile("^<([^>]+)> \\(known instances:\s*(.*?)(?:\s*\\|\s*)possible instances:\s*(.*?)\s*\\)", re.MULTILINE)
 
+_PELLET_PROP_REGEXP   = re.compile("^PROPINST: ([^ ]+) ([^ ]+) ([^ ]+)$", re.MULTILINE)
+
 
 _HERE = os.path.dirname(__file__)
 _HERMIT_CLASSPATH = os.pathsep.join([os.path.join(_HERE, "hermit"), os.path.join(_HERE, "hermit", "HermiT.jar")])
@@ -193,7 +195,7 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
 sync_reasoner = sync_reasoner_hermit
 
 
-def sync_reasoner_pellet(x = None, debug = 1, keep_tmp_file = False):
+def sync_reasoner_pellet(x = None, infer_property_values = False, debug = 1, keep_tmp_file = False):
   if   isinstance(x, World):    world = x
   elif isinstance(x, Ontology): world = x.world
   elif isinstance(x, list):     world = x[0].world
@@ -213,6 +215,8 @@ def sync_reasoner_pellet(x = None, debug = 1, keep_tmp_file = False):
     world.save(tmp, format = "ntriples")
   tmp.close()
   command = [owlready2.JAVA_EXE, "-Xmx2000M", "-cp", _PELLET_CLASSPATH, "pellet.Pellet", "realize", "--ignore-imports", tmp.name]
+  if infer_property_values: command.insert(-2, "--infer-prop-values")
+  
   if debug:
     import time
     print("* Owlready2 * Running Pellet...", file = sys.stderr)
@@ -268,12 +272,25 @@ def sync_reasoner_pellet(x = None, debug = 1, keep_tmp_file = False):
         entity_2_type[ind_storid] = "individual"
         new_parents[ind_storid].extend(class_storids)
         
+  if infer_property_values:
+    inferred_obj_relations = []
+    for a_iri, prop_iri, b_iri in _PELLET_PROP_REGEXP.findall(output):
+      prop = world[prop_iri]
+      if prop is None: continue
+      a_storid = ontology._abbreviate(a_iri, False)
+      b_storid = ontology._abbreviate(b_iri.strip(), False)
+      if ((not a_storid is None) and (not b_storid is None) and
+          (not world._has_obj_triple_spo(a_storid, prop.storid, b_storid)) and
+          ((not prop._inverse_property) or (not world._has_obj_triple_spo(b_storid, prop._inverse_storid, a_storid)))):
+        inferred_obj_relations.append((a_storid, prop, b_storid))
         
   if not keep_tmp_file: os.unlink(tmp.name)
   
   if locked: world.graph.acquire_write_lock() # re-lock when applying results
   
   _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, entity_2_type)
+  if infer_property_values:
+    _apply_inferred_obj_relations(world, ontology, debug, inferred_obj_relations)
   
   if debug: print("* Owlready * (NB: only changes on entities loaded in Python are shown, other changes are done but not listed)", file = sys.stderr)
 

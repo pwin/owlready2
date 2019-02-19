@@ -5821,8 +5821,6 @@ for Class in [Test, Paper]:
   if Class:
     for name, func in list(Class.__dict__.items()):
       if name.startswith("test_reasoning"):
-        if name == "test_reasoning_7": continue # Not yet supported by Pellet
-        if name == "test_reasoning_8": continue # Not yet supported by Pellet
         def test_pellet(self, func = func):
           global sync_reasoner
           sync_reasoner = sync_reasoner_pellet
