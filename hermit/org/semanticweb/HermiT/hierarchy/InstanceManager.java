@@ -841,6 +841,7 @@ public class InstanceManager {
     }
     public void realize(ReasonerProgressMonitor monitor) {
         assert m_usesClassifiedConceptHierarchy==true;
+        
         if (m_readingOffFoundPossibleConceptInstance && !m_realizationCompleted) {
             if (monitor!=null)
                 monitor.reasonerTaskStarted("Computing instances for all classes");
@@ -849,6 +850,7 @@ public class InstanceManager {
             Queue<HierarchyNode<AtomicConcept>> toProcess=new LinkedList<HierarchyNode<AtomicConcept>>();
             Set<HierarchyNode<AtomicConcept>> visited=new HashSet<HierarchyNode<AtomicConcept>>();
             toProcess.addAll(m_currentConceptHierarchy.m_bottomNode.m_parentNodes);
+            
             while (!toProcess.isEmpty()) {
                 if (monitor!=null)
                     monitor.reasonerTaskProgressChanged(currentHierarchyNode,numHierarchyNodes);

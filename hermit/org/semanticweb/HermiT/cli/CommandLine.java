@@ -166,8 +166,9 @@ public class CommandLine {
                 inferences.add(InferenceType.DISJOINT_CLASSES);
             }
             status.log(2,"Classifying...");
-            //hermit.precomputeInferences(inferences.toArray(new InferenceType[0]));
-            hermit.precomputeInferences(InferenceType.CLASS_HIERARCHY, InferenceType.OBJECT_PROPERTY_HIERARCHY, InferenceType.DATA_PROPERTY_HIERARCHY, InferenceType.CLASS_ASSERTIONS,InferenceType.OBJECT_PROPERTY_ASSERTIONS,InferenceType.SAME_INDIVIDUAL,InferenceType.DISJOINT_CLASSES,InferenceType.DATA_PROPERTY_ASSERTIONS,InferenceType.DIFFERENT_INDIVIDUALS);
+            hermit.precomputeInferences(inferences.toArray(new InferenceType[0]));
+            //hermit.precomputeInferences(InferenceType.CLASS_HIERARCHY, InferenceType.OBJECT_PROPERTY_HIERARCHY, InferenceType.DATA_PROPERTY_HIERARCHY, InferenceType.CLASS_ASSERTIONS,InferenceType.OBJECT_PROPERTY_ASSERTIONS,InferenceType.SAME_INDIVIDUAL,InferenceType.DISJOINT_CLASSES,InferenceType.DATA_PROPERTY_ASSERTIONS,InferenceType.DIFFERENT_INDIVIDUALS);
+            
             if (output!=null) {
                 if (outputLocation!=null)
                     status.log(2,"Writing results to "+outputLocation);
@@ -803,6 +804,29 @@ public class CommandLine {
                     long parseTime=System.currentTimeMillis()-startTime;
                     status.log(2,"Ontology parsed in "+String.valueOf(parseTime)+" msec.");
                     startTime=System.currentTimeMillis();
+
+                    /*
+                    uk.ac.manchester.cs.owlapi.dlsyntax.DLSyntaxObjectRenderer renderer = new uk.ac.manchester.cs.owlapi.dlsyntax.DLSyntaxObjectRenderer(); 
+                    for (org.semanticweb.owlapi.model.SWRLRule rule : ontology.getAxioms(org.semanticweb.owlapi.model.AxiomType.SWRL_RULE)) { 
+                      System.out.println(renderer.render(rule)); 
+                    }
+                    */
+                    
+                    /*
+                    org.semanticweb.HermiT.Configuration.PrepareReasonerInferences prepareReasonerInferences=new org.semanticweb.HermiT.Configuration.PrepareReasonerInferences();
+                    prepareReasonerInferences.classClassificationRequired=true;
+                    prepareReasonerInferences.objectPropertyClassificationRequired=true;
+                    prepareReasonerInferences.dataPropertyClassificationRequired=true;
+                    prepareReasonerInferences.realisationRequired=true;
+                    prepareReasonerInferences.objectPropertyRealisationRequired=true;
+                    prepareReasonerInferences.dataPropertyRealisationRequired=true;
+                    prepareReasonerInferences.objectPropertyDomainsRequired=true;
+                    prepareReasonerInferences.objectPropertyRangesRequired=true;
+                    prepareReasonerInferences.sameAs=true;
+                    config.prepareReasonerInferences=prepareReasonerInferences;
+                    */
+
+
                     Reasoner hermit=new Reasoner(config,ontology);
                     Prefixes prefixes=hermit.getPrefixes();
                     if (defaultPrefix!=null) {

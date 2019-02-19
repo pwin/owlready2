@@ -2560,7 +2560,7 @@ I took a placebo
     
   def test_reasoning_7(self):
     world = self.new_world()
-    onto  = world.get_ontology("file:///home/jiba/tmp/onto2.owl").load()
+    onto  = world.get_ontology("onto2.owl").load()
 
     assert onto.t2 .prop == []
     assert onto.t22.prop == []
@@ -2581,6 +2581,18 @@ I took a placebo
     
     assert onto.pizza1.has_topping == [onto.meatTopping1]
     assert onto.pizza2.has_topping == [onto.meatTopping1]
+    
+  def test_reasoning_9(self):
+    world = self.new_world()
+    onto  = world.get_ontology("test_rule.owl").load()
+    
+    assert set(onto.e.is_a) == set([onto.E])
+    assert set(onto.e.prop) == set([])
+    
+    sync_reasoner(world, infer_property_values = True, debug = 0)
+    
+    assert set(onto.e.is_a) == set([onto.E, onto.S])
+    assert set(onto.e.prop) == set([onto.obj])
     
     
   def test_disjoint_1(self):

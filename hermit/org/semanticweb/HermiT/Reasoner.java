@@ -117,6 +117,9 @@ public class Reasoner implements OWLReasoner {
         Object[] result = clausifier.preprocessAndClausify(m_rootOntology, m_descriptionGraphs);
         m_objectPropertyInclusionManager = (ObjectPropertyInclusionManager) result[0];
         m_dlOntology = (DLOntology) result[1];
+        
+        //System.out.println(m_dlOntology.getDLClauses());
+        
         // Load the DLOntology
         createPrefixes();
         m_tableau = createTableau(m_interruptFlag, m_configuration, m_dlOntology, null, m_prefixes);
