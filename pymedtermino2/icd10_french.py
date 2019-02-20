@@ -129,8 +129,3 @@ def import_icd10_french(atih_data = "https://www.atih.sante.fr/plateformes-de-tr
           
   default_world.save()
         
-        
-if __name__ == "__main__":
-  default_world.set_backend(filename = "/home/jiba/tmp/pym.sqlite3")
-  #import_icd10_french()
-  import_icd10_french("/home/jiba/telechargements/base_med/NomenclatureCim10.zip")
