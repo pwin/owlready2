@@ -1379,8 +1379,6 @@ class Test(BaseTest, unittest.TestCase):
       
     c1 = C()
     c2 = C(p = [c1])
-
-    print(c1.get_properties())
     
     assert set(c2.get_properties()) == set([p])
     assert set(c1.get_properties()) == set([i])
@@ -4761,6 +4759,24 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     g = world.as_rdflib_graph()
     s = set(g.triples((rdflib.URIRef(o1.iri), None, None)))
     assert len(s) == 5
+    
+  def test_rdflib_6(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/test.owl")
+    with n:
+      class O(Thing): pass
+      class p(Thing >> str): pass
+
+    g = world.as_rdflib_graph()
+    g.bind("ex", "http://www.semanticweb.org/test.owl#")
+    
+    r = g.query("""
+    SELECT ?b WHERE {
+    ex:O
+    <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+    ?b .
+    }""")
+    assert list(r) == [(rdflib.URIRef("http://www.w3.org/2002/07/owl#Class"),)]
     
       
   def test__refactor_1(self):

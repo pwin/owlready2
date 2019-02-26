@@ -30,6 +30,9 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     self.triplelite = world.graph
     super().__init__()
     
+    self.__namespace = {}
+    self.__prefix = {}
+    
     self.main_graph            = TripleLiteRDFlibGraph(store = self)
     self.main_graph.onto       = None
     self.main_graph.triplelite = self.triplelite
@@ -124,7 +127,24 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
       for graph in self.context_graphs.values():
         if graph.triplelite.has_triple(*triple): yield graph
 
+        
+  def bind(self, prefix, namespace):
+    self.__prefix[namespace] = prefix
+    self.__namespace[prefix] = namespace
 
+  def namespace(self, prefix):
+    return self.__namespace.get(prefix, None)
+
+  def prefix(self, namespace):
+    return self.__prefix.get(namespace, None)
+
+  def namespaces(self):
+    for prefix, namespace in self.__namespace.items():
+      yield prefix, namespace
+
+
+
+        
 class TripleLiteRDFlibGraph(rdflib.Graph):
   def query_owlready(self, query, *args, **kargs):
     r = self.query(query, *args, **kargs)
