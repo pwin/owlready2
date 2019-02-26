@@ -120,7 +120,7 @@ public class HierarchyDumperFSS {
     }
     public void printDataPropertyHierarchy(Hierarchy<AtomicRole> dataRoleHierarchy) {
         for (HierarchyNode<AtomicRole> node : dataRoleHierarchy.getAllNodesSet()) {
-            m_out.println(node.toString());
+            //m_out.println(node.toString());
             
             SortedSet<AtomicRole> equivs=new TreeSet<AtomicRole>(DataRoleComparator.INSTANCE);
             equivs.addAll(node.getEquivalentElements());

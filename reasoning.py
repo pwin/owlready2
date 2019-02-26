@@ -173,6 +173,7 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
       prop = world[prop_iri]
       if prop is None: continue
       knowns = knowns[1:-1] # Remove first and last parenthesese
+      if not knowns.strip(): continue
       for pair in knowns.split(")("):
         a, b = pair[1:-1].split(">, <", 1)
         a_storid = ontology._abbreviate(a, False)

@@ -318,6 +318,7 @@ version 2 - 0.15
 
 * Bugfixes:
   - Consider inverse property in get_properties()
+  - Fix parsing bug in reasoning with HermiT and infer_property_values = True
 
     
 Links
