@@ -610,6 +610,9 @@ class Graph(BaseMainGraph):
   def _get_triples_s_p(self, s):
     for (x,) in self.execute("SELECT DISTINCT p FROM quads WHERE s=?", (s,)).fetchall(): yield x
     
+  def _get_obj_triples_o_p(self, o):
+    for (x,) in self.execute("SELECT DISTINCT p FROM quads WHERE o=?", (o,)).fetchall(): yield x
+    
   def _get_obj_triples_s_po(self, s):
     return self.execute("SELECT p,o FROM objs WHERE s=?", (s,)).fetchall()
   
@@ -1293,6 +1296,9 @@ class SubGraph(BaseSubGraph):
   
   def _get_triples_s_p(self, s):
     for (x,) in self.execute("SELECT DISTINCT p FROM quads WHERE c=? AND s=?", (self.c, s,)).fetchall(): yield x
+    
+  def _get_obj_triples_o_p(self, o):
+    for (x,) in self.execute("SELECT DISTINCT p FROM quads WHERE c=? AND o=?", (self.c, o,)).fetchall(): yield x
     
   def _get_obj_triples_cspo_cspo(self, c, s, p, o):
     return [(self.c, s, p, o) for (s, p, o) in self._get_obj_triples_spo_spo(s, p, o)]

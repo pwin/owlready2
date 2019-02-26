@@ -294,6 +294,11 @@ class Thing(metaclass = ThingClass):
       Prop = self.namespace.world._get_by_storid(storid)
       if not Prop is None: # None is is-a
         l.add(Prop)
+    for storid in self.namespace.world._get_obj_triples_o_p(self.storid):
+      Prop = self.namespace.world._get_by_storid(storid)
+      if not Prop is None: # None is is-a
+        if Prop._inverse_property:
+          l.add(Prop._inverse_property)
     return l
   
   def INDIRECT_get_properties(self):

@@ -1368,6 +1368,30 @@ class Test(BaseTest, unittest.TestCase):
     assert o.iri   == ""
     assert o.label == ["anonymous cheese"]
     
+  def test_individual_22(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/onto.owl")
+
+    with onto:
+      class C(Thing): pass
+      class p(C >> C): pass
+      class i(C >> C): inverse = p
+      
+    c1 = C()
+    c2 = C(p = [c1])
+
+    print(c1.get_properties())
+    
+    assert set(c2.get_properties()) == set([p])
+    assert set(c1.get_properties()) == set([i])
+      
+    c3 = C()
+    c4 = C()
+    c3.i = [c4]
+    c4.p = [c3]
+    
+    assert len(c3.get_properties()) == 1
+    
     
   def test_prop_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

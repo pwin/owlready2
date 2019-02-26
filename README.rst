@@ -313,6 +313,12 @@ version 2 - 0.14
   - Fix use of '*' in search
   - Fix synchronization, using contextvars for global variables
 
+version 2 - 0.15
+****************
+
+* Bugfixes:
+  - Consider inverse property in get_properties()
+
     
 Links
 -----

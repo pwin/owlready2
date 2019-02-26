@@ -46,7 +46,7 @@ class BaseGraph(object):
                    
                    "_get_data_triples_spod_spod", "_get_data_triples_sp_od", "_get_data_triple_sp_od", "_get_data_triples_s_pod", "_has_data_triple_spod", "_del_data_triple_raw_spod",
                    
-                   "_get_triples_spod_spod", "_get_triples_sp_od", "_get_triple_sp_od", "_get_triples_s_pod", "_get_triples_s_p",
+                   "_get_triples_spod_spod", "_get_triples_sp_od", "_get_triple_sp_od", "_get_triples_s_pod", "_get_triples_s_p", "_get_obj_triples_o_p",
                    
                    "_get_obj_triples_transitive_sp", "_get_obj_triples_transitive_po", "_get_obj_triples_transitive_sym", "_get_obj_triples_transitive_sp_indirect"]
   
