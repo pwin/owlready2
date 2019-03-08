@@ -92,7 +92,7 @@ class _GraphManager(object):
   def _get_obj_triples_spo_spo(self, subject = None, predicate = None, object = None): return []
   _get_triples_s_p = _get_obj_triples_spo_spo
   
-  def _has_data_triple_spod(self, subject = None, predicate = None, object = None, d = ""): return False
+  def _has_data_triple_spod(self, subject = None, predicate = None, object = None, d = None): return False
   _has_obj_triple_spo = _has_data_triple_spod
   
   def _get_obj_triples_cspo(self, subject = None, predicate = None, object = None, ontology_graph = None): return []
@@ -497,7 +497,7 @@ class World(_GraphManager):
             
       if main_type is None: # Try to guess it
         if   self._has_obj_triple_spo(None, rdf_type, storid) or self._has_obj_triple_spo(None, rdfs_subclassof, storid): main_type = ThingClass
-        elif self._has_obj_triple_spo(storid, None, None) or self._has_data_triple_spod(storid, None, None, ""): main_type = Thing
+        elif self._has_obj_triple_spo(storid, None, None) or self._has_data_triple_spod(storid, None, None, None): main_type = Thing
         
       if main_type and (not main_type is Thing):
         if not trace is None:

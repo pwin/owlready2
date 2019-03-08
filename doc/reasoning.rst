@@ -117,6 +117,13 @@ If you also want to infer object property values, use the "infer_property_values
 
 To use Pellet instead of HermiT, just use the sync_reasoner_pellet() function instead.
 
+In addition, Pellet also supports the inference of data property values, using the "infer_data_property_values" parameter:
+
+::
+
+   >>> sync_reasoner(infer_property_values = True, infer_data_property_values = True)
+
+
 
 Results of the automatic classification
 ---------------------------------------

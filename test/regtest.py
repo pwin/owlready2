@@ -2611,6 +2611,36 @@ I took a placebo
     assert set(onto.e.is_a) == set([onto.E, onto.S])
     assert set(onto.e.prop) == set([onto.obj])
     
+  def test_pellet_reasoning_1(self):
+    world = self.new_world()
+    onto  = world.get_ontology("test_rule.owl").load()
+    
+    sync_reasoner_pellet(world, infer_property_values = True, infer_data_property_values = True, debug = 0)
+
+    assert set(onto.e.is_a) == set([onto.E, onto.S])
+    assert set(onto.e.prop) == set([onto.obj])
+    assert set(onto.e.data_prop) == set([1.0, "english", True])
+    assert len(onto.e.data_prop) == 3
+    
+    i = [i for i in onto.e.data_prop if isinstance(i, str)][0]
+    assert i.lang == "en"
+    
+  def test_pellet_reasoning_2(self):
+    world = self.new_world()
+    onto  = world.get_ontology("test_rule.owl").load()
+    
+    onto.e.data_prop = [1.0, locstr("english", "en"), True]
+    
+    sync_reasoner_pellet(world, infer_property_values = True, infer_data_property_values = True, debug = 0)
+    
+    assert set(onto.e.is_a) == set([onto.E, onto.S])
+    assert set(onto.e.prop) == set([onto.obj])
+    assert set(onto.e.data_prop) == set([1.0, "english", True])
+    assert len(onto.e.data_prop) == 3
+    
+    i = [i for i in onto.e.data_prop if isinstance(i, str)][0]
+    assert i.lang == "en"
+    
     
   def test_disjoint_1(self):
     world = self.new_world()

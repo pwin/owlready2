@@ -670,21 +670,25 @@ class Graph(BaseMainGraph):
         else:         cur = self.execute("SELECT s FROM objs WHERE s=? AND p=? AND o=? LIMIT 1", (s, p, o))
     return not cur.fetchone() is None
   
-  def _has_data_triple_spod(self, s = None, p = None, o = None, d = ""):
+  def _has_data_triple_spod(self, s = None, p = None, o = None, d = None):
     if s is None:
       if p is None:
-        if o is None: cur = self.execute("SELECT s FROM datas LIMIT 1")
-        else:         cur = self.execute("SELECT s FROM datas WHERE o=? AND d=? LIMIT 1", (o,d,))
+        if o is None:   cur = self.execute("SELECT s FROM datas LIMIT 1")
+        elif d is None: cur = self.execute("SELECT s FROM datas WHERE o=? LIMIT 1", (o,))
+        else:           cur = self.execute("SELECT s FROM datas WHERE o=? AND d=? LIMIT 1", (o,d,))
       else:
-        if o is None: cur = self.execute("SELECT s FROM datas WHERE p=? LIMIT 1", (p,))
-        else:         cur = self.execute("SELECT s FROM datas WHERE p=? AND o=? AND d=? LIMIT 1", (p, o, d))
+        if o is None:   cur = self.execute("SELECT s FROM datas WHERE p=? LIMIT 1", (p,))
+        elif d is None: cur = self.execute("SELECT s FROM datas WHERE p=? AND o=? LIMIT 1", (p, o))
+        else:           cur = self.execute("SELECT s FROM datas WHERE p=? AND o=? AND d=? LIMIT 1", (p, o, d))
     else:
       if p is None:
-        if o is None: cur = self.execute("SELECT s FROM datas WHERE s=? LIMIT 1", (s,))
-        else:         cur = self.execute("SELECT s FROM datas WHERE s=? AND o=? AND d=? LIMIT 1", (s, o, d))
+        if o is None:   cur = self.execute("SELECT s FROM datas WHERE s=? LIMIT 1", (s,))
+        elif d is None: cur = self.execute("SELECT s FROM datas WHERE s=? AND o=? LIMIT 1", (s, o))
+        else:           cur = self.execute("SELECT s FROM datas WHERE s=? AND o=? AND d=? LIMIT 1", (s, o, d))
       else:
-        if o is None: cur = self.execute("SELECT s FROM datas WHERE s=? AND p=? LIMIT 1", (s, p))
-        else:         cur = self.execute("SELECT s FROM datas WHERE s=? AND p=? AND o=? AND d=? LIMIT 1", (s, p, o, d))
+        if o is None:   cur = self.execute("SELECT s FROM datas WHERE s=? AND p=? LIMIT 1", (s, p))
+        elif d is None: cur = self.execute("SELECT s FROM datas WHERE s=? AND p=? AND o=? LIMIT 1", (s, p, o))
+        else:           cur = self.execute("SELECT s FROM datas WHERE s=? AND p=? AND o=? AND d=? LIMIT 1", (s, p, o, d))
     return not cur.fetchone() is None
   
   def _del_obj_triple_raw_spo(self, s, p, o):
@@ -1155,21 +1159,25 @@ class SubGraph(BaseSubGraph):
         else:         cur = self.execute("SELECT s FROM objs WHERE c=? AND s=? AND p=? AND o=? LIMIT 1", (self.c, s, p, o))
     return not cur.fetchone() is None
        
-  def _has_data_triple_spod(self, s = None, p = None, o = None, d = ""):
+  def _has_data_triple_spod(self, s = None, p = None, o = None, d = None):
     if s is None:
       if p is None:
-        if o is None: cur = self.execute("SELECT s FROM datas WHERE c=? LIMIT 1", (self.c,))
-        else:         cur = self.execute("SELECT s FROM datas WHERE c=? AND o=? AND d=? LIMIT 1", (self.c, o, d))
+        if o is None:   cur = self.execute("SELECT s FROM datas WHERE c=? LIMIT 1", (self.c,))
+        elif d is None: cur = self.execute("SELECT s FROM datas WHERE c=? AND o=? LIMIT 1", (self.c, o))
+        else:           cur = self.execute("SELECT s FROM datas WHERE c=? AND o=? AND d=? LIMIT 1", (self.c, o, d))
       else:
-        if o is None: cur = self.execute("SELECT s FROM datas WHERE c=? AND p=? LIMIT 1", (self.c, p,))
-        else:         cur = self.execute("SELECT s FROM datas WHERE c=? AND p=? AND o=? AND d=? LIMIT 1", (self.c, p, o, d))
+        if o is None:   cur = self.execute("SELECT s FROM datas WHERE c=? AND p=? LIMIT 1", (self.c, p,))
+        elif d is None: cur = self.execute("SELECT s FROM datas WHERE c=? AND p=? AND o=? LIMIT 1", (self.c, p, o))
+        else:           cur = self.execute("SELECT s FROM datas WHERE c=? AND p=? AND o=? AND d=? LIMIT 1", (self.c, p, o, d))
     else:
       if p is None:
-        if o is None: cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? LIMIT 1", (self.c, s,))
-        else:         cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND o=? AND d=? LIMIT 1", (self.c, s, o, d))
+        if o is None:   cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? LIMIT 1", (self.c, s,))
+        elif d is None: cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND o=? LIMIT 1", (self.c, s, o))
+        else:           cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND o=? AND d=? LIMIT 1", (self.c, s, o, d))
       else:
-        if o is None: cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,))
-        else:         cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND p=? AND o=? AND d=? LIMIT 1", (self.c, s, p, o, d))
+        if o is None:   cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,))
+        elif d is None: cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND p=? AND o=? LIMIT 1", (self.c, s, p, o))
+        else:           cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND p=? AND o=? AND d=? LIMIT 1", (self.c, s, p, o, d))
     return not cur.fetchone() is None
     
         

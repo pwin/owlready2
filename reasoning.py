@@ -29,7 +29,8 @@ from owlready2.individual      import *
 _HERMIT_RESULT_REGEXP = re.compile("^([A-Za-z]+)\\( ((?:<(?:[^>]+)>\s*)+) \\)$", re.MULTILINE)
 _HERMIT_PROP_REGEXP   = re.compile("^<([^>]+)> \\(known instances:\s*(.*?)(?:\s*\\|\s*)possible instances:\s*(.*?)\s*\\)", re.MULTILINE)
 
-_PELLET_PROP_REGEXP   = re.compile("^PROPINST: ([^ ]+) ([^ ]+) ([^ ]+)$", re.MULTILINE)
+_PELLET_PROP_REGEXP      = re.compile("^PROPINST: ([^ ]+) ([^ ]+) ([^ ]+)$", re.MULTILINE)
+_PELLET_DATA_PROP_REGEXP = re.compile("^DATAPROPVAL: ([^ ]+) ([^ ]+) literal\((.*?),(.*?),(.*?)\)$", re.MULTILINE)
 
 
 _HERE = os.path.dirname(__file__)
@@ -196,7 +197,7 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
 sync_reasoner = sync_reasoner_hermit
 
 
-def sync_reasoner_pellet(x = None, infer_property_values = False, debug = 1, keep_tmp_file = False):
+def sync_reasoner_pellet(x = None, infer_property_values = False, infer_data_property_values = False, debug = 1, keep_tmp_file = False):
   if   isinstance(x, World):    world = x
   elif isinstance(x, Ontology): world = x.world
   elif isinstance(x, list):     world = x[0].world
@@ -216,7 +217,8 @@ def sync_reasoner_pellet(x = None, infer_property_values = False, debug = 1, kee
     world.save(tmp, format = "ntriples")
   tmp.close()
   command = [owlready2.JAVA_EXE, "-Xmx2000M", "-cp", _PELLET_CLASSPATH, "pellet.Pellet", "realize", "--ignore-imports", tmp.name]
-  if infer_property_values: command.insert(-2, "--infer-prop-values")
+  if infer_property_values:      command.insert(-2, "--infer-prop-values")
+  if infer_data_property_values: command.insert(-2, "--infer-data-prop-values")
   
   if debug:
     import time
@@ -285,13 +287,31 @@ def sync_reasoner_pellet(x = None, infer_property_values = False, debug = 1, kee
           ((not prop._inverse_property) or (not world._has_obj_triple_spo(b_storid, prop._inverse_storid, a_storid)))):
         inferred_obj_relations.append((a_storid, prop, b_storid))
         
+  if infer_data_property_values:
+    inferred_data_relations = []
+    for a_iri, prop_iri, value, lang, datatype in _PELLET_DATA_PROP_REGEXP.findall(output):
+      prop = world[prop_iri]
+      if prop is None: continue
+      a_storid = ontology._abbreviate(a_iri, False)
+      if lang and (lang != "()"):
+        datatype = "@%s" % lang
+      else:
+        datatype = ontology._abbreviate(datatype)
+        python_datatype = owlready2.base._universal_abbrev_2_datatype.get(datatype)
+        if   python_datatype is int:   value = int  (value)
+        elif python_datatype is float: value = float(value)
+      if ((not a_storid is None) and
+          (not world._has_data_triple_spod(a_storid, prop.storid, value))):
+        inferred_data_relations.append((a_storid, prop, value, datatype))
+        
+      
   if not keep_tmp_file: os.unlink(tmp.name)
   
   if locked: world.graph.acquire_write_lock() # re-lock when applying results
   
   _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, entity_2_type)
-  if infer_property_values:
-    _apply_inferred_obj_relations(world, ontology, debug, inferred_obj_relations)
+  if infer_property_values:      _apply_inferred_obj_relations (world, ontology, debug, inferred_obj_relations)
+  if infer_data_property_values: _apply_inferred_data_relations(world, ontology, debug, inferred_data_relations)
   
   if debug: print("* Owlready * (NB: only changes on entities loaded in Python are shown, other changes are done but not listed)", file = sys.stderr)
 
@@ -378,7 +398,7 @@ def _apply_inferred_obj_relations(world, ontology, debug, relations):
     if not a is None:
       if debug:
         b = world._entities.get(b_storid)
-        if not b is None: print("* Owlready * Adding realtion %s %s %s" % (a, prop.name, b))
+        if not b is None: print("* Owlready * Adding relation %s %s %s" % (a, prop.name, b))
       if prop._python_name in a.__dict__:
         delattr(a, prop._python_name)
         
@@ -387,3 +407,17 @@ def _apply_inferred_obj_relations(world, ontology, debug, relations):
       if not b is None:
         if prop._inverse_property._python_name in b.__dict__:
           delattr(b, prop._inverse_property._python_name)
+          
+          
+def _apply_inferred_data_relations(world, ontology, debug, relations):
+  for a_storid, prop, value, datatype in relations:
+    ontology._add_data_triple_spod(a_storid, prop.storid, value, datatype)
+    
+    a = world._entities.get(a_storid)
+    if not a is None:
+      if debug:
+        b = world._entities.get(b_storid)
+        if not b is None: print("* Owlready * Adding relation %s %s %s" % (a, prop.name, value))
+      if prop._python_name in a.__dict__:
+        delattr(a, prop._python_name)
+        
