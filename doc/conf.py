@@ -48,7 +48,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Owlready2'
-copyright = '2014-2017, Jean-Baptiste LAMY'
+copyright = '2014-2019, Jean-Baptiste LAMY'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

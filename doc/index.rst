@@ -12,7 +12,8 @@ Owlready2 can deal with big ontologies.
 
 Owlready2 has been created at the LIMICS reseach lab,
 University Paris 13, Sorbonne Paris Cité, INSERM UMRS 1142, Paris 6 University, by
-Jean-Baptiste Lamy. It was developed during the VIIIP research project funded by ANSM, the French Drug Agency;
+Jean-Baptiste Lamy. It was initially developed during the VIIIP research project funded by ANSM,
+the French Drug Agency;
 this is why some examples in this documentation relate to drug ;).
 
 Owlready2 is available under the GNU LGPL licence v3.
