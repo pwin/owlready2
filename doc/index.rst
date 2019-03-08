@@ -6,7 +6,7 @@ as Python objects, modify them, save them, and perform reasoning via HermiT
 (included). Owlready2 allows a transparent access to OWL ontologies (contrary
 to usual Java-based API).
 
-Owlready version 2 includes an optimized triplestore / quadstore, based on SQLite3 or PostgresQL.
+Owlready version 2 includes an optimized triplestore / quadstore, based on SQLite3.
 This quadstore is optimized both for performance and memory consumption. Controray to version 1,
 Owlready2 can deal with big ontologies.
 

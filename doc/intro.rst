@@ -89,7 +89,7 @@ Export to OWL file:
 Architecture
 ------------
 
-Owlready2 maintains a RDF quadstore in an optimized database (SQLite3 or PostgresQL),
+Owlready2 maintains a RDF quadstore in an optimized database (SQLite3),
 either in memory or on the disk (see :doc:`world`). It provides a high-level access to the Classes and the
 objects in the ontology (aka. ontology-oriented programming). Classes and Invididuals are loaded
 dynamically from the quadstore as needed, cached in memory and destroyed when no longer needed.
