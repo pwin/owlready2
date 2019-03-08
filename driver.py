@@ -43,6 +43,7 @@ class BaseGraph(object):
                    
                    "_get_obj_triples_cspo_cspo", "_get_obj_triples_spo_spo", "_get_obj_triples_sp_co", "_get_obj_triples_s_po",
                    "_get_obj_triples_po_s", "_get_obj_triples_sp_o", "_get_obj_triple_sp_o", "_get_obj_triple_po_s", "_has_obj_triple_spo", "_del_obj_triple_raw_spo",
+                   "_get_obj_triples_spi_o",
                    
                    "_get_data_triples_spod_spod", "_get_data_triples_sp_od", "_get_data_triple_sp_od", "_get_data_triples_s_pod", "_has_data_triple_spod", "_del_data_triple_raw_spod",
                    

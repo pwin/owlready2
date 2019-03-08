@@ -59,13 +59,30 @@ Owlready provides the following types of restrictions (they have the same names 
  * value : Property.value(Range_Individual / Literal value)
  * has_self : Property.has_self(Boolean value)
 
-In addition, the Inverse(Property) construct can be used as the inverse of a given Property.
+When defining classes, restrictions can be used in class definition (i.e. 'equivalent_to ='),
+but also as superclasses, using 'is_a =', as in the following example:
+
+::
+
+   >>> with onto:
+   ...     class MyClass(Thing):
+   ...         is_a = [my_property.some(Value)]
+   
+In addition, restrictions can be added to existing classes by adding them to .is_a or .equivalent_to,
+as in the two following examples:
+
+::
+
+   >>> MyClass.is_a.append(my_property.some(Value))
+
+   >>> MyClass.equivalent_to.append(my_property.some(Value))
+
 
 Restrictions can be modified *in place* (Owlready2 updates the quadstore automatically), using the
 following attributes: .property, .type (SOME, ONLY, MIN, MAX, EXACTLY or VALUE), .cardinality
 and .value (a Class, an Individual, a class contruct or another restriction).
 
-   
+Finally, the Inverse(Property) construct can be used as the inverse of a given Property.
 
 
 Restrictions as class properties

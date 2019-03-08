@@ -447,10 +447,13 @@ class ObjectPropertyClass(ReasoningPropertyClass):
           
   def _get_values_for_individual(Prop, entity):
     if Prop._inverse_storid:
+      #return IndividualValueList((entity.namespace.ontology._to_python(o)
+      #                            for g in (entity.namespace.world._get_obj_triples_sp_o(entity.storid, Prop.storid),
+      #                                      entity.namespace.world._get_obj_triples_po_s(Prop._inverse_storid, entity.storid))
+      #                            for o in g ), entity, Prop)
       return IndividualValueList((entity.namespace.ontology._to_python(o)
-                                  for g in (entity.namespace.world._get_obj_triples_sp_o(entity.storid, Prop.storid),
-                                            entity.namespace.world._get_obj_triples_po_s(Prop._inverse_storid, entity.storid))
-                                  for o in g ), entity, Prop)
+                                  for o in  entity.namespace.world._get_obj_triples_spi_o(entity.storid, Prop.storid, Prop._inverse_storid)),
+                                  entity, Prop)
     else:
       return IndividualValueList((entity.namespace.ontology._to_python(o)
                                   for o in  entity.namespace.world._get_obj_triples_sp_o(entity.storid, Prop.storid)),

@@ -320,8 +320,10 @@ version 2 - 0.15
   - Consider inverse property in get_properties()
   - Fix parsing bug in reasoning with HermiT and infer_property_values = True
   - Namespace prefix support in RDFlib binding
+  - Fix dupplicates values when a relation involving a property with inverse is asserted in both directions
+  - Better workaround in case of metaclass conflict
     
-    
+
 Links
 -----
 

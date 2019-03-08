@@ -1716,12 +1716,7 @@ class Test(BaseTest, unittest.TestCase):
     
   def test_prop_24(self):
     ok = False
-    try:
-      o = get_ontology("test_multiple_base_prop.owl").load()
-      o.bug_database
-    except TypeError:
-      ok = True
-    assert ok
+    o = get_ontology("test_multiple_base_prop.owl").load()
     
   def test_prop_25(self):
     world   = self.new_world()

@@ -554,7 +554,8 @@ class World(_GraphManager):
           if e.args[0].startswith("metaclass conflict"):
             print("* Owlready2 * WARNING: %s belongs to more than one entity types (e.g. Class, Property, Individual): %s; I'm trying to fix it..." % (full_iri, list(types) + is_a_entities), file = sys.stderr)
             is_a_entities = [t for t in is_a_entities if issubclass_python(t, ObjectProperty)]
-            entity = ObjectPropertyClass(name, types or (ObjectProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
+            #entity = ObjectPropertyClass(name, types or (ObjectProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
+            entity = ObjectPropertyClass(name, (ObjectProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
             
       elif main_type is DataPropertyClass:
         try:
@@ -564,12 +565,19 @@ class World(_GraphManager):
           if e.args[0].startswith("metaclass conflict"):
             print("* Owlready2 * WARNING: %s belongs to more than one entity types (e.g. Class, Property, Individual): %s; I'm trying to fix it..." % (full_iri, list(types) + is_a_entities), file = sys.stderr)
             is_a_entities = [t for t in is_a_entities if issubclass_python(t, DataProperty)]
-            entity = DataPropertyClass(name, types or (DataProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
+            #entity = DataPropertyClass(name, types or (DataProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
+            entity = DataPropertyClass(name, (DataProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
             
       elif main_type is AnnotationPropertyClass:
-        types = tuple(t for t in types if t.iri != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")
-        entity = AnnotationPropertyClass(name, types or (AnnotationProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
-        
+        try:
+          types = tuple(t for t in types if t.iri != "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")
+          entity = AnnotationPropertyClass(name, types or (AnnotationProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
+        except TypeError as e:
+          if e.args[0].startswith("metaclass conflict"):
+            print("* Owlready2 * WARNING: %s belongs to more than one entity types (e.g. Class, Property, Individual): %s; I'm trying to fix it..." % (full_iri, list(types) + is_a_entities), file = sys.stderr)
+            is_a_entities = [t for t in is_a_entities if issubclass_python(t, AnnotationProperty)]
+            entity = AnnotationPropertyClass(name, (AnnotationProperty,), { "namespace" : namespace, "is_a" : is_a_entities, "storid" : storid } )
+          
       elif main_type is Thing:
         if   len(types) == 1: Class = types[0]
         elif len(types) >  1: Class = FusionClass._get_fusion_class(types)
