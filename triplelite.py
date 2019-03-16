@@ -762,6 +762,25 @@ AS (      SELECT s FROM objs WHERE p=? AND o=?
 UNION ALL SELECT objs.s FROM objs, transit WHERE objs.p=? AND objs.o=transit.x)
 SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
 
+
+
+
+  def _get_obj_triples_transitive_sp(self, s, p):
+    for (x,) in self.execute("""
+WITH RECURSIVE transit(x)
+AS (  SELECT o FROM objs WHERE s=? AND p=?
+UNION SELECT objs.o FROM objs, transit WHERE objs.s=transit.x AND objs.p=?)
+SELECT x FROM transit""", (s, p, p)).fetchall(): yield x
+
+
+    
+  def _get_obj_triples_transitive_po(self, p, o):
+    for (x,) in self.execute("""
+WITH RECURSIVE transit(x)
+AS (  SELECT s FROM objs WHERE p=? AND o=?
+UNION SELECT objs.s FROM objs, transit WHERE objs.p=? AND objs.o=transit.x)
+SELECT x FROM transit""", (p, o, p)).fetchall(): yield x
+    
 # Slower than Python implementation
 #  def _get_obj_triples_transitive_sym2(self, s, p):
 #    r = { s }
@@ -1337,16 +1356,16 @@ class SubGraph(BaseSubGraph):
   def _get_obj_triples_transitive_sp(self, s, p):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
-AS (      SELECT o FROM objs WHERE c=? AND s=? AND p=?
-UNION ALL SELECT objs.o FROM objs, transit WHERE objs.c=? AND objs.s=transit.x AND objs.p=?)
-SELECT DISTINCT x FROM transit""", (self.c, s, p, self.c, p)).fetchall(): yield x
+AS (  SELECT o FROM objs WHERE c=? AND s=? AND p=?
+UNION SELECT objs.o FROM objs, transit WHERE objs.c=? AND objs.s=transit.x AND objs.p=?)
+SELECT x FROM transit""", (self.c, s, p, self.c, p)).fetchall(): yield x
   
   def _get_obj_triples_transitive_po(self, p, o):
     for (x,) in self.execute("""
 WITH RECURSIVE transit(x)
-AS (      SELECT s FROM objs WHERE c=? AND p=? AND o=?
-UNION ALL SELECT objs.s FROM objs, transit WHERE objs.c=? AND objs.p=? AND objs.o=transit.x)
-SELECT DISTINCT x FROM transit""", (self.c, p, o, self.c, p)).fetchall(): yield x
+AS (  SELECT s FROM objs WHERE c=? AND p=? AND o=?
+UNION SELECT objs.s FROM objs, transit WHERE objs.c=? AND objs.p=? AND objs.o=transit.x)
+SELECT x FROM transit""", (self.c, p, o, self.c, p)).fetchall(): yield x
 
 #  def _get_obj_triples_transitive_sym(self, s, p):
 #    r = { s }
@@ -1442,8 +1461,21 @@ class _SearchList(FirstList, _SearchMixin, _LazyListMixin):
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
         else:
-          self.conditions.append("(q%s.p = %s OR q%s.p = %s) AND q%s.o IN (%s)" % (i, rdf_type, i, rdfs_subclassof, i, ",".join("?" for i in v)))
-          self.params    .extend(v)
+          #self.conditions.append("(q%s.p = %s OR q%s.p = %s) AND q%s.o IN (%s)" % (i, rdf_type, i, rdfs_subclassof, i, ",".join("?" for i in v)))
+          #self.params    .extend(v)
+          select_descendant1 = """WITH RECURSIVE transit(x)
+AS (  SELECT s FROM objs WHERE o=? AND p=%s
+UNION SELECT objs.s FROM objs, transit WHERE objs.o=transit.x AND objs.p=%s)
+SELECT x FROM transit""" % (rdfs_subclassof, rdfs_subclassof)
+          self.params.append(v)
+          select_descendant2 = """WITH RECURSIVE transit(x)
+AS (  SELECT ?
+UNION SELECT s FROM objs WHERE o=? AND p=%s
+UNION SELECT objs.s FROM objs, transit WHERE objs.o=transit.x AND objs.p=%s)
+SELECT x FROM transit""" % (rdfs_subclassof, rdfs_subclassof)
+          self.params.append(v)
+          self.params.append(v)
+          self.conditions.append("((q%s.p = %s AND q%s.o IN (%s)) OR (q%s.s IN (%s)))" % (i, rdf_type, i, select_descendant2, i, select_descendant1))
           
       elif k == " type":
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
@@ -1452,8 +1484,16 @@ class _SearchList(FirstList, _SearchMixin, _LazyListMixin):
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
         else:
-          self.conditions.append("q%s.p = %s AND q%s.o IN (%s)" % (i, rdf_type, i, ",".join("?" for i in v)))
-          self.params    .extend(v)
+          #self.conditions.append("q%s.p = %s AND q%s.o IN (%s)" % (i, rdf_type, i, ",".join("?" for i in v)))
+          #self.params    .extend(v)
+          select_descendant = """WITH RECURSIVE transit(x)
+AS (  SELECT ?
+UNION SELECT s FROM objs WHERE o=? AND p=%s
+UNION SELECT objs.s FROM objs, transit WHERE objs.o=transit.x AND objs.p=%s)
+SELECT x FROM transit""" % (rdfs_subclassof, rdfs_subclassof)
+          self.params.append(v)
+          self.params.append(v)
+          self.conditions.append("q%s.p = %s AND q%s.o IN (%s)" % (i, rdf_type, i, select_descendant))
           
       elif k == " subclass_of":
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
@@ -1462,8 +1502,14 @@ class _SearchList(FirstList, _SearchMixin, _LazyListMixin):
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
         else:
-          self.conditions.append("q%s.p = %s AND q%s.o IN (%s)" % (i, rdfs_subclassof, i, ",".join("?" for i in v)))
-          self.params    .extend(v)
+          #self.conditions.append("q%s.p = %s AND q%s.o IN (%s)" % (i, rdfs_subclassof, i, ",".join("?" for i in v)))
+          #self.params    .extend(v)
+          select_descendant = """WITH RECURSIVE transit(x)
+AS (  SELECT s FROM objs WHERE o=? AND p=%s
+UNION SELECT objs.s FROM objs, transit WHERE objs.o=transit.x AND objs.p=%s)
+SELECT DISTINCT x FROM transit""" % (rdfs_subclassof, rdfs_subclassof)
+          self.params.append(v)
+          self.conditions.append("q%s.s IN (%s)" % (i, select_descendant))
           
       elif isinstance(k, tuple): # Prop with inverse
         if n == 1: # Does not work if it is the FIRST => add a dumb first.

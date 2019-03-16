@@ -295,7 +295,8 @@ class _GraphManager(object):
           prop_vals.append((" iri", v, None))
         elif (k == "is_a") or (k == "subclass_of") or (k == "type"):
           if isinstance(v, _SearchList): v2 = v
-          else:                          v2 = [child.storid for child in v.descendants()]
+          #else:                          v2 = [child.storid for child in v.descendants()]
+          else:                          v2 = v.storid
           prop_vals.append((" %s" % k, v2, None))
         else:
           d = None
