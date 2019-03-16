@@ -2017,6 +2017,58 @@ class Test(BaseTest, unittest.TestCase):
     assert c.INDIRECT_label == ["c"]
     assert e.INDIRECT_label == ["e"]
     
+  def test_prop_35(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class p(C >> int): pass
+
+    assert p.range_iri == ["http://www.w3.org/2001/XMLSchema#integer"]
+    assert p.range == [int]
+    
+    p.range_iri = ["http://www.w3.org/2001/XMLSchema#float"]
+
+    assert p.range_iri == ["http://www.w3.org/2001/XMLSchema#float"]
+    assert p.range == [float]
+    
+    
+    p.range_iri = ["http://www.w3.org/2001/XMLSchema#int"]
+    assert p.range_iri == ["http://www.w3.org/2001/XMLSchema#int"]
+    assert p.range == [int]
+    
+  def test_prop_36(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class p(C >> int): pass
+      
+    assert p.range_iri == ["http://www.w3.org/2001/XMLSchema#integer"]
+    assert p.range == [int]
+    
+    p.range = [float]
+    
+    assert p.range_iri == ["http://www.w3.org/2001/XMLSchema#decimal"]
+    assert p.range == [float]
+    
+    p.range = [int]
+    assert p.range_iri == ["http://www.w3.org/2001/XMLSchema#integer"]
+    assert p.range == [int]
+    
+  def test_prop_37(self):
+    world   = self.new_world()
+    o       = world.get_ontology("http://www.semanticweb.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class D(Thing): pass
+      class p(C >> (C & D)): pass
+      
+    assert p.range_iri[0].startswith("_:")
+    
     
   def test_prop_inverse_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

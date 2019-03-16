@@ -167,6 +167,36 @@ class PropertyClass(EntityClass):
       x2 = _universal_datatype_2_abbrev.get(x) or x.storid
       Prop.namespace.ontology._add_obj_triple_spo(Prop.storid, rdf_range, x2)
       
+    if "_range_iri" in Prop.__dict__: del Prop._range_iri
+    
+    
+  def get_range_iri(Prop):
+    if not "_range_iri" in Prop.__dict__:
+      iris = []
+      for o in Prop.namespace.world._get_obj_triples_sp_o(Prop.storid, rdf_range):
+        if o > 0: iris.append(Prop.namespace.world._unabbreviate(o))
+        else:     iris.append("_:%s" % (-o))
+      type.__setattr__(Prop, "_range_iri", CallbackList(iris, Prop, PropertyClass._range_iri_changed))
+    return Prop._range_iri
+  
+  def set_range_iri(Prop, value): Prop.range_iri.reinit(value)
+  
+  range_iri = property(get_range_iri, set_range_iri)
+  
+  def _range_iri_changed(Prop, old):
+    new = frozenset(Prop.range_iri)
+    old = frozenset(old)
+    for x in old - new:
+      if x.startswith("_"): x2 = -int(x[2:])
+      else:                 x2 = Prop.namespace.world._abbreviate(x)
+      Prop.namespace.ontology._del_obj_triple_spo(Prop.storid, rdf_range, x2)        
+    for x in new - old:
+      if x.startswith("_"): x2 = -int(x[2:])
+      else:                 x2 = Prop.namespace.world._abbreviate(x)
+      Prop.namespace.ontology._add_obj_triple_spo(Prop.storid, rdf_range, x2)
+      
+    if Prop._range: Prop._range = None
+      
       
   def get_class_property_type(Prop): return Prop._class_property_type
   def set_class_property_type(Prop, value): Prop.class_property_type.reinit(value)

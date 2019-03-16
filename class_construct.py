@@ -305,7 +305,7 @@ class Restriction(ClassConstruct):
           ontology._add_obj_triple_spo(self.storid, owl_onclass, o)
           
   def __getattr__(self, attr):
-    if attr == "value":
+    if   attr == "value":
       if (self.type == SOME) or (self.type == ONLY) or (self.type == HAS_SELF):
         v = self.ontology._get_obj_triple_sp_o(self.storid, self.type)
         v = self.__dict__["value"] = self.ontology.world._to_python(v, None, default_to_none = True)
