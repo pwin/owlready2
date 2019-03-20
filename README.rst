@@ -319,6 +319,7 @@ version 2 - 0.15
 * Can infer data property values when reasoning with Pellet
 * Optimize searches with 'type =', 'subclass_of =', or 'is_a =' parameters
 * Add Property.range_iri
+* Add inverse property support in RDFlib support
 * Bugfixes:
   - Consider inverse property in get_properties()
   - Fix parsing bug in reasoning with HermiT and infer_property_values = True

@@ -4855,6 +4855,33 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     }""")
     assert list(r) == [(rdflib.URIRef("http://www.w3.org/2002/07/owl#Class"),)]
     
+  def test_rdflib_7(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/test.owl")
+    with n:
+      class O(Thing): pass
+      class p(Thing >> Thing): pass
+      class i(Thing >> Thing): inverse = p
+      o1 = O()
+      o2 = O(p = [o1])
+      
+    g = world.as_rdflib_graph()
+    
+    r = set(g.triples((rdflib.URIRef(o2.iri), rdflib.URIRef(p.iri), None)))
+    assert r == set([(rdflib.URIRef(o2.iri), rdflib.URIRef(p.iri), rdflib.URIRef(o1.iri))])
+    r = set(g.triples((rdflib.URIRef(o2.iri), rdflib.URIRef(p.iri), rdflib.URIRef(o1.iri))))
+    assert r == set([(rdflib.URIRef(o2.iri), rdflib.URIRef(p.iri), rdflib.URIRef(o1.iri))])
+    
+    r = set(g.triples((rdflib.URIRef(o1.iri), rdflib.URIRef(i.iri), None)))
+    assert r == set([(rdflib.URIRef(o1.iri), rdflib.URIRef(i.iri), rdflib.URIRef(o2.iri))])
+    r = set(g.triples((rdflib.URIRef(o1.iri), rdflib.URIRef(i.iri), rdflib.URIRef(o2.iri))))
+    assert r == set([(rdflib.URIRef(o1.iri), rdflib.URIRef(i.iri), rdflib.URIRef(o2.iri))])
+    
+    r = set(g.triples((rdflib.URIRef(o1.iri), None, None)))
+    assert r > set([(rdflib.URIRef(o1.iri), rdflib.URIRef(i.iri), rdflib.URIRef(o2.iri))])
+    r = set(g.triples((rdflib.URIRef(o1.iri), None, rdflib.URIRef(o2.iri))))
+    assert r == set([(rdflib.URIRef(o1.iri), rdflib.URIRef(i.iri), rdflib.URIRef(o2.iri))])
+    
       
   def test__refactor_1(self):
     world = self.new_world()

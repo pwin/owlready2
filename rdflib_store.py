@@ -106,16 +106,39 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
   def triples(self, triple_pattern, context = None):
     rs,rp,ro,rd = self._rdflib_2_owlready(triple_pattern)
     
-    if   rd is None:
-      for s,p,o,d in context.triplelite._get_triples_spod_spod(rs,rp,ro, None):
+    if   ro is None:
+      for s,p,o,d in context.triplelite._get_triples_spod_spod(rs,rp,None, None):
         yield self._owlready_2_rdflib(s,p,o,d), context
+      if rp:
+        prop = self.world._entities.get(rp)
+        if prop and prop._inverse_storid:
+          for o,p,s in context.triplelite._get_obj_triples_spo_spo(None,prop._inverse_storid,rs):
+            yield self._owlready_2_rdflib(s,rp,o,None), context
+      else:
+        for o,p,s in context.triplelite._get_obj_triples_spo_spo(None,None,rs):
+          prop = self.world._entities.get(p)
+          if prop and prop._inverse_storid:
+            yield self._owlready_2_rdflib(s,prop._inverse_storid,o,None), context
+            
     elif rd is None:
       for s,p,o in context.triplelite._get_obj_triples_spo_spo(rs,rp,ro):
         yield self._owlready_2_rdflib(s,p,o,None), context
+      if rp:
+        prop = self.world._entities.get(rp)
+        if prop and prop._inverse_storid:
+          for o,p,s in context.triplelite._get_obj_triples_spo_spo(ro,prop._inverse_storid,rs):
+            yield self._owlready_2_rdflib(s,rp,o,None), context
+      else:
+        for o,p,s in context.triplelite._get_obj_triples_spo_spo(ro,None,rs):
+          prop = self.world._entities.get(p)
+          if prop and prop._inverse_storid:
+            yield self._owlready_2_rdflib(s,prop._inverse_storid,o,None), context
+        
     else:
       for s,p,o,d in context.triplelite._get_data_triples_spod_spod(rs,rp,ro, None):
         yield self._owlready_2_rdflib(s,p,o,d), context
-        
+            
+      
   def __len__(self, context = None):
     return len(context.triplelite)
   

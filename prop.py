@@ -362,6 +362,7 @@ _FUNCTIONAL_FOR_CACHE = weakref.WeakKeyDictionary()
 
 class Property(metaclass = PropertyClass):
   namespace = rdf
+  _inverse_storid = 0
   
   @classmethod
   def is_functional_for(Prop, Class):
