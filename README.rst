@@ -320,6 +320,7 @@ version 2 - 0.15
 * Optimize searches with 'type =', 'subclass_of =', or 'is_a =' parameters
 * Add Property.range_iri
 * Add inverse property support in RDFlib support
+* Show Java error message when reasoners crash
 * Bugfixes:
   - Consider inverse property in get_properties()
   - Fix parsing bug in reasoning with HermiT and infer_property_values = True

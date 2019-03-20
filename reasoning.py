@@ -128,8 +128,9 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
   except subprocess.CalledProcessError as e:
     if (e.returncode == 1) and (b"Inconsistent ontology" in e.output):
       raise OwlReadyInconsistentOntologyError()
-    raise
-  
+    else:
+      raise OwlReadyJavaError("Java error message is:\n%s" % e.stderr.decode("utf8"))
+    
   output = output.decode("utf8").replace("\r","")
   if debug:
     print("* Owlready2 * HermiT took %s seconds" % (time.time() - t0), file = sys.stderr)
@@ -231,7 +232,8 @@ def sync_reasoner_pellet(x = None, infer_property_values = False, infer_data_pro
   except subprocess.CalledProcessError as e:
     if (e.returncode == 1) and (b"ERROR: Ontology is inconsistent" in e.stderr): # XXX
       raise OwlReadyInconsistentOntologyError()
-    raise
+    else:
+      raise OwlReadyJavaError("Java error message is:\n%s" % e.stderr.decode("utf8"))
   
   output = output.decode("utf8").replace("\r","")
   if debug:
