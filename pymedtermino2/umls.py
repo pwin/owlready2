@@ -165,8 +165,8 @@ def parse_mrconso(PYM, terminologies, langs, importer, f, remnant = ""):
 #     importer.check_insert()
     
 
-def parse_mrrel(PYM, terminologies, langs, importer, f, remnant = ""):
-  if remnant == "":
+def parse_mrrel(PYM, terminologies, langs, importer, f, remnant_previous = ""):
+  if remnant_previous == "":
     remnant = ""
     previous = [None] * 17
   else:
@@ -209,8 +209,8 @@ def parse_mrrel(PYM, terminologies, langs, importer, f, remnant = ""):
     previous = current
     
     
-def parse_mrsat(PYM, terminologies, langs, importer, f, remnant = ""):
-  if remnant == "":
+def parse_mrsat(PYM, terminologies, langs, importer, f, remnant_previous = ""):
+  if remnant_previous == "":
     remnant = ""
     previous = [None] * 14
   else:

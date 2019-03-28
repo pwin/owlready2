@@ -1609,7 +1609,7 @@ SELECT DISTINCT x FROM transit""" % (rdfs_subclassof, rdfs_subclassof)
       sqls        = []
       for combination in all_combinations(self.alternatives):
         combination_conditions, combination_paramss = zip(*combination)
-        sql = "SELECT q%s.s from %s WHERE %s" % (self.target, ", ".join(tables), " AND ".join(conditions0 + list(combination_conditions)))
+        sql = "SELECT DISTINCT q%s.s from %s WHERE %s" % (self.target, ", ".join(tables), " AND ".join(conditions0 + list(combination_conditions)))
         sqls.append(sql)
         params.extend(params0)
         for combination_params in combination_paramss: params.extend(combination_params)
