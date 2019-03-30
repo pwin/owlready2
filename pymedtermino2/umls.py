@@ -257,7 +257,7 @@ def parse_mrdef(PYM, terminologies, langs, importer, f, remnant = ""):
     if suppress in "OEY": continue
 
     orig = importer.aui_2_orig[aui]
-    importer.datas.append((orig, PYM.definitions.storid, defin, ""))
+    importer.datas.append((orig, PYM.definitions.storid, defin, 0))
     
     importer.check_insert()
 
