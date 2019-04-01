@@ -1409,7 +1409,7 @@ class _SearchList(FirstList, _SearchMixin, _LazyListMixin):
   __slots__ = ["world", "prop_vals", "_c", "id", "tables", "conditions", "params", "alternatives", "excepts", "except_conditions", "except_params", "nested_searchs", "target"]
   _PopulatedClass = _PopulatedSearchList
   
-  def __init__(self, world, prop_vals, c = None):
+  def __init__(self, world, prop_vals, c = None, case_sensitive = True):
     global _NEXT_SEARCH_ID
     
     super().__init__()
@@ -1419,7 +1419,7 @@ class _SearchList(FirstList, _SearchMixin, _LazyListMixin):
     
     _NEXT_SEARCH_ID += 1
     self.id = _NEXT_SEARCH_ID
-    
+
     self.tables            = []
     self.conditions        = []
     self.params            = []
@@ -1450,10 +1450,14 @@ class _SearchList(FirstList, _SearchMixin, _LazyListMixin):
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
         self.tables    .append("resources")
         self.conditions.append("resources.storid = q%s.s" % i)
-        if "*" in v: self.conditions.append("resources.iri GLOB ?")
-        else:        self.conditions.append("resources.iri = ?")
-        self.params.append(v)
-        
+        if case_sensitive:
+          if "*" in v: self.conditions.append("resources.iri GLOB ?")
+          else:        self.conditions.append("resources.iri = ?")
+          self.params.append(v)
+        else:
+          self.conditions.append("resources.iri LIKE ?")
+          self.params.append(v.replace("*", "%"))
+          
       elif k == " is_a":
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
         if isinstance(v, (_SearchList, _PopulatedSearchList)):
@@ -1564,13 +1568,18 @@ SELECT DISTINCT x FROM transit""" % (rdfs_subclassof, rdfs_subclassof)
               self.conditions.append("q%s.o %s ?" % (i, operator))
               self.params    .append(value)
               
-          elif isinstance(v, str) and ("*" in v):
-            if   v == "*":
-              #self.conditions.append("q%s.o GLOB '*'" % i)
-              pass
+          elif isinstance(v, str):
+            if   v == "*": pass
+            elif case_sensitive:
+              if "*" in v:
+                self.conditions.append("q%s.o GLOB ?" % i)
+                self.params    .append(v)
+              else:
+                self.conditions.append("q%s.o = ?" % i)
+                self.params    .append(v)
             else:
-              self.conditions.append("q%s.o GLOB ?" % i)
-              self.params    .append(v)
+              self.conditions.append("q%s.o LIKE ?" % i)
+              self.params    .append(v.replace("*", "%"))
               
           else:
             self.conditions.append("q%s.o = ?" % i)

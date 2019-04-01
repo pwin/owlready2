@@ -4682,6 +4682,46 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert set(world.search(q = c3)) == set()
     assert set(world.search(q = "*")) == {c1, c3}
     
+  def test_search_16(self):
+    world = self.new_world()
+    o = world.get_ontology("http://test.org/onto.owl")
+    
+    with o:
+      class MyClass1(Thing): pass
+      class MYCLASS2(Thing): pass
+      
+    assert set(world.search(iri = "*MyClass*")) == set([MyClass1])
+    assert set(world.search(iri = "*MYCLASS*")) == set([MYCLASS2])
+    assert set(world.search(iri = "*myclass*")) == set([])
+    
+    assert set(world.search(iri = "*MyClass*", _case_sensitive = False)) == set([MyClass1, MYCLASS2])
+    assert set(world.search(iri = "*MYCLASS*", _case_sensitive = False)) == set([MyClass1, MYCLASS2])
+    assert set(world.search(iri = "*myclass*", _case_sensitive = False)) == set([MyClass1, MYCLASS2])
+    
+  def test_search_17(self):
+    world = self.new_world()
+    o = world.get_ontology("http://test.org/onto.owl")
+    
+    with o:
+      class C(Thing): pass
+      c1 = C(comment = ["Comment"])
+      c2 = C(comment = ["COMMENT"])
+      c3 = C(comment = ["comment"])
+      
+    assert set(world.search(comment = "*Comment*")) == set([c1])
+    assert set(world.search(comment = "*COMMENT*")) == set([c2])
+    assert set(world.search(comment = "*comment*")) == set([c3])
+    assert set(world.search(comment = "Comment")) == set([c1])
+    assert set(world.search(comment = "COMMENT")) == set([c2])
+    assert set(world.search(comment = "comment")) == set([c3])
+    
+    assert set(world.search(comment = "*Comment*", _case_sensitive = False)) == set([c1, c2, c3])
+    assert set(world.search(comment = "*COMMENT*", _case_sensitive = False)) == set([c1, c2, c3])
+    assert set(world.search(comment = "*comment*", _case_sensitive = False)) == set([c1, c2, c3])
+    assert set(world.search(comment = "Comment", _case_sensitive = False)) == set([c1, c2, c3])
+    assert set(world.search(comment = "COMMENT", _case_sensitive = False)) == set([c1, c2, c3])
+    assert set(world.search(comment = "comment", _case_sensitive = False)) == set([c1, c2, c3])
+    
     
   def test_rdflib_1(self):
     world = self.new_world()

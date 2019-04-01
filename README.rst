@@ -319,6 +319,7 @@ version 2 - 0.15
 * Can infer data property values when reasoning with Pellet
 * Optimize searches with 'type =', 'subclass_of =', or 'is_a =' parameters
 * Add Property.range_iri
+* Add _case_sensitive parameter to search()
 * Add inverse property support in RDFlib support
 * Show Java error message when reasoners crash
 * Bugfixes:

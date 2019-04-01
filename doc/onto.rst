@@ -169,6 +169,11 @@ arguments. The supported keywords are:
 * **is_a**, for searching both Individuals and subclasses of a given Class
 * any object, data or annotation property name
 
+Special arguments are:
+
+* **_use_str_as_loc_str**: whether to treats plain Python strings as strings in any language (default is True)
+* **_case_sensitive**: whether to take lower/upper case into consideration (default is True)
+
 The value associated to each keyword can be a single value or a list of several values.
 A star * can be used as a jocker in string values.
 

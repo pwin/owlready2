@@ -284,7 +284,7 @@ class _GraphManager(object):
         sub = self._get_obj_triple_po_s(rdfs_subclassof, s)
         if sub is None: yield self._parse_bnode(s)
         
-  def search(self, _use_str_as_loc_str = True, **kargs):
+  def search(self, _use_str_as_loc_str = True, _case_sensitive = True, **kargs):
     from owlready2.triplelite import _SearchList
     
     prop_vals = []
@@ -325,7 +325,7 @@ class _GraphManager(object):
                 
           prop_vals.append((k2, v2, d))
           
-    return _SearchList(self.world, prop_vals)
+    return _SearchList(self.world, prop_vals, None, _case_sensitive)
     
   def search_one(self, **kargs): return self.search(**kargs).first()
   
