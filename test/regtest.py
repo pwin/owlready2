@@ -284,7 +284,7 @@ class Test(BaseTest, unittest.TestCase):
     o2 = world.get_ontology("http://test.org/t2.owl")
     with o2:
       class B(Thing): pass
-    
+      
   def test_world_9(self):
     world = self.new_world()
     o1 = world.get_ontology("http://test.org/t1.owl")
@@ -294,6 +294,36 @@ class Test(BaseTest, unittest.TestCase):
     n2 = world.graph._abbreviate("xxx2")
     
     assert n2 == n1 + 1
+    
+  def test_world_10(self):
+    import sqlite3
+    tmp   = self.new_tmp_file()
+    world = self.new_world()
+    world.set_backend(filename = tmp)
+    world.save()
+    world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
+    world.graph.db.close()
+    world = None
+    
+    db = sqlite3.connect(tmp)
+    sql = db.cursor()
+    sql.execute("""SELECT * from ontologies;""")
+    assert sql.fetchall() == []
+    
+    tmp   = self.new_tmp_file()
+    tmp2  = self.new_tmp_file()
+    world = self.new_world()
+    world.set_backend(filename = tmp)
+    world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    world.get_ontology("http://www.test.org/test.owl").save(tmp2)
+    world.graph.db.close()
+    world = None
+    
+    db = sqlite3.connect(tmp)
+    sql = db.cursor()
+    sql.execute("""SELECT * from ontologies;""");     print(sql.fetchall())
+    sql.execute("""SELECT * from ontologies;""")
+    assert sql.fetchall() == []
     
     
   def test_ontology_1(self):

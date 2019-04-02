@@ -685,7 +685,7 @@ class Ontology(Namespace, _GraphManager):
       f = fileobj or _get_onto_file(self.base_iri, self.name, "r", only_local)
     else:
       f = ""
-
+      
     self.world.graph.acquire_write_lock()
     
     new_base_iri = None
