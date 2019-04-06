@@ -330,7 +330,13 @@ version 2 - 0.15
   - Better workaround in case of metaclass conflict
   - Fix 'sqlite3.OperationalError: too many SQL variables' in searches with 'type =', 'subclass_of =', or 'is_a =' parameters
     
+version 2 - 0.16
+****************
 
+* Support "with long_ontology_name as onto" syntax
+* In UMLS import, add optional parameters for preventing extraction of attributes, relations, etc
+  
+  
 Links
 -----
 

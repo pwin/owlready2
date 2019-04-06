@@ -197,7 +197,7 @@ def parse_mrrel(PYM, terminologies, langs, importer, f, remnant_previous = ""):
         if orig1 and (orig1 != orig2) and (orig2 in importer.orig_2_terminology):
           importer.terminology_2_parents[importer.orig_2_terminology[orig2]] [orig2].add(orig1)
           
-    else:
+    elif importer.extract_relations:
       orig1 = importer.aui_2_orig.get(aui1)
       orig2 = importer.aui_2_orig.get(aui2)
       if orig1 and orig2:
@@ -479,10 +479,14 @@ def finalize(PYM, importer):
     del importer.orig_2_cuis
     
 class _Importer(object):
-  def __init__(self, PYM, terminologies, langs):
+  def __init__(self, PYM, terminologies, langs, extract_groups, extract_attributes, extract_relations, extract_definitions):
     self.PYM          = PYM
     self.terminologies = terminologies
     self.langs         = langs
+    self.extract_groups      = extract_groups
+    self.extract_attributes  = extract_attributes
+    self.extract_relations   = extract_relations
+    self.extract_definitions = extract_definitions
     
     self.tty_2_priority = defaultdict(int)
     self.created_terminologies = set()
@@ -575,7 +579,7 @@ class _Importer(object):
       if not (orig2, prop, orig1) in self.relations: # Else, already done by a relation in another group
         self.restrict(orig2, SOME, prop, orig1)
         self.relations.add((orig2, prop, orig1))
-      if group_i:
+      if group_i and self.extract_groups:
         self.restrict(self.get_group(orig2, group_i), SOME, prop, orig1)
     else:
       self.indirect_props[prop] += 1
@@ -611,7 +615,7 @@ class _Importer(object):
     return bnode0
     
     
-def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index = True):
+def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index = True, extract_groups = True, extract_attributes = True, extract_relations = True, extract_definitions = True):
   if terminologies:
     terminologies = set(terminologies)
   if langs:
@@ -622,15 +626,15 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index
   
   default_world.graph.set_indexed(False)
   
-  importer = _Importer(PYM, terminologies, langs)
+  importer = _Importer(PYM, terminologies, langs, extract_groups, extract_attributes, extract_relations, extract_definitions)
   
   parsers = [
     ("MRRANK",  parse_mrrank),
     ("MRCONSO", parse_mrconso),
-    ("MRDEF"  , parse_mrdef),
-    ("MRREL"  , parse_mrrel),
-    ("MRSAT"  , parse_mrsat),
   ]
+  if extract_definitions: parsers.append(("MRDEF"  , parse_mrdef))
+  parsers.append(("MRREL"  , parse_mrrel))
+  if extract_attributes: parsers.append(("MRSAT"  , parse_mrsat))
   #if (not terminology) or ("CUI" in terminologies): parsers["MRSTY"] = parse_mrsty
   
   remnants = defaultdict(str)

@@ -61,6 +61,7 @@ class Namespace(object):
     l = CURRENT_NAMESPACES.get()
     if l is None: CURRENT_NAMESPACES.set([self])
     else:         l.append(self)
+    return self
     
   def __exit__(self, exc_type = None, exc_val = None, exc_tb = None):
     #del CURRENT_NAMESPACES[-1]
