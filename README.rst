@@ -333,6 +333,8 @@ version 2 - 0.15
 version 2 - 0.16
 ****************
 
+* Optimize nested searches
+* search(sublclass_of = xxx) now returns xxx itself in the results
 * Support "with long_ontology_name as onto" syntax
 * In UMLS import, add optional parameters for preventing extraction of attributes, relations, etc
   

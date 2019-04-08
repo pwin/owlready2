@@ -321,7 +321,6 @@ class Test(BaseTest, unittest.TestCase):
     
     db = sqlite3.connect(tmp)
     sql = db.cursor()
-    sql.execute("""SELECT * from ontologies;""");     print(sql.fetchall())
     sql.execute("""SELECT * from ontologies;""")
     assert sql.fetchall() == []
     
@@ -4368,7 +4367,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert o.O3
     assert issubclass(o.O2, o.O)
     assert issubclass(o.O3, o.O2)
-    assert set(o.search(subclass_of = o.O)) == { o.O2, o.O3 }
+    assert set(o.search(subclass_of = o.O)) == { o.O, o.O2, o.O3 }
     
   def test_format_23(self):
     world = self.new_world()
@@ -4448,13 +4447,13 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
     l = n.search(is_a = n.Pizza)
-    assert set(l) == { n.ma_pizza, n.VegetarianPizza }
+    assert set(l) == { n.Pizza, n.ma_pizza, n.VegetarianPizza }
     
     l = n.search(type = n.Pizza)
     assert set(l) == { n.ma_pizza }
     
     l = n.search(subclass_of = n.Pizza)
-    assert set(l) == { n.VegetarianPizza }
+    assert set(l) == { n.Pizza, n.VegetarianPizza }
     
   def test_search_4(self):
     world = self.new_world()
@@ -4495,16 +4494,16 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert set(l) == { n.ma_tomate, n.mon_frometon }
     
     l = n.search(subclass_of = n.Tomato)
-    assert set(l) == set()
+    assert set(l) == { n.Tomato }
     
     l = n.search(is_a = n.Tomato)
-    assert set(l) == { n.ma_tomate }
+    assert set(l) == { n.Tomato, n.ma_tomate }
     
     l = n.search(subclass_of = n.Topping)
-    assert set(l) == { n.Tomato, n.Cheese, n.Meat, n.Vegetable, n.Eggplant, n.Olive }
+    assert set(l) == { n.Topping, n.Tomato, n.Cheese, n.Meat, n.Vegetable, n.Eggplant, n.Olive }
     
     l = n.search(is_a = n.Topping)
-    assert set(l) == { n.ma_tomate, n.mon_frometon, n.Tomato, n.Cheese, n.Meat, n.Vegetable, n.Eggplant, n.Olive }
+    assert set(l) == { n.Topping, n.ma_tomate, n.mon_frometon, n.Tomato, n.Cheese, n.Meat, n.Vegetable, n.Eggplant, n.Olive }
     
   def test_search_7(self):
     world = self.new_world()

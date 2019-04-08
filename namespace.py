@@ -286,18 +286,17 @@ class _GraphManager(object):
         if sub is None: yield self._parse_bnode(s)
         
   def search(self, _use_str_as_loc_str = True, _case_sensitive = True, **kargs):
-    from owlready2.triplelite import _SearchList
+    from owlready2.triplelite import _SearchList, _SearchMixin
     
     prop_vals = []
     for k, v0 in kargs.items():
-      if isinstance(v0, _SearchList) or not isinstance(v0, list): v0 = (v0,)
+      if isinstance(v0, _SearchMixin) or not isinstance(v0, list): v0 = (v0,)
       for v in v0:
         if   k == "iri":
           prop_vals.append((" iri", v, None))
         elif (k == "is_a") or (k == "subclass_of") or (k == "type"):
-          if isinstance(v, _SearchList): v2 = v
-          #else:                          v2 = [child.storid for child in v.descendants()]
-          else:                          v2 = v.storid
+          if isinstance(v, (_SearchMixin, Or)): v2 = v
+          else:                                 v2 = v.storid
           prop_vals.append((" %s" % k, v2, None))
         else:
           d = None
@@ -314,7 +313,7 @@ class _GraphManager(object):
           else:
             if   isinstance(v, FTS):  v2 = v; d = "*"
             elif isinstance(v, NumS): v2 = v; d = "*"
-            elif isinstance(v, _SearchList): v2 = v
+            elif isinstance(v, _SearchMixin): v2 = v
             else:
               v2, d = self.world._to_rdf(v)
               if   Prop and (Prop._owl_type == owl_object_property): # Use "*" as a jocker for object

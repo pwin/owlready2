@@ -36,7 +36,8 @@ from owlready2.reasoning       import *
 from owlready2.reasoning       import _keep_most_specific
 from owlready2.close           import *
 
-import owlready2.namespace, owlready2.entity, owlready2.prop, owlready2.class_construct
+import owlready2.namespace, owlready2.entity, owlready2.prop, owlready2.class_construct, owlready2.triplelite
+owlready2.triplelite.Or                     = Or
 owlready2.namespace.EntityClass             = EntityClass
 owlready2.namespace.ThingClass              = ThingClass
 owlready2.namespace.PropertyClass           = PropertyClass
