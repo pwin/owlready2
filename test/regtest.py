@@ -2692,6 +2692,32 @@ I took a placebo
     assert set(onto.e.is_a) == set([onto.E, onto.S])
     assert set(onto.e.prop) == set([onto.obj])
     
+  def test_reasoning_10(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/test.owl")
+    
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      class p(ObjectProperty, FunctionalProperty):
+        domain = [C]
+        range  = [D]
+        
+      class F(C):
+        is_a = [p.some(E)]
+        
+      f = F()
+      AllDisjoint([C, D, E])
+
+    with onto:
+      try:
+        sync_reasoner(world, debug = 0)
+      except OwlReadyInconsistentOntologyError:
+        return
+      
+    assert False
+     
   def test_pellet_reasoning_1(self):
     world = self.new_world()
     onto  = world.get_ontology("test_rule.owl").load()

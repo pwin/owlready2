@@ -104,91 +104,93 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
   
   locked = world.graph.has_write_lock()
   if locked: world.graph.release_write_lock() # Not needed during reasoning
-  
-  if   isinstance(x, Ontology):  ontology = x
-  elif CURRENT_NAMESPACES.get(): ontology = CURRENT_NAMESPACES.get()[-1].ontology
-  else:                          ontology = world.get_ontology(_INFERRENCES_ONTOLOGY)
-  
-  tmp = tempfile.NamedTemporaryFile("wb", delete = False)
-  if isinstance(x, list):
-    for o in x: o.save(tmp, format = "ntriples", commit = False)
-  else:
-    world.save(tmp, format = "ntriples")
-  tmp.close()
-  command = [owlready2.JAVA_EXE, "-Xmx2000M", "-cp", _HERMIT_CLASSPATH, "org.semanticweb.HermiT.cli.CommandLine", "-c", "-O", "-D", "-I", "file:///%s" % tmp.name.replace('\\','/')]
-  if infer_property_values: command.append("-Y")
-  if debug:
-    import time
-    print("* Owlready2 * Running HermiT...", file = sys.stderr)
-    print("    %s" % " ".join(command), file = sys.stderr)
-    t0 = time.time()
-    
+
   try:
-    output = subprocess.check_output(command, stderr = subprocess.STDOUT)
-  except subprocess.CalledProcessError as e:
-    if (e.returncode == 1) and (b"Inconsistent ontology" in e.output):
-      raise OwlReadyInconsistentOntologyError()
+    if   isinstance(x, Ontology):  ontology = x
+    elif CURRENT_NAMESPACES.get(): ontology = CURRENT_NAMESPACES.get()[-1].ontology
+    else:                          ontology = world.get_ontology(_INFERRENCES_ONTOLOGY)
+    
+    tmp = tempfile.NamedTemporaryFile("wb", delete = False)
+    if isinstance(x, list):
+      for o in x: o.save(tmp, format = "ntriples", commit = False)
     else:
-      raise OwlReadyJavaError("Java error message is:\n%s" % e.stderr.decode("utf8"))
-    
-  output = output.decode("utf8").replace("\r","")
-  if debug:
-    print("* Owlready2 * HermiT took %s seconds" % (time.time() - t0), file = sys.stderr)
-    if debug > 1:
-      print("* Owlready2 * HermiT output:", file = sys.stderr)
-      print(output, file = sys.stderr)
-
-
-  new_parents = defaultdict(list)
-  new_equivs  = defaultdict(list)
-  entity_2_type = {}
-  for relation, concept_iris in _HERMIT_RESULT_REGEXP.findall(output):
-    concept_storids = [ontology._abbreviate(x) for x in concept_iris[1:-1].split("> <")]
-    owl_relation = _HERMIT_2_OWL[relation]
-    
-    if  relation in _IS_A_RELATIONS:
-      if concept_iris[0].startswith("http://www.w3.org/2002/07/owl"): continue
+      world.save(tmp, format = "ntriples")
+    tmp.close()
+    command = [owlready2.JAVA_EXE, "-Xmx2000M", "-cp", _HERMIT_CLASSPATH, "org.semanticweb.HermiT.cli.CommandLine", "-c", "-O", "-D", "-I", "file:///%s" % tmp.name.replace('\\','/')]
+    if infer_property_values: command.append("-Y")
+    if debug:
+      import time
+      print("* Owlready2 * Running HermiT...", file = sys.stderr)
+      print("    %s" % " ".join(command), file = sys.stderr)
+      t0 = time.time()
       
-      new_parents[concept_storids[0]].append(concept_storids[1])
-      entity_2_type[concept_storids[0]] = _OWL_2_TYPE[owl_relation]
-      
-    elif relation in _EQUIV_RELATIONS:
-      if "http://www.w3.org/2002/07/owl#Nothing" in concept_iris:
-        for concept_iri, concept_storid in zip(concept_iris, concept_storids):
-          if concept_iri.startswith("http://www.w3.org/2002/07/owl"): continue
-          if concept_storid == owl_nothing: continue
-          
-          new_equivs[concept_storid].append(owl_nothing)
-          entity_2_type[concept_storid] = _OWL_2_TYPE[owl_relation]
-          
+    try:
+      output = subprocess.check_output(command, stderr = subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+      if (e.returncode == 1) and (b"Inconsistent ontology" in e.output):
+        raise OwlReadyInconsistentOntologyError()
       else:
-        for concept_iri1, concept_storid1 in zip(concept_iris, concept_storids):
-          if concept_iri1.startswith("http://www.w3.org/2002/07/owl"): continue
-          for concept_iri2, concept_storid2 in zip(concept_iris, concept_storids):
-            if concept_iri1 == concept_iri2: continue
-            new_equivs[concept_storid1].append(concept_storid2)
-            entity_2_type[concept_storid1] = _OWL_2_TYPE[owl_relation]
+        raise OwlReadyJavaError("Java error message is:\n%s" % e.stderr.decode("utf8"))
+    
+    output = output.decode("utf8").replace("\r","")
+    if debug:
+      print("* Owlready2 * HermiT took %s seconds" % (time.time() - t0), file = sys.stderr)
+      if debug > 1:
+        print("* Owlready2 * HermiT output:", file = sys.stderr)
+        print(output, file = sys.stderr)
+        
+        
+    new_parents = defaultdict(list)
+    new_equivs  = defaultdict(list)
+    entity_2_type = {}
+    for relation, concept_iris in _HERMIT_RESULT_REGEXP.findall(output):
+      concept_storids = [ontology._abbreviate(x) for x in concept_iris[1:-1].split("> <")]
+      owl_relation = _HERMIT_2_OWL[relation]
+    
+      if  relation in _IS_A_RELATIONS:
+        if concept_iris[0].startswith("http://www.w3.org/2002/07/owl"): continue
+        
+        new_parents[concept_storids[0]].append(concept_storids[1])
+        entity_2_type[concept_storids[0]] = _OWL_2_TYPE[owl_relation]
+      
+      elif relation in _EQUIV_RELATIONS:
+        if "http://www.w3.org/2002/07/owl#Nothing" in concept_iris:
+          for concept_iri, concept_storid in zip(concept_iris, concept_storids):
+            if concept_iri.startswith("http://www.w3.org/2002/07/owl"): continue
+            if concept_storid == owl_nothing: continue
             
-  if infer_property_values:
-    inferred_obj_relations = []
-    for prop_iri, knowns, possibles in _HERMIT_PROP_REGEXP.findall(output):
-      prop = world[prop_iri]
-      if prop is None: continue
-      knowns = knowns[1:-1] # Remove first and last parenthesese
-      if not knowns.strip(): continue
-      for pair in knowns.split(")("):
-        a, b = pair[1:-1].split(">, <", 1)
-        a_storid = ontology._abbreviate(a, False)
-        b_storid = ontology._abbreviate(b, False)
-        if ((not a_storid is None) and (not b_storid is None) and
-            (not world._has_obj_triple_spo(a_storid, prop.storid, b_storid)) and
-            ((not prop._inverse_property) or (not world._has_obj_triple_spo(b_storid, prop._inverse_storid, a_storid)))):
-          inferred_obj_relations.append((a_storid, prop, b_storid))
+            new_equivs[concept_storid].append(owl_nothing)
+            entity_2_type[concept_storid] = _OWL_2_TYPE[owl_relation]
           
-  if not keep_tmp_file: os.unlink(tmp.name)
-  
-  if locked: world.graph.acquire_write_lock() # re-lock when applying results
-  
+        else:
+          for concept_iri1, concept_storid1 in zip(concept_iris, concept_storids):
+            if concept_iri1.startswith("http://www.w3.org/2002/07/owl"): continue
+            for concept_iri2, concept_storid2 in zip(concept_iris, concept_storids):
+              if concept_iri1 == concept_iri2: continue
+              new_equivs[concept_storid1].append(concept_storid2)
+              entity_2_type[concept_storid1] = _OWL_2_TYPE[owl_relation]
+            
+    if infer_property_values:
+      inferred_obj_relations = []
+      for prop_iri, knowns, possibles in _HERMIT_PROP_REGEXP.findall(output):
+        prop = world[prop_iri]
+        if prop is None: continue
+        knowns = knowns[1:-1] # Remove first and last parenthesese
+        if not knowns.strip(): continue
+        for pair in knowns.split(")("):
+          a, b = pair[1:-1].split(">, <", 1)
+          a_storid = ontology._abbreviate(a, False)
+          b_storid = ontology._abbreviate(b, False)
+          if ((not a_storid is None) and (not b_storid is None) and
+              (not world._has_obj_triple_spo(a_storid, prop.storid, b_storid)) and
+             ((not prop._inverse_property) or (not world._has_obj_triple_spo(b_storid, prop._inverse_storid, a_storid)))):
+            inferred_obj_relations.append((a_storid, prop, b_storid))
+          
+    if not keep_tmp_file: os.unlink(tmp.name)
+    
+  finally:
+    if locked: world.graph.acquire_write_lock() # re-lock when applying results
+    
   _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, entity_2_type)
   if infer_property_values:
     _apply_inferred_obj_relations(world, ontology, debug, inferred_obj_relations)
@@ -207,110 +209,112 @@ def sync_reasoner_pellet(x = None, infer_property_values = False, infer_data_pro
   locked = world.graph.has_write_lock()
   if locked: world.graph.release_write_lock() # Not needed during reasoning
   
-  if   isinstance(x, Ontology):  ontology = x
-  elif CURRENT_NAMESPACES.get(): ontology = CURRENT_NAMESPACES.get()[-1].ontology
-  else:                          ontology = world.get_ontology(_INFERRENCES_ONTOLOGY)
-  
-  tmp = tempfile.NamedTemporaryFile("wb", delete = False)
-  if isinstance(x, list):
-    for o in x: o.save(tmp, format = "ntriples", commit = False)
-  else:
-    world.save(tmp, format = "ntriples")
-  tmp.close()
-  command = [owlready2.JAVA_EXE, "-Xmx2000M", "-cp", _PELLET_CLASSPATH, "pellet.Pellet", "realize", "--ignore-imports", tmp.name]
-  if infer_property_values:      command.insert(-2, "--infer-prop-values")
-  if infer_data_property_values: command.insert(-2, "--infer-data-prop-values")
-  
-  if debug:
-    import time
-    print("* Owlready2 * Running Pellet...", file = sys.stderr)
-    print("    %s" % " ".join(command), file = sys.stderr)
-    t0 = time.time()
-    
   try:
-    output = subprocess.run(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE, check = True).stdout
-  except subprocess.CalledProcessError as e:
-    if (e.returncode == 1) and (b"ERROR: Ontology is inconsistent" in e.stderr): # XXX
-      raise OwlReadyInconsistentOntologyError()
+    if   isinstance(x, Ontology):  ontology = x
+    elif CURRENT_NAMESPACES.get(): ontology = CURRENT_NAMESPACES.get()[-1].ontology
+    else:                          ontology = world.get_ontology(_INFERRENCES_ONTOLOGY)
+    
+    tmp = tempfile.NamedTemporaryFile("wb", delete = False)
+    if isinstance(x, list):
+      for o in x: o.save(tmp, format = "ntriples", commit = False)
     else:
-      raise OwlReadyJavaError("Java error message is:\n%s" % e.stderr.decode("utf8"))
+      world.save(tmp, format = "ntriples")
+    tmp.close()
+    command = [owlready2.JAVA_EXE, "-Xmx2000M", "-cp", _PELLET_CLASSPATH, "pellet.Pellet", "realize", "--ignore-imports", tmp.name]
+    if infer_property_values:      command.insert(-2, "--infer-prop-values")
+    if infer_data_property_values: command.insert(-2, "--infer-data-prop-values")
   
-  output = output.decode("utf8").replace("\r","")
-  if debug:
-    print("* Owlready2 * Pellet took %s seconds" % (time.time() - t0), file = sys.stderr)
-    if debug > 1:
-      print("* Owlready2 * Pellet output:", file = sys.stderr)
-      print(output, file = sys.stderr)
-      
-      
-  new_parents = defaultdict(list)
-  new_equivs  = defaultdict(list)
-  entity_2_type = {}
-  stack = []
-  for line in output.split("\n"):
-    if not line: continue
-    line2 = line.lstrip()
-    depth = len(line) - len(line2)
-    splitted = line2.split(" - ", 1)
-    class_storids = [ontology._abbreviate(class_iri) for class_iri in splitted[0].split(" = ")]
+    if debug:
+      import time
+      print("* Owlready2 * Running Pellet...", file = sys.stderr)
+      print("    %s" % " ".join(command), file = sys.stderr)
+      t0 = time.time()
     
-    if len(class_storids) > 1:
-      for class_storid1 in class_storids:
-        for class_storid2 in class_storids:
-          if not class_storid1 is class_storid2:
-            new_equivs[class_storid1].append(class_storid2)
-            
-    while stack and (stack[-1][0] >= depth): del stack[-1]
-    if len(stack) > 1: # if len(stack) == 1, it only contains Thing => not interesting
-      for class_storid in class_storids:
-        entity_2_type[class_storid] = "class"
-        new_parents[class_storid].extend(stack[-1][1])
-    else:
-      for class_storid in class_storids:
-        entity_2_type[class_storid] = "class"
-    stack.append((depth, class_storids))
-    
-    if len(splitted) == 2:
-      ind_iris = splitted[1][1:-1].split(", ")
-      for ind_iri in ind_iris:
-        ind_storid = ontology._abbreviate(ind_iri)
-        entity_2_type[ind_storid] = "individual"
-        new_parents[ind_storid].extend(class_storids)
-        
-  if infer_property_values:
-    inferred_obj_relations = []
-    for a_iri, prop_iri, b_iri in _PELLET_PROP_REGEXP.findall(output):
-      prop = world[prop_iri]
-      if prop is None: continue
-      a_storid = ontology._abbreviate(a_iri, False)
-      b_storid = ontology._abbreviate(b_iri.strip(), False)
-      if ((not a_storid is None) and (not b_storid is None) and
-          (not world._has_obj_triple_spo(a_storid, prop.storid, b_storid)) and
-          ((not prop._inverse_property) or (not world._has_obj_triple_spo(b_storid, prop._inverse_storid, a_storid)))):
-        inferred_obj_relations.append((a_storid, prop, b_storid))
-        
-  if infer_data_property_values:
-    inferred_data_relations = []
-    for a_iri, prop_iri, value, lang, datatype in _PELLET_DATA_PROP_REGEXP.findall(output):
-      prop = world[prop_iri]
-      if prop is None: continue
-      a_storid = ontology._abbreviate(a_iri, False)
-      if lang and (lang != "()"):
-        datatype = "@%s" % lang
+    try:
+      output = subprocess.run(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE, check = True).stdout
+    except subprocess.CalledProcessError as e:
+      if (e.returncode == 1) and (b"ERROR: Ontology is inconsistent" in e.stderr): # XXX
+        raise OwlReadyInconsistentOntologyError()
       else:
-        datatype = ontology._abbreviate(datatype)
-        python_datatype = owlready2.base._universal_abbrev_2_datatype.get(datatype)
-        if   python_datatype is int:   value = int  (value)
-        elif python_datatype is float: value = float(value)
-      if ((not a_storid is None) and
-          (not world._has_data_triple_spod(a_storid, prop.storid, value))):
-        inferred_data_relations.append((a_storid, prop, value, datatype))
+        raise OwlReadyJavaError("Java error message is:\n%s" % e.stderr.decode("utf8"))
+      
+    output = output.decode("utf8").replace("\r","")
+    if debug:
+      print("* Owlready2 * Pellet took %s seconds" % (time.time() - t0), file = sys.stderr)
+      if debug > 1:
+        print("* Owlready2 * Pellet output:", file = sys.stderr)
+        print(output, file = sys.stderr)
+      
+      
+    new_parents = defaultdict(list)
+    new_equivs  = defaultdict(list)
+    entity_2_type = {}
+    stack = []
+    for line in output.split("\n"):
+      if not line: continue
+      line2 = line.lstrip()
+      depth = len(line) - len(line2)
+      splitted = line2.split(" - ", 1)
+      class_storids = [ontology._abbreviate(class_iri) for class_iri in splitted[0].split(" = ")]
+      
+      if len(class_storids) > 1:
+        for class_storid1 in class_storids:
+          for class_storid2 in class_storids:
+            if not class_storid1 is class_storid2:
+              new_equivs[class_storid1].append(class_storid2)
+            
+      while stack and (stack[-1][0] >= depth): del stack[-1]
+      if len(stack) > 1: # if len(stack) == 1, it only contains Thing => not interesting
+        for class_storid in class_storids:
+          entity_2_type[class_storid] = "class"
+          new_parents[class_storid].extend(stack[-1][1])
+      else:
+        for class_storid in class_storids:
+          entity_2_type[class_storid] = "class"
+      stack.append((depth, class_storids))
+    
+      if len(splitted) == 2:
+        ind_iris = splitted[1][1:-1].split(", ")
+        for ind_iri in ind_iris:
+          ind_storid = ontology._abbreviate(ind_iri)
+          entity_2_type[ind_storid] = "individual"
+          new_parents[ind_storid].extend(class_storids)
+        
+    if infer_property_values:
+      inferred_obj_relations = []
+      for a_iri, prop_iri, b_iri in _PELLET_PROP_REGEXP.findall(output):
+        prop = world[prop_iri]
+        if prop is None: continue
+        a_storid = ontology._abbreviate(a_iri, False)
+        b_storid = ontology._abbreviate(b_iri.strip(), False)
+        if ((not a_storid is None) and (not b_storid is None) and
+            (not world._has_obj_triple_spo(a_storid, prop.storid, b_storid)) and
+           ((not prop._inverse_property) or (not world._has_obj_triple_spo(b_storid, prop._inverse_storid, a_storid)))):
+          inferred_obj_relations.append((a_storid, prop, b_storid))
+        
+    if infer_data_property_values:
+      inferred_data_relations = []
+      for a_iri, prop_iri, value, lang, datatype in _PELLET_DATA_PROP_REGEXP.findall(output):
+        prop = world[prop_iri]
+        if prop is None: continue
+        a_storid = ontology._abbreviate(a_iri, False)
+        if lang and (lang != "()"):
+          datatype = "@%s" % lang
+        else:
+          datatype = ontology._abbreviate(datatype)
+          python_datatype = owlready2.base._universal_abbrev_2_datatype.get(datatype)
+          if   python_datatype is int:   value = int  (value)
+          elif python_datatype is float: value = float(value)
+        if ((not a_storid is None) and
+            (not world._has_data_triple_spod(a_storid, prop.storid, value))):
+          inferred_data_relations.append((a_storid, prop, value, datatype))
         
       
-  if not keep_tmp_file: os.unlink(tmp.name)
-  
-  if locked: world.graph.acquire_write_lock() # re-lock when applying results
-  
+    if not keep_tmp_file: os.unlink(tmp.name)
+
+  finally:
+    if locked: world.graph.acquire_write_lock() # re-lock when applying results
+    
   _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, entity_2_type)
   if infer_property_values:      _apply_inferred_obj_relations (world, ontology, debug, inferred_obj_relations)
   if infer_data_property_values: _apply_inferred_data_relations(world, ontology, debug, inferred_data_relations)
