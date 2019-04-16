@@ -2098,6 +2098,46 @@ class Test(BaseTest, unittest.TestCase):
       
     assert p.range_iri[0].startswith("_:")
     
+  def test_prop_38(self):
+    tmp = self.new_tmp_file()
+    
+    world = self.new_world()
+    world.set_backend(filename = tmp)
+    o1    = world.get_ontology("http://www.semanticweb.org/test1.owl")
+    o2    = world.get_ontology("http://www.semanticweb.org/test2.owl")
+    with o1:
+      class p1(Thing >> Thing): pass
+    with o2:
+      class p2(Thing >> Thing): inverse = p1
+    world.save()
+    world.close()
+    
+    world = self.new_world()
+    world.set_backend(filename = tmp)
+    o2    = world.get_ontology("http://www.semanticweb.org/test2.owl").load()
+    o1    = world.get_ontology("http://www.semanticweb.org/test1.owl").load()
+    assert o2.p2.inverse is o1.p1
+    assert o1.p1.inverse is o2.p2
+    
+  def test_prop_39(self):
+    tmp = self.new_tmp_file()
+    
+    world = self.new_world()
+    world.set_backend(filename = tmp)
+    o1    = world.get_ontology("http://www.semanticweb.org/test1.owl")
+    o2    = world.get_ontology("http://www.semanticweb.org/test2.owl")
+    with o1:
+      class p1(Thing >> Thing): pass
+    with o2:
+      class p2(p1): pass
+    world.save()
+    world.close()
+    
+    world = self.new_world()
+    world.set_backend(filename = tmp)
+    o2    = world.get_ontology("http://www.semanticweb.org/test2.owl").load()
+    assert issubclass(p2, p1)
+    
     
   def test_prop_inverse_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

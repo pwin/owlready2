@@ -481,8 +481,13 @@ class Graph(BaseMainGraph):
       self.execute("UPDATE store SET current_blank=?, current_resource=?", (self.current_blank, self.current_resource))
       self.db.commit()
 
-  def context_2_user_context(self, c): return self.c_2_onto[c]
-
+  def context_2_user_context(self, c):
+    user_c = self.c_2_onto.get(c)
+    if user_c is None:
+      iri = self.execute("SELECT iri FROM ontologies WHERE c=? LIMIT 1", (c,)).fetchone()[0]
+      return self.world.get_ontology(iri)
+    return user_c
+  
   def new_blank_node(self):
     self.current_blank += 1
     return -self.current_blank
@@ -1091,7 +1096,7 @@ class SubGraph(BaseSubGraph):
     return objs, datas, on_prepare_obj, on_prepare_data, insert_objs, insert_datas, self.parent.new_blank_node, _abbreviate, on_finish
 
 
-  def context_2_user_context(self, c): return self.parent.c_2_onto[c]
+  def context_2_user_context(self, c): return self.parent.context_2_user_context(c)
  
   def add_ontology_alias(self, iri, alias):
     self.execute("INSERT into ontology_alias VALUES (?,?)", (iri, alias))

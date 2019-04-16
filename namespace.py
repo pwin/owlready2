@@ -515,7 +515,7 @@ class World(_GraphManager):
             obj2 = self._entities.get(obj)
             if obj2 is None: obj2 = self._load_by_storid(obj, None, main_type, main_onto, default_to_none, trace)
             if not obj2 is None: is_a_entities.append(obj2)
-            
+
       if main_onto is None:
         main_onto = self.get_ontology("http://anonymous/")
         full_iri = full_iri or self._unabbreviate(storid)

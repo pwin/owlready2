@@ -339,7 +339,7 @@ version 2 - 0.16
 * In UMLS import, add optional parameters for preventing extraction of attributes, relations, etc
 * Bugfixes:
   - Fix 'Cannot release un-acquired lock' error when reasoning on inconsistent ontologies inside a 'with' statement
-
+  - Fix bug when loading a property that refers to another property from a quadstore stored on disk
   
 Links
 -----

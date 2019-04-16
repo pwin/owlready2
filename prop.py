@@ -414,7 +414,7 @@ class ReasoningPropertyClass(PropertyClass):
   
 class ObjectPropertyClass(ReasoningPropertyClass):
   _owl_type = owl_object_property
-
+  
   def __init__(Prop, name, bases, obj_dict):
     super().__init__(name, bases, obj_dict)
     
