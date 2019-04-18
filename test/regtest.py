@@ -5017,6 +5017,21 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     r = set(g.triples((rdflib.URIRef(o1.iri), None, rdflib.URIRef(o2.iri))))
     assert r == set([(rdflib.URIRef(o1.iri), rdflib.URIRef(i.iri), rdflib.URIRef(o2.iri))])
     
+  def test_rdflib_8(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/onto.owl")
+    g = world.as_rdflib_graph()
+    g.bind("onto", "http://www.semanticweb.org/onto.owl#")
+    
+    r = g.update("""
+    CONSTRUCT {
+    onto:C
+    <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+    <http://www.w3.org/2002/07/owl#Class> .
+    } WHERE {}""")
+
+    world.graph.dump()
+    
       
   def test__refactor_1(self):
     world = self.new_world()

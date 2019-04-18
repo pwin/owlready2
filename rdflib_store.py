@@ -20,6 +20,7 @@
 import rdflib, rdflib.store
 from rdflib import URIRef, BNode, Literal
 
+import owlready2.triplelite, owlready2.namespace
 from owlready2.base import from_literal
 
 class TripleLiteRDFlibStore(rdflib.store.Store):
@@ -89,10 +90,18 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
   def add(self, xxx_todo_changeme, context, quoted = False):
     s,p,o,d = self._rdflib_2_owlready(xxx_todo_changeme)
 
-    if d is None:
-      context.triplelite._add_obj_triple_raw_spo(s,p,o)
+    print(context)
+    if isinstance(context.triplelite, owlready2.triplelite.SubGraph):
+      triplelite = context.triplelite
     else:
-      context.triplelite._add_data_triple_raw_spod(s,p,o,d)
+      l = owlready2.namespace.CURRENT_NAMESPACES.get()
+      if not l: raise ValueError("Cannot add triples to a graph ouside a 'with' block. Please start a 'with' block to indicate in which ontology the new triple is added.")
+      triplelite = l[-1].ontology.graph
+      
+    if d is None:
+      triplelite._add_obj_triple_raw_spo(s,p,o)
+    else:
+      triplelite._add_data_triple_raw_spod(s,p,o,d)
     #super().add(xxx_todo_changeme, context, quoted)
     
   def remove(self, xxx_todo_changeme, context = None):
@@ -164,9 +173,20 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
   def namespaces(self):
     for prefix, namespace in self.__namespace.items():
       yield prefix, namespace
-
-
-
+      
+  def get_context(self, identifier_or_ontology):
+    if isinstance(identifier_or_ontology, URIRef):
+      identifier_or_ontology = str(identifier_or_ontology)
+      for onto, graph in self.context_graphs.items():
+        if identifier_or_ontology == onto.base_iri:
+          return graph
+      for onto, graph in self.context_graphs.items():
+        if identifier_or_ontology == onto.base_iri[:-1]:
+          return graph
+      raise ValueError
+    else:
+      return self.context_graphs[identifier_or_ontology]
+    
         
 class TripleLiteRDFlibGraph(rdflib.Graph):
   def query_owlready(self, query, *args, **kargs):
@@ -191,3 +211,7 @@ class TripleLiteRDFlibGraph(rdflib.Graph):
         o = str(o)
       o = from_literal(o, d)
     return o
+
+  def get_context(self, onto): return self.store.get_context(onto)
+
+  

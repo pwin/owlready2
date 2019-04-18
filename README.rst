@@ -337,6 +337,7 @@ version 2 - 0.16
 * search(sublclass_of = xxx) now returns xxx itself in the results
 * Support "with long_ontology_name as onto" syntax
 * In UMLS import, add optional parameters for preventing extraction of attributes, relations, etc
+* Support SPARQL INSERT queries
 * Bugfixes:
   - Fix 'Cannot release un-acquired lock' error when reasoning on inconsistent ontologies inside a 'with' statement
   - Fix bug when loading a property that refers to another property from a quadstore stored on disk
