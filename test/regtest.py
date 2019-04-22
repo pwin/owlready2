@@ -4817,6 +4817,17 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert set(world.search(comment = "COMMENT", _case_sensitive = False)) == set([c1, c2, c3])
     assert set(world.search(comment = "comment", _case_sensitive = False)) == set([c1, c2, c3])
     
+  def test_search_18(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    l = world.search(type = n.Pizza) | world.search(type = n.Tomato)
+    assert set(l) == { n.ma_pizza, n.ma_tomate }
+    
+    l = world.search(has_topping = world.search(type = n.Cheese) | world.search(type = n.Tomato))
+    assert set(l) == { n.ma_pizza }
+     
+    
     
   def test_rdflib_1(self):
     world = self.new_world()

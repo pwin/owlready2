@@ -1675,7 +1675,7 @@ UNION ALL SELECT objs.s FROM objs, %s WHERE objs.o=%s.x AND objs.p=%s)
           self.except_conditions.append("quads.s = candidates.s AND quads.p = ?")
           self.except_params    .append(except_p)
           
-  def sql_components(self):
+  def sql_components(self, last_request = True):
     transits   = self.transits   + [x for search in self.nested_searchs for x in search.transits]
     tables     = self.tables     + [x for search in self.nested_searchs for x in search.tables]
     conditions = self.conditions + [x for search in self.nested_searchs for x in search.conditions]
@@ -1744,10 +1744,13 @@ class _UnionSearchList(FirstList, _SearchMixin, _LazyListMixin):
     self.searches = searches
     
     
-  def sql_components(self):
-    transits_sqls_params = [s.sql_components() for s in self.searches]
-    sql = "SELECT DISTINCT * AS x FROM (\n%s\n)" % "\nUNION ALL\n".join(sql2 for (transits2, sql2, params2) in transits_sqls_params)
-    
+  def sql_components(self, last_request = True):
+    transits_sqls_params = [s.sql_components(False) for s in self.searches]
+    if last_request:
+      sql = "SELECT DISTINCT * FROM (\n%s\n)" % "\nUNION ALL\n".join(sql2 for (transits2, sql2, params2) in transits_sqls_params)
+    else:
+      sql = "SELECT DISTINCT * AS x FROM (\n%s\n)" % "\nUNION ALL\n".join(sql2 for (transits2, sql2, params2) in transits_sqls_params)
+      
     params   = []
     transits = []
     for (transits2, sql2, params2) in transits_sqls_params:
