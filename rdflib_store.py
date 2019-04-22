@@ -65,7 +65,7 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
           elif isinstance(o.value, (int, float)): o = o.value
           else:                                   o = str(o)
         else:
-          d = ""
+          d = 0
           o = str(o)
       else:
         d = "@%s" % o.language
@@ -89,15 +89,14 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
   
   def add(self, xxx_todo_changeme, context, quoted = False):
     s,p,o,d = self._rdflib_2_owlready(xxx_todo_changeme)
-
-    print(context)
+    
     if isinstance(context.triplelite, owlready2.triplelite.SubGraph):
       triplelite = context.triplelite
     else:
       l = owlready2.namespace.CURRENT_NAMESPACES.get()
       if not l: raise ValueError("Cannot add triples to a graph ouside a 'with' block. Please start a 'with' block to indicate in which ontology the new triple is added.")
       triplelite = l[-1].ontology.graph
-      
+
     if d is None:
       triplelite._add_obj_triple_raw_spo(s,p,o)
     else:

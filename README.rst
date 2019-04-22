@@ -341,7 +341,7 @@ version 2 - 0.16
 * Bugfixes:
   - Fix 'Cannot release un-acquired lock' error when reasoning on inconsistent ontologies inside a 'with' statement
   - Fix bug when loading a property that refers to another property from a quadstore stored on disk
-  
+  - Fix RDF triple suppression with RDFlib when object is a datatype
 Links
 -----
 

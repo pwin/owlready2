@@ -5019,21 +5019,34 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
   def test_rdflib_8(self):
     world = self.new_world()
-    n = world.get_ontology("http://www.semanticweb.org/onto.owl")
+    o = world.get_ontology("http://www.semanticweb.org/onto.owl")
     g = world.as_rdflib_graph()
     g.bind("onto", "http://www.semanticweb.org/onto.owl#")
+
+    with o:
+      r = g.update("""
+      INSERT {
+      onto:C
+      <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+      <http://www.w3.org/2002/07/owl#Class> .
+      } WHERE {}""")
+
+    assert g.get_context(o) is g.get_context(rdflib.URIRef("http://www.semanticweb.org/onto.owl"))
+    assert g.get_context(o) is g.get_context(rdflib.URIRef("http://www.semanticweb.org/onto.owl#"))
     
-    r = g.update("""
-    CONSTRUCT {
-    onto:C
+    g2 = g.get_context(o)
+    r = g2.update("""
+    INSERT {
+    onto:D
     <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
     <http://www.w3.org/2002/07/owl#Class> .
     } WHERE {}""")
-
-    world.graph.dump()
+    
+    self.assert_triple(world._abbreviate("http://www.semanticweb.org/onto.owl#C"), rdf_type, owl_class, world = world)
+    self.assert_triple(world._abbreviate("http://www.semanticweb.org/onto.owl#D"), rdf_type, owl_class, world = world)
     
       
-  def test__refactor_1(self):
+  def test_refactor_1(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
@@ -5045,7 +5058,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert p.iri == "http://www.semanticweb.org/jiba/ontologies/2017/0/test#ma_pizza_2"
     assert world["http://www.semanticweb.org/jiba/ontologies/2017/0/test#ma_pizza_2"] is p
     
-  def test__refactor_2(self):
+  def test_refactor_2(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
@@ -5057,7 +5070,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert world["http://t/p"] is p
     assert n.get_namespace("http://t/").p is p
         
-  def test__refactor_3(self):
+  def test_refactor_3(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
@@ -5068,7 +5081,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     assert p.iri == "http://www.semanticweb.org/jiba/ontologies/2017/0/test#Pizza_2"
     assert world["http://www.semanticweb.org/jiba/ontologies/2017/0/test#Pizza_2"] is p
     
-  def test__refactor_4(self):
+  def test_refactor_4(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     
