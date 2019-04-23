@@ -4826,7 +4826,10 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
     l = world.search(has_topping = world.search(type = n.Cheese) | world.search(type = n.Tomato))
     assert set(l) == { n.ma_pizza }
-     
+    
+    l = world.search(has_topping = world.search(type = Or([n.Cheese, n.Tomato])))
+    assert set(l) == { n.ma_pizza }
+    
     
     
   def test_rdflib_1(self):

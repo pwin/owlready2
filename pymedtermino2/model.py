@@ -191,7 +191,7 @@ def _chain_mapper(mapper1, mapper2):
 def _create_from_cui_mapper(dest):
   def _from_cui_mapper(c, dest_storid = dest.storid):
     for (i,) in PYM.world.graph.execute(
-"""SELECT DISTINCT to3.o FROM objs to1, objs to2, objs to3
+"""SELECT to3.o FROM objs to1, objs to2, objs to3
 WHERE to1.s=? AND to1.p=?
 AND to2.s=to1.o AND to2.p=? AND to2.o=?
 AND to3.s=to1.o AND to3.p=?
@@ -206,7 +206,7 @@ AND to3.s=to1.o AND to3.p=?
   
 def _to_cui_mapper(c):
   for (i,) in PYM.world.graph.execute(
-"""SELECT DISTINCT tu2.o FROM objs t, objs tu1, objs tu2
+"""SELECT tu2.o FROM objs t, objs tu1, objs tu2
 WHERE t.s=? AND t.p=?
 AND tu1.s=t.o AND tu1.p=? AND tu1.o=?
 AND tu2.s=t.o AND tu2.p=?
@@ -220,12 +220,13 @@ AND tu2.s=t.o AND tu2.p=?
 def _create_cui_mapper(source, dest):
   def _cui_mapper(c, dest_storid = dest.storid):
     found = False
+
     for (i,) in PYM.world.graph.execute(
 """SELECT DISTINCT tm2.o FROM objs t, objs tm1, objs tm2, objs tt
 WHERE t.s=? AND t.p=?
 AND tm1.s=t.o AND tm1.p=? AND tm1.o=?
 AND tm2.s=t.o AND tm2.p=?
-AND tt.s=tm2.o AND tt.p=? AND tt.o=?
+AND tt.s=tm2.o AND tt.p=? AND unlikely(tt.o=?)
 """, (
   c.storid, rdfs_subclassof,
   owl_onproperty, PYM.mapped_to.storid,
@@ -235,25 +236,54 @@ AND tt.s=tm2.o AND tt.p=? AND tt.o=?
       yield c.namespace.world._get_by_storid(i)
       found = True
     if found: return
-    
-    for (i,) in PYM.world.graph.execute(
-"""SELECT DISTINCT to3.o FROM objs t, objs tu1, objs tu2, objs to1, objs to2, objs to3
+
+    cuis = [i for (i,) in PYM.world.graph.execute(
+"""SELECT tu2.o FROM objs t, objs tu1, objs tu2
 WHERE t.s=? AND t.p=?
 AND tu1.s=t.o AND tu1.p=? AND tu1.o=?
 AND tu2.s=t.o AND tu2.p=?
-AND to1.s=tu2.o AND to1.p=?
-AND to2.s=to1.o AND to2.p=? AND to2.o=?
-AND to3.s=to1.o AND to3.p=?
 """, (
   c.storid, rdfs_subclassof,
   owl_onproperty, PYM.unifieds.storid,
   SOME,
+  ))]
+    if cuis:
+      already = set()
+      for (i,) in PYM.world.graph.execute(
+"""SELECT to3.o FROM objs to1, objs to2, objs to3
+WHERE to1.s IN (%s) AND to1.p=?
+AND to2.s=to1.o AND to2.p=? AND to2.o=?
+AND to3.s=to1.o AND to3.p=?
+""" % (", ".join(str(cui) for cui in cuis)), (
   rdfs_subclassof,
   owl_onproperty, PYM.originals.storid,
   SOME,
   )):
-      if PYM.world._get_obj_triple_sp_o(i, PYM.terminology.storid) == dest_storid:
-        yield c.namespace.world._get_by_storid(i)
+        if i in already: continue
+        if PYM.world._get_obj_triple_sp_o(i, PYM.terminology.storid) == dest_storid:
+          already.add(i)
+          yield c.namespace.world._get_by_storid(i)
+          
+      
+## Single request but can be very slow!
+#     for (i,) in PYM.world.graph.execute(
+# """SELECT DISTINCT to3.o FROM objs t, objs tu1, objs tu2, objs to1, objs to2, objs to3
+# WHERE t.s=? AND t.p=?
+# AND tu1.s=t.o AND tu1.p=? AND unlikely(tu1.o=?)
+# AND tu2.s=t.o AND tu2.p=?
+# AND to1.s=tu2.o AND to1.p=?
+# AND to2.s=to1.o AND to2.p=? AND unlikely(to2.o=?)
+# AND to3.s=to1.o AND to3.p=?
+# """, (
+#   c.storid, rdfs_subclassof,
+#   owl_onproperty, PYM.unifieds.storid,
+#   SOME,
+#   rdfs_subclassof,
+#   owl_onproperty, PYM.originals.storid,
+#   SOME,
+#   )):
+#       if PYM.world._get_obj_triple_sp_o(i, PYM.terminology.storid) == dest_storid:
+#         yield c.namespace.world._get_by_storid(i)
   return _cui_mapper
 
 def _create_icd10_french_atih_2_icd10_mapper(dest):
