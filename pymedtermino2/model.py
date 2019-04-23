@@ -381,7 +381,7 @@ inherits from Python's :class:`set` the methods for computing intersection, unio
   #      if c.is_a(concept): return c
   
   def imply(self, other):
-    """returns true if all concepts in the OTHER set are descendants of (at least) one of the concept in this set."""
+    """returns true if all concepts in the OTHER set are descendants of (at least) one of the concepts in this set."""
     for cb in other:
       for ca in self:
         if issubclass(ca, cb): break

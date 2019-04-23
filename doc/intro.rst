@@ -14,6 +14,8 @@ Owlready2 can:
 
  - Re-classify instances automatically, using the HermiT reasoner.
 
+ - Import medical terminologies from UMLS (see :doc:`pymedtermino2`).
+
    
 If you need to "convert" formulas between Protégé, Owlready2 and/or Description Logics, the following cheat sheet may be of interest:
 

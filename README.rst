@@ -15,22 +15,24 @@ Owlready2 is a module for ontology-oriented programming in Python 3, including a
 
 Owlready2 can:
 
- - Import OWL 2.0 ontologies in NTriples, RDF/XML or OWL/XML format.
+ - Import OWL 2.0 ontologies in NTriples, RDF/XML or OWL/XML format
 
- - Export OWL 2.0 ontologies to NTriples or RDF/XML.
+ - Export OWL 2.0 ontologies to NTriples or RDF/XML
 
  - Manipulates ontology classes, instances and properties transparently,
-   as if they were normal Python objects.
+   as if they were normal Python objects
 
- - Add Python methods to ontology classes.
+ - Add Python methods to ontology classes
 
- - Perform automatic classification of classes and instances, using the HermiT reasoner.
+ - Perform automatic classification of classes and instances, using the HermiT reasoner
+
+ - Access to UMLS and medical terminology (using the integrated PyMedTermino2 submodule)
 
  - Tested up to 1 billion of RDF triples! (but can potentially support more)
 
- - In addition, the quadstore is compatible with the RDFlib Python module, which can be used to perform SPARQL queries.
-
- - Finally, Owlready2 can also be used as an ORM (Object-Relational mapper) or an object database.
+ - In addition, the quadstore is compatible with the RDFlib Python module, which can be used to perform SPARQL queries
+ 
+ - Finally, Owlready2 can also be used as an ORM (Object-Relational mapper) or an object database
   
 Owlready has been created by Jean-Baptiste Lamy at the LIMICS reseach lab.
 It is available under the GNU LGPL licence v3.
@@ -100,6 +102,28 @@ Perform reasoning, and classify instances and classes:
    >>> test_pizza.eat()
    Beurk! I'm vegetarian !
 
+Access to medical terminologies from UMLS:
+
+::
+
+  >>> from owlready2 import *
+  >>> from owlready2.pymedtermino2.umls import *
+  >>> default_world.set_backend(filename = "pym.sqlite3")
+  >>> import_umls("umls-2018AB-full.zip", terminologies = ["ICD10", "SNOMEDCT_US", "CUI"])
+  >>> default_world.save()
+  
+  >>> PYM = get_ontology("http://PYM/").load()
+  >>> ICD10       = PYM["ICD10"]
+  >>> SNOMEDCT_US = PYM["SNOMEDCT_US"]
+  
+  >>> SNOMEDCT_US[186675001]
+  SNOMEDCT_US["186675001"] # Viral pharyngoconjunctivitis
+  
+  >>> SNOMEDCT_US[186675001] >> ICD10   # Map to ICD10
+  Concepts([
+    ICD10["B30.9"] # Viral conjunctivitis, unspecified
+  ])
+  
 For more documentation, look at the doc/ directories in the source.
 
 Changelog
