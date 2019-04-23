@@ -104,7 +104,7 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
   
   locked = world.graph.has_write_lock()
   if locked: world.graph.release_write_lock() # Not needed during reasoning
-
+  
   try:
     if   isinstance(x, Ontology):  ontology = x
     elif CURRENT_NAMESPACES.get(): ontology = CURRENT_NAMESPACES.get()[-1].ontology
