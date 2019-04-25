@@ -3,17 +3,18 @@ from owlready2 import *
 
 """
 
-Random write: 12463.595507487718 objects/second
-Random read: 18397.111064617253 objects/second
+Random write: 12892.586777357414 objects/second
+Random read: 19158.756753497568 objects/second
 
 """
 
 tmp = "/home/jiba/tmp/tmp_bench.sqlite3" # Not in /tmp because in is stored in memory
 NB = 10000
 
-t = time.time()
 first_world = World(filename = tmp)
 onto = first_world.get_ontology("http://test.org/onto.owl")
+
+t = time.time()
 with onto:
   class Node(Thing): pass
   class next(ObjectProperty): pass
@@ -31,14 +32,14 @@ first_world.close()
 
 
 
-t = time.time()
 second_world = World(filename = tmp) # Force reloading -- Owlready has aggressive caching behaviour!
 onto = second_world.get_ontology("http://test.org/onto.owl").load()
+
+t = time.time()
 node = onto.node1
-while True:
+while node.next:
   label = node.label[0]
-  if not node.next: break
-  node = node.next[0]
+  node  = node.next [0]
 dt = time.time() - t
 print("Random read:", 1/dt*NB, "objects/second")
 

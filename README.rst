@@ -19,20 +19,19 @@ Owlready2 can:
 
  - Export OWL 2.0 ontologies to NTriples or RDF/XML
 
- - Manipulates ontology classes, instances and properties transparently,
-   as if they were normal Python objects
+ - Manipulates ontology classes, instances and properties transparently, as if they were normal Python objects
 
  - Add Python methods to ontology classes
 
- - Perform automatic classification of classes and instances, using the HermiT reasoner
+ - Perform automatic classification of classes and instances, using the HermiT or Pellet reasoner (included)
 
- - Access to UMLS and medical terminology (using the integrated PyMedTermino2 submodule)
+ - Load DBpedia or UMLS (for medical terminology, using the integrated PyMedTermino2 submodule)
 
  - Tested up to 1 billion of RDF triples! (but can potentially support more)
 
  - In addition, the quadstore is compatible with the RDFlib Python module, which can be used to perform SPARQL queries
  
- - Finally, Owlready2 can also be used as an ORM (Object-Relational mapper) or an object database
+ - Finally, Owlready2 can also be used as an ORM (Object-Relational mapper) -- as a graph/object database, it beats Neo4J, MongoDB, SQLObject and SQLAlchemy in terms of performances
   
 Owlready has been created by Jean-Baptiste Lamy at the LIMICS reseach lab.
 It is available under the GNU LGPL licence v3.
@@ -363,6 +362,7 @@ version 2 - 0.16
 * In UMLS import, add optional parameters for preventing extraction of attributes, relations, etc
 * Support SPARQL INSERT queries
 * Optimize Pymedtermino mapping
+* Doc for PyMedTermino2
 * Bugfixes:
   - Fix 'Cannot release un-acquired lock' error when reasoning on inconsistent ontologies inside a 'with' statement
   - Fix bug when loading a property that refers to another property from a quadstore stored on disk

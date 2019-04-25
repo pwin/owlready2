@@ -19,7 +19,7 @@
 
 VERSION = "0.16"
 
-JAVA_EXE   = "java"
+JAVA_EXE = "java"
 
 from owlready2.base            import *
 #_render_func = default_render_func
