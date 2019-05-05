@@ -692,7 +692,8 @@ class Ontology(Namespace, _GraphManager):
     if f.startswith("http:") or f.startswith("https:"):
       if  reload or (self.graph.get_last_update_time() == 0.0): # Never loaded
         if _LOG_LEVEL: print("* Owlready2 *     ...loading ontology %s from %s..." % (self.name, f), file = sys.stderr)
-        fileobj = urllib.request.urlopen(f)
+        try:     fileobj = urllib.request.urlopen(f)
+        except:  raise OwlReadyOntologyParsingError("Cannot download '%s'!" % f)
         try:     new_base_iri = self.graph.parse(fileobj, default_base = self.base_iri, **args)
         finally: fileobj.close()
     elif fileobj:

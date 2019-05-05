@@ -127,10 +127,10 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
     try:
       output = subprocess.check_output(command, stderr = subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-      if (e.returncode == 1) and (b"Inconsistent ontology" in e.output):
+      if (e.returncode == 1) and (b"Inconsistent ontology" in (e.output or b"")):
         raise OwlReadyInconsistentOntologyError()
       else:
-        raise OwlReadyJavaError("Java error message is:\n%s" % e.stderr.decode("utf8"))
+        raise OwlReadyJavaError("Java error message is:\n%s" % (e.stderr or b"").decode("utf8"))
     
     output = output.decode("utf8").replace("\r","")
     if debug:
@@ -233,10 +233,10 @@ def sync_reasoner_pellet(x = None, infer_property_values = False, infer_data_pro
     try:
       output = subprocess.run(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE, check = True).stdout
     except subprocess.CalledProcessError as e:
-      if (e.returncode == 1) and (b"ERROR: Ontology is inconsistent" in e.stderr): # XXX
+      if (e.returncode == 1) and (b"ERROR: Ontology is inconsistent" in (e.stderr or b"")): # XXX
         raise OwlReadyInconsistentOntologyError()
       else:
-        raise OwlReadyJavaError("Java error message is:\n%s" % e.stderr.decode("utf8"))
+        raise OwlReadyJavaError("Java error message is:\n%s" % (e.stderr or b"").decode("utf8"))
       
     output = output.decode("utf8").replace("\r","")
     if debug:

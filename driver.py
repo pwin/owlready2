@@ -212,7 +212,7 @@ class BaseSubGraph(BaseGraph):
       raise ValueError("Unsupported format %s." % format)
     
     return onto_base_iri
- 
+  
   def save(self, f, format = "rdfxml", commit = False, **kargs):
     if commit: self.parent.commit()
     _save(f, format, self, **kargs)

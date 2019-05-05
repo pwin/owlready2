@@ -48,7 +48,6 @@ public class dbtest_neo4j {
         node = tx.run("MATCH (x:Node)-[:NEXT]->(y:Node) WHERE id(x)=" + node + " RETURN id(y)").single().get(0);
       }
       catch (org.neo4j.driver.v1.exceptions.NoSuchRecordException e) { break; }
-      
     }
     tx.success();
     tx.close();
