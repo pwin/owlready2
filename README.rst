@@ -368,6 +368,12 @@ version 2 - 0.16
   - Fix bug when loading a property that refers to another property from a quadstore stored on disk
   - Fix RDF triple suppression with RDFlib when object is a datatype
 
+version 2 - 0.17
+****************
+
+* Bugfixes:
+  - Fix PyMedTermino2 installation
+
     
 Links
 -----

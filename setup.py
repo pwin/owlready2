@@ -65,7 +65,7 @@ setuptools.setup(
     ],
   
   package_dir  = {"owlready2" : "."},
-  packages     = ["owlready2"],
+  packages     = ["owlready2", "owlready2.pymedtermino2"],
   package_data = {"owlready2" : ["owlready_ontology.owl",
                                  "hermit/*.*", "hermit/org/semanticweb/HermiT/*", "hermit/org/semanticweb/HermiT/cli/*", "hermit/org/semanticweb/HermiT/hierarchy/*",
                                  "pellet/*.*", "pellet/org/mindswap/pellet/taxonomy/printer/*",
