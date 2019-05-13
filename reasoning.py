@@ -422,8 +422,7 @@ def _apply_inferred_data_relations(world, ontology, debug, relations):
     a = world._entities.get(a_storid)
     if not a is None:
       if debug:
-        b = world._entities.get(b_storid)
-        if not b is None: print("* Owlready * Adding relation %s %s %s" % (a, prop.name, value))
+        print("* Owlready * Adding relation %s %s %s" % (a, prop.name, value))
       if prop._python_name in a.__dict__:
         delattr(a, prop._python_name)
         

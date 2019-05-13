@@ -374,6 +374,7 @@ version 2 - 0.17
 * SWRL rule support
 * Bugfixes:
   - Fix PyMedTermino2 installation
+  - Fix data property value inferrence with debug = 1
 
     
 Links
