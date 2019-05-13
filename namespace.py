@@ -257,6 +257,18 @@ class _GraphManager(object):
         if isinstance(i, Thing):
           yield i
           
+  def variables(self):
+    for s in self._get_obj_triples_po_s(rdf_type, swrl_variable):
+      if s < 0: i = self._parse_bnode(s)
+      else:     i = self.world._get_by_storid(s)
+      yield i
+      
+  def rules(self):
+    for s in self._get_obj_triples_po_s(rdf_type, swrl_imp):
+      if s < 0: i = self._parse_bnode(s)
+      else:     i = self.world._get_by_storid(s)
+      yield i
+      
   def disjoint_classes(self):
     for s in self._get_obj_triples_po_s(rdf_type, owl_alldisjointclasses):
       yield self._parse_bnode(s)

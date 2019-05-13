@@ -954,29 +954,9 @@ class IndividualValueList(CallbackListWithLanguage):
     self._obj  = obj
     self._Prop = Prop
     
-  # def transitive(self):
-  #   n = self._obj.namespace
-  #   if self._Prop.inverse_property:
-  #     for o in n.world._get_obj_triples_transitive_sp_indirect(self._obj.storid, [(self._Prop.storid, self._Prop.inverse_property.storid)]):
-  #       yield n.ontology._to_python(o)
-  #   else:
-  #     for o in n.world._get_obj_triples_transitive_sp(self._obj.storid, self._Prop.storid):
-  #       yield n.ontology._to_python(o)
-        
-  # def transitive_symmetric(self):
-  #   n = self._obj.namespace
-  #   for o in n.world._get_obj_triples_transitive_sym(self._obj.storid, self._Prop.storid):
-  #     yield n.ontology._to_python(o)
-      
-  # def symmetric(self):
-  #   yield from self
-  #   n = self._obj.namespace
-  #   for o in n.world._get_obj_triples_po_s(self._Prop.storid, self._obj.storid):
-  #     yield n.ontology._to_python(o)
-      
   def indirect(self):
     return self._Prop._get_indirect_values_for_individual(self._obj)
-
+  
   def _callback(self, obj, old):
     old = set(old)
     new = set(self)

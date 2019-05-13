@@ -5059,6 +5059,37 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     self.assert_triple(world._abbreviate("http://www.semanticweb.org/onto.owl#C"), rdf_type, owl_class, world = world)
     self.assert_triple(world._abbreviate("http://www.semanticweb.org/onto.owl#D"), rdf_type, owl_class, world = world)
     
+  def test_rdflib_9(self):
+    world = self.new_world()
+    o = world.get_ontology("http://www.semanticweb.org/onto.owl")
+    g = world.as_rdflib_graph()
+    g.bind("onto", "http://www.semanticweb.org/onto.owl#")
+
+    with o:
+      r = g.update("""
+      DELETE {
+      onto:ma_pizza
+      <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+      onto:Pizza .
+      } WHERE {}""")
+      
+    self.assert_not_triple(world._abbreviate("http://www.semanticweb.org/onto.owl#ma_pizza"), rdf_type, world._abbreviate("http://www.semanticweb.org/onto.owl#Pizza"), world = world)
+    
+  def test_rdflib_10(self):
+    world = self.new_world()
+    o = world.get_ontology("http://www.semanticweb.org/onto.owl")
+    g = world.as_rdflib_graph()
+    g.bind("onto", "http://www.semanticweb.org/onto.owl#")
+
+    r = g.update("""
+    DELETE {
+    onto:ma_pizza
+    <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+    onto:Pizza .
+    } WHERE {}""")
+    
+    self.assert_not_triple(world._abbreviate("http://www.semanticweb.org/onto.owl#ma_pizza"), rdf_type, world._abbreviate("http://www.semanticweb.org/onto.owl#Pizza"), world = world)
+    
       
   def test_refactor_1(self):
     world = self.new_world()
@@ -5913,6 +5944,54 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     assert set(world.search(label = FTS("heart", "en"))) == { c1 }
 
     
+  def test_swrl_1(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/t.owl#")
+    with onto:
+      class Person(Thing): pass
+      class size  (Person >> float, FunctionalProperty): pass
+      class weight(Person >> float, FunctionalProperty): pass
+      
+    rules = [
+      """Person(?p), size(?p, ?s) -> weight(?p, ?s)""",
+      """Person(?p), Person(?q), size(?p, ?s), SameAs(?p, ?s) -> size(?q, ?s)""",
+      """Person(?p), size(?p, ?s), add(?r, ?s, 2) -> weight(?q, ?r)""",
+      """Person(?p), size(?p, ?s), add(?r, ?s, 2.0) -> weight(?q, ?r)""",
+      """Person(?p), size(?p, ?s), add(?r, ?s, ?s) -> weight(?q, ?r)""",
+      """Person(?p), size(?p, ?s), add(?r, ?s, ?s) -> weight(?q, 'abc')""",
+      """Person(?p), size(?p, ?s), int(?s) -> weight(?q, 'abc')""",
+      """Person(?p), size(?p, ?s), decimal(?s) -> weight(?q, 'abc')""",
+    ]
+    for rule in rules:
+      with onto:
+        imp = Imp().set_as_rule(rule)
+        #print(rule)
+        #print(imp)
+        #print()
+        assert rule == str(imp)
+        
+    with onto:
+      imp = Imp().set_as_rule("""http://test.org/t.owl#Person(?p), http://test.org/t.owl#size(?p, ?s) -> http://test.org/t.owl#weight(?p, ?s)""")
+      assert str(imp) == """Person(?p), size(?p, ?s) -> weight(?p, ?s)"""
+      
+  def test_swrl_2(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/t.owl#")
+    with onto:
+      class Person(Thing): pass
+      class size  (Person >> float, FunctionalProperty): pass
+      class weight(Person >> float, FunctionalProperty): pass
+      class imc   (Person >> float, FunctionalProperty): pass
+      Imp().set_as_rule("""Person(?x), weight(?x, ?p), size(?x, ?t), divide(?i, ?p, ?tt), multiply(?tt, ?t, ?t) -> imc(?x, ?i)""")
+
+      p1 = Person(size = 2.0, weight = 100.0)
+
+    onto.save("/tmp/t.owl")
+    sync_reasoner_pellet(world, infer_property_values = True, infer_data_property_values = True, debug = 0)
+    
+    assert p1.imc == 25.0
+    
+      
 class Paper(BaseTest, unittest.TestCase):
   def test_reasoning_paper_ic2017(self):
     world = self.new_world()

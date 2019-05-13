@@ -105,6 +105,7 @@ owlready2.class_construct.ThingClass  = ThingClass
 owlready2.class_construct.EntityClass = EntityClass
 del owlready2
 
+from owlready2.rule            import *
 
 LOADING.__exit__()
 

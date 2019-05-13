@@ -226,6 +226,26 @@ owlready_class_property_type = _universal_abbrev("http://www.lesfleursdunormal.f
 owlready_defined_class       = _universal_abbrev("http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#defined_class")
 rdf_property                 = _universal_abbrev("http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")
 
+swrl_variable                = _universal_abbrev("http://www.w3.org/2003/11/swrl#Variable")
+swrl_imp                     = _universal_abbrev("http://www.w3.org/2003/11/swrl#Imp")
+swrl_body                    = _universal_abbrev("http://www.w3.org/2003/11/swrl#body")
+swrl_head                    = _universal_abbrev("http://www.w3.org/2003/11/swrl#head")
+swrl_class_atom              = _universal_abbrev("http://www.w3.org/2003/11/swrl#ClassAtom")
+swrl_class_predicate         = _universal_abbrev("http://www.w3.org/2003/11/swrl#classPredicate")
+swrl_dataprop_atom           = _universal_abbrev("http://www.w3.org/2003/11/swrl#DatavaluedPropertyAtom")
+swrl_objprop_atom            = _universal_abbrev("http://www.w3.org/2003/11/swrl#IndividualPropertyAtom")
+swrl_property_predicate      = _universal_abbrev("http://www.w3.org/2003/11/swrl#propertyPredicate")
+swrl_builtin_atom            = _universal_abbrev("http://www.w3.org/2003/11/swrl#BuiltinAtom")
+swrl_builtin                 = _universal_abbrev("http://www.w3.org/2003/11/swrl#builtin")
+swrl_datarange_atom          = _universal_abbrev("http://www.w3.org/2003/11/swrl#DataRangeAtom")
+swrl_datarange               = _universal_abbrev("http://www.w3.org/2003/11/swrl#dataRange")
+swrl_argument1               = _universal_abbrev("http://www.w3.org/2003/11/swrl#argument1")
+swrl_argument2               = _universal_abbrev("http://www.w3.org/2003/11/swrl#argument2")
+swrl_arguments               = _universal_abbrev("http://www.w3.org/2003/11/swrl#arguments")
+swrl_equivalentindividual    = _universal_abbrev("http://www.w3.org/2003/11/swrl#SameIndividualAtom")
+swrl_differentfrom           = _universal_abbrev("http://www.w3.org/2003/11/swrl#DifferentIndividualAtom")
+#swrl_                    = _universal_abbrev("http://www.w3.org/2003/11/swrl#")
+
 
 issubclass_python = issubclass
 
