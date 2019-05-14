@@ -42,6 +42,7 @@ Table of content
    annotations.rst
    namespace.rst
    world.rst
+   rule.rst
    pymedtermino2.rst
    porting1.rst
    contact.rst

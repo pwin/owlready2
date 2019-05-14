@@ -28,7 +28,7 @@ The 'with' statement can also be used to provide the ontology (or namespace):
    >>> onto = get_ontology("http://test.org/onto.owl")
    
    >>> with onto:
-   >>>     class Drug(Thing):
+   ...     class Drug(Thing):
    ...         pass
 
 
