@@ -643,7 +643,7 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index
 
   previous_parser = None
   
-  if umls_zip_filename.endswith("/"):
+  if os.path.isdir(umls_zip_filename):
     print("Importing UMLS from %s..." % umls_zip_filename)
     inner_filenames = sorted(os.listdir(umls_zip_filename))
     for table_name, parser in parsers:
