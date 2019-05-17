@@ -212,7 +212,7 @@ class _LazyListMixin(list):
   def sort(self, key = None, reverse = False):
     list.__init__(self, self._populate())
     self.__class__ = self._PopulatedClass
-    return self.sort(key, reverse)
+    return self.sort(key = key, reverse = reverse)
     
   def append(self, e):
     list.__init__(self, self._populate())
