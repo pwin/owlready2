@@ -376,6 +376,8 @@ version 2 - 0.17
   - Fix PyMedTermino2 installation
   - Fix data property value inferrence with debug = 1
   - Fix sort() in LazyList (thanks fiveop!)
+  - Fix World.get() and add World.get_if_loaded()
+
     
 Links
 -----

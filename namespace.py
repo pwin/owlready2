@@ -471,7 +471,12 @@ class World(_GraphManager):
     return Namespace(self, base_iri, name or base_iri[:-1].rsplit("/", 1)[-1])
     
   
-  def get(self, iri):
+  def get(self, iri, default = None):
+    storid = self._abbreviate(iri, False)
+    if storid is None: return default
+    return self._get_by_storid(storid, iri)
+  
+  def get_if_loaded(self, iri):
     return self._entities.get(self._abbreviate(iri, False))
   
   def __getitem__(self, iri):
