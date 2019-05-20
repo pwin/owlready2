@@ -377,7 +377,7 @@ version 2 - 0.17
   - Fix data property value inferrence with debug = 1
   - Fix sort() in LazyList (thanks fiveop!)
   - Fix World.get() and add World.get_if_loaded()
-
+  - Add appropriate error message when importing UMLS with Python 3.6
     
 Links
 -----

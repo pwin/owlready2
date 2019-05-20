@@ -666,7 +666,10 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index
         if filename.endswith("-meta.nlm"):
           print("Importing UMLS from Zip file %s..." % (filename))
           
-          with zipfile.ZipFile(umls_zip.open(filename), "r") as umls_inner_zip:
+          fp = umls_zip.open(filename)
+          if not fp.seekable():
+            raise Exception("PyMedTermino2 import require Python version >= 3.7 (but after import, the quadstore can be used by Python 3.6)")
+          with zipfile.ZipFile(fp, "r") as umls_inner_zip:
             inner_filenames = sorted(umls_inner_zip.namelist())
             for table_name, parser in parsers:
               for inner_filename in inner_filenames:

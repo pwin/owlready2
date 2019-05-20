@@ -42,7 +42,8 @@ If you use PyMedTermino in scientific works, **please cite the following article
 Installation
 ************
 
-#. Install Python 3 and Owlready2 (if not already done).
+#. Install Python 3.7 and Owlready2 (if not already done).
+   **PyMedTermino2 requires Python >= 3.7 for importing UMLS** (However, after importing the data in the quadstore, it can be used with Python 3.6 if you really need to).
 
 #. After registration with NLM, download UMLS data (Warning: some restriction may apply depending on country; see UMLS licence and its SNOMED CT appendix):
 
