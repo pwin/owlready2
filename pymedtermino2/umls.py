@@ -70,7 +70,7 @@ def parse_mrrank(PYM, terminologies, langs, importer, f, remnant = ""):
     except: return line
     
     if (importer.terminologies and (not terminology in importer.terminologies) and (terminology != "SRC")): continue
-    if suppress in "OEY": continue
+    if suppress in importer.remove_suppressed: continue
     
     importer.tty_2_priority[terminology, tty] = int(rank)
   
@@ -91,7 +91,7 @@ def parse_mrconso(PYM, terminologies, langs, importer, f, remnant = ""):
     if (importer.terminologies and (not terminology in importer.terminologies)):
       if not ((terminology == "SRC") and ((orig_code == "SRC") or (orig_code in importer.terminologies))):
         continue
-      
+    
     if   orig_code == "NOCODE":
       orig_code = importer.next_arbitrary_code
       importer.next_arbitrary_code += 1
@@ -104,7 +104,7 @@ def parse_mrconso(PYM, terminologies, langs, importer, f, remnant = ""):
     
     importer.aui_2_orig[aui] = orig
     
-    if suppress in "OEY": continue
+    if suppress in importer.remove_suppressed: continue
     
     if not terminology in importer.created_terminologies:
       importer.created_terminologies.add(terminology)
@@ -181,7 +181,7 @@ def parse_mrrel(PYM, terminologies, langs, importer, f, remnant_previous = ""):
     cui1, aui1, stype1, rel, cui2, aui2, stype2, rela, rui, srui, \
       terminology, sl, group_i, direct, suppress, cvf, _dropit = current
     
-    if suppress in "OEY":
+    if suppress in importer.remove_suppressed:
       previous = current
       continue
     
@@ -224,7 +224,7 @@ def parse_mrsat(PYM, terminologies, langs, importer, f, remnant_previous = ""):
     if not current[0]: current = [current[i] or previous[i] for i in range(len(previous))]
     cui, lui, sui, metaui, stype, code, atui, satui, atn, terminology, atv, suppress, cvf, _dropit = current
     
-    if suppress in "OEY":
+    if suppress in importer.remove_suppressed:
       previous = current
       continue
     if importer.terminologies and (not terminology in importer.terminologies):
@@ -254,7 +254,7 @@ def parse_mrdef(PYM, terminologies, langs, importer, f, remnant = ""):
     except: return line
     
     if (importer.terminologies and (not terminology in importer.terminologies)): continue
-    if suppress in "OEY": continue
+    if suppress in importer.remove_suppressed: continue
 
     orig = importer.aui_2_orig[aui]
     importer.datas.append((orig, PYM.definitions.storid, defin, 0))
@@ -479,7 +479,7 @@ def finalize(PYM, importer):
     del importer.orig_2_cuis
     
 class _Importer(object):
-  def __init__(self, PYM, terminologies, langs, extract_groups, extract_attributes, extract_relations, extract_definitions):
+  def __init__(self, PYM, terminologies, langs, extract_groups, extract_attributes, extract_relations, extract_definitions, remove_suppressed):
     self.PYM          = PYM
     self.terminologies = terminologies
     self.langs         = langs
@@ -487,6 +487,7 @@ class _Importer(object):
     self.extract_attributes  = extract_attributes
     self.extract_relations   = extract_relations
     self.extract_definitions = extract_definitions
+    self.remove_suppressed   = remove_suppressed
     
     self.tty_2_priority = defaultdict(int)
     self.created_terminologies = set()
@@ -615,7 +616,7 @@ class _Importer(object):
     return bnode0
     
     
-def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index = True, extract_groups = True, extract_attributes = True, extract_relations = True, extract_definitions = True):
+def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index = True, extract_groups = True, extract_attributes = True, extract_relations = True, extract_definitions = True, remove_suppressed = "OEY"):
   if terminologies:
     terminologies = set(terminologies)
   if langs:
@@ -626,7 +627,7 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index
   
   default_world.graph.set_indexed(False)
   
-  importer = _Importer(PYM, terminologies, langs, extract_groups, extract_attributes, extract_relations, extract_definitions)
+  importer = _Importer(PYM, terminologies, langs, extract_groups, extract_attributes, extract_relations, extract_definitions, remove_suppressed)
   
   parsers = [
     ("MRRANK",  parse_mrrank),
@@ -640,7 +641,7 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index
   remnants = defaultdict(str)
   
   remnant_mrconso = remnant_mrrel = ""
-
+  
   previous_parser = None
   
   if os.path.isdir(umls_zip_filename):

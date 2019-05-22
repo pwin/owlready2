@@ -137,7 +137,7 @@ class Graph(BaseMainGraph):
       self.prop_fts         = set()
       
       self.execute("""CREATE TABLE store (version INTEGER, current_blank INTEGER, current_resource INTEGER)""")
-      self.execute("""INSERT INTO store VALUES (7, 0, 300)""")
+      self.execute("""INSERT INTO store VALUES (8, 0, 300)""")
       self.execute("""CREATE TABLE objs (c INTEGER, s INTEGER, p INTEGER, o INTEGER)""")
       self.execute("""CREATE TABLE datas (c INTEGER, s INTEGER, p INTEGER, o BLOB, d INTEGER)""")
       #self.execute("""CREATE VIEW quads (c,s,p,o,d) AS SELECT c,s,p,o,NULL FROM objs UNION ALL SELECT c,s,p,o,d FROM datas""")
@@ -335,6 +335,33 @@ class Graph(BaseMainGraph):
         for prop_storid in prop_fts2: self.enable_full_text_search (prop_storid)
         
         self.execute("""UPDATE store SET version=7""")
+        self.db.commit()
+        
+      if version == 7:
+        print("* Owlready2 * Converting quadstore to internal format 8...", file = sys.stderr)
+        
+        import owlready2.base
+        self.db.executemany("""INSERT INTO resources VALUES (?,?)""", [
+          (owlready2.base.swrl_variable, "http://www.w3.org/2003/11/swrl#Variable"),
+          (owlready2.base.swrl_imp,                  "http://www.w3.org/2003/11/swrl#Imp"),
+          (owlready2.base.swrl_body,                 "http://www.w3.org/2003/11/swrl#body"),
+          (owlready2.base.swrl_head,                 "http://www.w3.org/2003/11/swrl#head"),
+          (owlready2.base.swrl_class_atom,           "http://www.w3.org/2003/11/swrl#ClassAtom"),
+          (owlready2.base.swrl_class_predicate,      "http://www.w3.org/2003/11/swrl#classPredicate"),
+          (owlready2.base.swrl_dataprop_atom,        "http://www.w3.org/2003/11/swrl#DatavaluedPropertyAtom"),
+          (owlready2.base.swrl_objprop_atom,         "http://www.w3.org/2003/11/swrl#IndividualPropertyAtom"),
+          (owlready2.base.swrl_property_predicate,   "http://www.w3.org/2003/11/swrl#propertyPredicate"),
+          (owlready2.base.swrl_builtin_atom,         "http://www.w3.org/2003/11/swrl#BuiltinAtom"),
+          (owlready2.base.swrl_builtin,              "http://www.w3.org/2003/11/swrl#builtin"),
+          (owlready2.base.swrl_datarange_atom,       "http://www.w3.org/2003/11/swrl#DataRangeAtom"),
+          (owlready2.base.swrl_datarange,            "http://www.w3.org/2003/11/swrl#dataRange"),
+          (owlready2.base.swrl_argument1,            "http://www.w3.org/2003/11/swrl#argument1"),
+          (owlready2.base.swrl_argument2,            "http://www.w3.org/2003/11/swrl#argument2"),
+          (owlready2.base.swrl_arguments,            "http://www.w3.org/2003/11/swrl#arguments"),
+          (owlready2.base.swrl_equivalentindividual, "http://www.w3.org/2003/11/swrl#SameIndividualAtom"),
+          (owlready2.base.swrl_differentfrom,        "http://www.w3.org/2003/11/swrl#DifferentIndividualAtom"),
+        ])
+        self.execute("""UPDATE store SET version=8""")
         self.db.commit()
         
         

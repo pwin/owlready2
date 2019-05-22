@@ -694,6 +694,13 @@ class Ontology(Namespace, _GraphManager):
       self.loaded = True
       if self.graph: self.graph.set_last_update_time(time.time())
       
+  def _destroy_cached_entities(self):
+    _entities = self.world._entities
+    for i, cached in enumerate(_cache):
+      if (not cached is None) and (cached.namespace.ontology is self):
+        if cached.storid in _entities: del _entities[cached.storid]
+        _cache[i] = None
+        
   def load(self, only_local = False, fileobj = None, reload = False, reload_if_newer = False, **args):
     if self.loaded and (not reload): return self
     if self.base_iri == "http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#":
@@ -704,6 +711,8 @@ class Ontology(Namespace, _GraphManager):
       f = ""
       
     self.world.graph.acquire_write_lock()
+    
+    if reload: self._destroy_cached_entities()
     
     new_base_iri = None
     if f.startswith("http:") or f.startswith("https:"):

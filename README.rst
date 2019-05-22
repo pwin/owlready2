@@ -372,12 +372,15 @@ version 2 - 0.17
 ****************
 
 * SWRL rule support
+* Allows importing UMLS suppressed terms
+* Uncache entities when relaoding an ontology
 * Bugfixes:
   - Fix PyMedTermino2 installation
   - Fix data property value inferrence with debug = 1
   - Fix sort() in LazyList (thanks fiveop!)
   - Fix World.get() and add World.get_if_loaded()
   - Add appropriate error message when importing UMLS with Python 3.6
+
     
 Links
 -----

@@ -65,6 +65,8 @@ were:
  - ["ICD10", "SNOMEDCT_US", "CUI"] are the terminologies imported (valid codes are UMLS code, plus "CUI" for CUI).
    If the 'terminologies' parameter is missing, all terminologies are imported.
 
+To import also suppressed/deprecated concept, add the following parameter: remove_suppressed = "".
+
 The importation can take several minutes or hours, depending on the number of terminologies imported.
 
 4. Import French ICD10 (optional):

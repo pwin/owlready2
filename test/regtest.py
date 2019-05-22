@@ -704,6 +704,16 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_triple(o.storid, comment.storid, "TEST", w._abbreviate("http://www.w3.org/2001/XMLSchema#string"), world = w)
     self.assert_triple(w._abbreviate("http://test.org/onto"), comment.storid, "TEST", w._abbreviate("http://www.w3.org/2001/XMLSchema#string"), world = w)
     
+  def test_ontology_30(self):
+    w = self.new_world()
+    
+    o = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    o.ma_pizza.has_topping.append(o.Tomato())
+
+    print(id(o.ma_pizza), o.ma_pizza.has_topping)
+    
+    o = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load(reload = True)
+    print(id(o.ma_pizza), o.ma_pizza.has_topping)
     
   def test_class_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
