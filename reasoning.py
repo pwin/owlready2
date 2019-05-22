@@ -79,20 +79,25 @@ _TYPES = { FunctionalProperty, InverseFunctionalProperty, TransitiveProperty, Sy
 
 
 def _keep_most_specific(s, consider_equivalence = True):
-  if consider_equivalence:
-    testsubclass = issubclass
-  else:
-    testsubclass = issubclass_python
   r = set()
-  for i in s:
-    if isinstance(i, ClassConstruct):
-      r.add(i)
-    else:
-      for j in s:
-        if (i is j) or isinstance(j, ClassConstruct): continue
-        if testsubclass(j, i): break
+  if consider_equivalence:
+    for i in s:
+      if isinstance(i, ClassConstruct): r.add(i)
       else:
-        r.add(i)
+        for j in s:
+          if (i is j) or isinstance(j, ClassConstruct): continue
+          if issubclass(j, i) and ((i.storid < j.storid) or (issubclass_python(j, i))): break
+        else:
+          r.add(i)
+  else:
+    for i in s:
+      if isinstance(i, ClassConstruct): r.add(i)
+      else:
+        for j in s:
+          if (i is j) or isinstance(j, ClassConstruct): continue
+          if issubclass_python(j, i): break
+        else:
+          r.add(i)
   return r
 
 
@@ -384,7 +389,7 @@ def _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, en
       for added   in new - old: new_is_a.append(added)
       
       child.is_a.reinit(new_is_a)
-            
+      
       for child_eq in child.equivalent_to.indirect():
         if isinstance(child_eq, ThingClass):
           if debug: print("* Owlready * Reparenting %s (since equivalent):" % child_eq, old, "=>", new, file = sys.stderr)

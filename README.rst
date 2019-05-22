@@ -380,7 +380,8 @@ version 2 - 0.17
   - Fix sort() in LazyList (thanks fiveop!)
   - Fix World.get() and add World.get_if_loaded()
   - Add appropriate error message when importing UMLS with Python 3.6
-
+  - Fix individuals belonging to multiple, equivalent, classes after reasoning
+    
     
 Links
 -----

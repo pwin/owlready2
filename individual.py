@@ -325,6 +325,8 @@ class FusionClass(ThingClass):
   
   _CACHES         = {}
   _FUSION_CLASSES = {}
+
+  def __repr__(self): return "<FusionClass %s>" % ", ".join(repr(c) for c in self.__bases__)
   
   @staticmethod
   def _get_fusion_class(Classes0):
@@ -342,5 +344,5 @@ class FusionClass(ThingClass):
     name = "_AND_".join(Class.__name__ for Class in Classes)
     with anonymous: # Force triple insertion into anonymous
       fusion_class = FusionClass._FUSION_CLASSES[Classes] = FusionClass._CACHES[key] = FusionClass(name, Classes, { "namespace" : anonymous })
+    
     return fusion_class
-

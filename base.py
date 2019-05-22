@@ -244,7 +244,6 @@ swrl_argument2               = _universal_abbrev("http://www.w3.org/2003/11/swrl
 swrl_arguments               = _universal_abbrev("http://www.w3.org/2003/11/swrl#arguments")
 swrl_equivalentindividual    = _universal_abbrev("http://www.w3.org/2003/11/swrl#SameIndividualAtom")
 swrl_differentfrom           = _universal_abbrev("http://www.w3.org/2003/11/swrl#DifferentIndividualAtom")
-#swrl_                    = _universal_abbrev("http://www.w3.org/2003/11/swrl#")
 
 
 issubclass_python = issubclass

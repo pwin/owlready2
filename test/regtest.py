@@ -709,11 +709,13 @@ class Test(BaseTest, unittest.TestCase):
     
     o = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     o.ma_pizza.has_topping.append(o.Tomato())
-
-    print(id(o.ma_pizza), o.ma_pizza.has_topping)
+    
+    assert len(o.ma_pizza.has_topping) == 3
     
     o = w.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load(reload = True)
-    print(id(o.ma_pizza), o.ma_pizza.has_topping)
+    
+    assert len(o.ma_pizza.has_topping) == 2
+    
     
   def test_class_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -1074,10 +1076,29 @@ class Test(BaseTest, unittest.TestCase):
     assert set(Listeria.is_a) == set([Bactery, p.some(Grouping)])
     assert len(Listeria.is_a) == 2
       
+  def test_class_27(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test")
+    with o:
+      class A(Thing): pass
+      class B(Thing): equivalent_to = [A]
+      class C(Thing): pass
+      class A2(A): pass
+      class C2(C): pass
+      class AC(A, C): pass
+      
+    assert owlready2.reasoning._keep_most_specific([A, B])    in [ {A}, {B}]
+    assert owlready2.reasoning._keep_most_specific([A, C])    == {A, C}
+    assert owlready2.reasoning._keep_most_specific([A, B, C]) in [ {A, C}, {B, C} ]
+    
+    assert owlready2.reasoning._keep_most_specific([A, B, A2]) == {A2}
+    assert owlready2.reasoning._keep_most_specific([A, B, C, AC]) == {AC}
+    assert owlready2.reasoning._keep_most_specific([A, B, C, AC, A2]) == {AC, A2}
+    
     
   def test_individual_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
-
+    
     assert isinstance(n.ma_tomate, n.Tomato)
     assert isinstance(n.ma_tomate, n.Vegetable)
     assert isinstance(n.ma_tomate, n.Topping)
