@@ -676,9 +676,11 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index
               for inner_filename in inner_filenames:
                 if ("/%s.RRF" % table_name) in inner_filename:
                   if previous_parser != table_name: importer.after(previous_parser)
-                  print("  Parsing %s as %s..." % (inner_filename, table_name))
+                  print("  Parsing %s as %s" % (inner_filename, table_name), end = "")
+                  f = gzip.open(umls_inner_zip.open(inner_filename), "rt", encoding = "UTF-8")
+                  print(" with encoding %s" % f.encoding)
                   remnants[table_name] = parser(PYM, terminologies, langs, importer,
-                                                gzip.open(umls_inner_zip.open(inner_filename), "rt"),
+                                                f,
                                                 remnants[table_name])
                   importer.force_insert()
                   default_world.save()

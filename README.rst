@@ -381,7 +381,14 @@ version 2 - 0.17
   - Fix World.get() and add World.get_if_loaded()
   - Add appropriate error message when importing UMLS with Python 3.6
   - Fix individuals belonging to multiple, equivalent, classes after reasoning
-    
+   
+version 2 - 0.18
+****************
+
+* Bugfixes:
+  - Force UTF-8 encoding when importing UMLS
+
+
     
 Links
 -----
