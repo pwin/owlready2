@@ -376,6 +376,14 @@ def issubclass_owlready(Class, Parent_or_tuple):
 
 issubclass = issubclass_owlready
 
+def isinstance_python(obj, class_or_tuple):
+  if isinstance(class_or_tuple, tuple):
+    for c in class_or_tuple:
+      if type.__instancecheck__(c, obj): return True
+  else:
+    return type.__instancecheck__(class_or_tuple, obj)
+  
+
 class ThingClass(EntityClass):
   namespace = owlready
   

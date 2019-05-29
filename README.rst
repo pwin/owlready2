@@ -385,6 +385,7 @@ version 2 - 0.17
 version 2 - 0.18
 ****************
 
+* Add isinstance_python() (faster than isinstance(), but do not consider equivalent_to relations)
 * Bugfixes:
   - Force UTF-8 encoding when importing UMLS
 
