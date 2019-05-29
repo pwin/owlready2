@@ -645,7 +645,7 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index
   previous_parser = None
   
   if os.path.isdir(umls_zip_filename):
-    print("Importing UMLS from directory %s..." % umls_zip_filename)
+    print("Importing UMLS from directory %s with Python version %s..." % (umls_zip_filename, sys.version))
     inner_filenames = sorted(os.listdir(umls_zip_filename))
     print("Files found in this directory: %s" % ", ".join(inner_filenames))
     if not "MRCONSO.RRF" in inner_filenames:
@@ -665,7 +665,7 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index
     with zipfile.ZipFile(umls_zip_filename, "r") as umls_zip:
       for filename in sorted(umls_zip.namelist()):
         if filename.endswith("-meta.nlm"):
-          print("Importing UMLS from Zip file %s..." % (filename))
+          print("Importing UMLS from Zip file %s with Python version %s..." % (filename, sys.version))
           
           fp = umls_zip.open(filename)
           if not fp.seekable():
