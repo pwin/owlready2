@@ -512,9 +512,9 @@ class World(_GraphManager):
             Class = self._get_by_storid(obj, None, ThingClass, main_onto)
             if isinstance(Class, EntityClass): types.append(Class)
             elif Class is None: raise ValueError("Cannot get '%s'!" % obj)
-            
+
       if main_type is None: # Try to guess it
-        if   self._has_obj_triple_spo(None, rdf_type, storid) or self._has_obj_triple_spo(None, rdfs_subclassof, storid): main_type = ThingClass
+        if   self._has_obj_triple_spo(None, rdf_type, storid) or self._has_obj_triple_spo(None, rdfs_subclassof, storid) or self._has_obj_triple_spo(storid, rdfs_subclassof, None): main_type = ThingClass
         elif self._has_obj_triple_spo(storid, None, None) or self._has_data_triple_spod(storid, None, None, None): main_type = Thing
         
       if main_type and (not main_type is Thing):
