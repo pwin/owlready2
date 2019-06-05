@@ -385,6 +385,8 @@ version 2 - 0.17
 version 2 - 0.18
 ****************
 
+* Add UNIQUE constraints for preventing dupplicated RDF triples in the quadstore
+* Add Individual.INDIRECT_is_a / Individual.INDIRECT_is_instance_of
 * Add isinstance_python() (faster than isinstance(), but do not consider equivalent_to relations)
 * Bugfixes:
   - Force UTF-8 encoding when importing UMLS
