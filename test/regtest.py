@@ -1450,6 +1450,26 @@ class Test(BaseTest, unittest.TestCase):
     
     assert len(c3.get_properties()) == 1
     
+  def test_individual_23(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/onto.owl")
+    
+    with onto:
+      class C(Thing): pass
+      class C2(C): pass
+      class C3(C2): pass
+      class C4(C2): pass
+      class p(C >> int): pass
+      
+    c = C3()
+    
+    assert set(c.INDIRECT_is_a) == { Thing, C, C2, C3 }
+
+    c = C4()
+    c.is_a.append(p.value(2))
+    
+    assert set(c.INDIRECT_is_instance_of) == { Thing, C, C2, C4 }
+    
     
   def test_prop_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

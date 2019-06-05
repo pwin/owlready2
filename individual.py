@@ -212,11 +212,14 @@ class Thing(metaclass = ThingClass):
     if attr.startswith("INDIRECT_"):
       Prop = self.namespace.world._props.get(attr[9:])
       if not Prop:
-        if attr == "INDIRECT_equivalent_to":
+        if   attr == "INDIRECT_equivalent_to":
           eq = self.equivalent_to
           if eq._indirect is None: eq._build_indirect()
           return eq._indirect
-        raise AttributeError("'%s' property is not defined." % attr)
+        elif (attr == "INDIRECT_is_a") or (attr == "INDIRECT_is_instance_of"):
+          return list({ ancestor for parent in self.is_a if isinstance(parent, ThingClass) for ancestor in parent.ancestors() })
+        else: raise AttributeError("'%s' property is not defined." % attr)
+          
       if Prop.is_functional_for(self.__class__):
         return Prop._get_indirect_value_for_individual(self)
       else:

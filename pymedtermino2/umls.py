@@ -522,6 +522,7 @@ class _Importer(object):
       
       
   def after(self, parser): # Free some memory
+    self.check_insert()
     if   parser == "MRCONSO":
       for orig, terms in self.orig_2_terms.items():
         terms.sort()
@@ -625,7 +626,7 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index
   PYM = create_model()
   default_world.save()
   
-  default_world.graph.set_indexed(False)
+  #default_world.graph.set_indexed(False)
   
   importer = _Importer(PYM, terminologies, langs, extract_groups, extract_attributes, extract_relations, extract_definitions, remove_suppressed)
   
@@ -692,8 +693,8 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index
   importer = None # Free memory
   #default_world.save()
   
-  print("Indexing...")
-  default_world.graph.set_indexed(True)
+  #print("Indexing...")
+  #default_world.graph.set_indexed(True)
   PYM = get_ontology("http://PYM/").load()
   
   if fts_index:

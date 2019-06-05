@@ -227,7 +227,7 @@ def _guess_format(f):
     s = f.peek(1000).lstrip()
 
   if isinstance(s, str): s = s.encode("utf8")
-  if s.startswith(b"\xef\xbb\xbf"): s = s[3:] # For FLUENT
+  if s.startswith(b"\xef\xbb\xbf"): s = s[3:] # Ignore byte-order mask
   
   if not s.lstrip().startswith(b"<"): return "ntriples"
   if s[s.find(b"\n") -1] == b".": return "ntriples"

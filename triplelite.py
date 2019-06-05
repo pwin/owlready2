@@ -173,7 +173,16 @@ class Graph(BaseMainGraph):
         self.execute("""CREATE TABLE resources (storid INTEGER PRIMARY KEY, iri TEXT)""")
       self.db.executemany("INSERT INTO resources VALUES (?,?)", _universal_abbrev_2_iri.items())
       self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
-      self.set_indexed(True)
+      #self.set_indexed(True)
+      self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
+      #self.execute("""CREATE INDEX index_objs_op ON objs(o,p,c)""") # c is for onto.classes(), etc
+      self.execute("""CREATE UNIQUE INDEX index_objs_op ON objs(o,p,c,s)""") # c is for onto.classes(), etc
+      
+      self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
+      #self.execute("""CREATE INDEX index_datas_op ON datas(o,p)""")
+      self.execute("""CREATE UNIQUE INDEX index_datas_op ON datas(o,p,c,d,s)""")
+      self.indexed = True
+      
       self.db.commit()
       
     else:
@@ -373,22 +382,25 @@ class Graph(BaseMainGraph):
 
     
   def set_indexed(self, indexed):
-    self.indexed = indexed
-    if indexed:
-      #self.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
-      self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
-      self.execute("""CREATE INDEX index_objs_op ON objs(o,p,c)""") # c is for onto.classes(), etc
-      self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
-      self.execute("""CREATE INDEX index_datas_op ON datas(o,p)""")
-      for onto in self.world.ontologies.values():
-        onto._load_properties()
-    else:
-      #self.execute("""DROP INDEX IF EXISTS index_resources_iri""")
-      self.execute("""DROP INDEX IF EXISTS index_objs_sp""")
-      self.execute("""DROP INDEX IF EXISTS index_objs_op""")
-      self.execute("""DROP INDEX IF EXISTS index_datas_sp""")
-      self.execute("""DROP INDEX IF EXISTS index_datas_op""")
-      
+    pass
+    #self.indexed = indexed
+    #if indexed:
+    #  self.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
+    #  #self.execute("""CREATE INDEX index_objs_op ON objs(o,p,c)""") # c is for onto.classes(), etc
+    #  self.execute("""CREATE UNIQUE INDEX index_objs_op ON objs(o,p,c,s)""") # c is for onto.classes(), etc
+    #  
+    #  self.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
+    #  #self.execute("""CREATE INDEX index_datas_op ON datas(o,p)""")
+    #  self.execute("""CREATE UNIQUE INDEX index_datas_op ON datas(o,p,c,d,s)""")
+    #  
+    #  for onto in self.world.ontologies.values():
+    #    onto._load_properties()
+    #else:
+    #  self.execute("""DROP INDEX IF EXISTS index_objs_sp""")
+    #  self.execute("""DROP INDEX IF EXISTS index_objs_op""")
+    #  self.execute("""DROP INDEX IF EXISTS index_datas_sp""")
+    #  self.execute("""DROP INDEX IF EXISTS index_datas_op""")
+    
   def close(self):
     self.db.close()
     
@@ -1021,18 +1033,16 @@ class SubGraph(BaseSubGraph):
       cur.execute("DELETE FROM objs WHERE c=?", (self.c,))
       cur.execute("DELETE FROM datas WHERE c=?", (self.c,))
       
-    if cur.execute("""SELECT COUNT() FROM ontologies""").fetchone()[0] < 2:
-      cur.execute("""DROP INDEX IF EXISTS index_resources_iri""")
-      cur.execute("""DROP INDEX IF EXISTS index_objs_sp""")
-      cur.execute("""DROP INDEX IF EXISTS index_objs_op""")
-      cur.execute("""DROP INDEX IF EXISTS index_datas_sp""")
-      cur.execute("""DROP INDEX IF EXISTS index_datas_op""")
-      reindex = True
-    else:
-      reindex = False
-      
-    # XXX
-      
+    #if cur.execute("""SELECT COUNT() FROM ontologies""").fetchone()[0] < 2:
+    #  cur.execute("""DROP INDEX IF EXISTS index_resources_iri""")
+    #  cur.execute("""DROP INDEX IF EXISTS index_objs_sp""")
+    #  cur.execute("""DROP INDEX IF EXISTS index_objs_op""")
+    #  cur.execute("""DROP INDEX IF EXISTS index_datas_sp""")
+    #  cur.execute("""DROP INDEX IF EXISTS index_datas_op""")
+    #  reindex = True
+    #else:
+    #  reindex = False
+    
     # Re-implement _abbreviate() for speed
     if self.parent._abbreviate_d is None:
       abbrevs = {}
@@ -1064,14 +1074,14 @@ class SubGraph(BaseSubGraph):
       nonlocal objs, new_abbrevs
       if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s object triples from ontology %s ..." % (len(objs), self.onto.base_iri), file = sys.stderr)
       cur.executemany("INSERT INTO resources VALUES (?,?)", new_abbrevs)
-      cur.executemany("INSERT INTO objs VALUES (%s,?,?,?)" % self.c, objs)
+      cur.executemany("INSERT OR IGNORE INTO objs VALUES (%s,?,?,?)" % self.c, objs)
       objs        .clear()
       new_abbrevs .clear()
       
     def insert_datas():
       nonlocal datas, new_abbrevs
       if owlready2.namespace._LOG_LEVEL: print("* OwlReady2 * Importing %s data triples from ontology %s ..." % (len(datas), self.onto.base_iri), file = sys.stderr)
-      cur.executemany("INSERT INTO datas VALUES (%s,?,?,?,?)" % self.c, datas)
+      cur.executemany("INSERT OR IGNORE INTO datas VALUES (%s,?,?,?,?)" % self.c, datas)
       datas.clear()
       
     def on_prepare_obj(s, p, o):
@@ -1094,13 +1104,13 @@ class SubGraph(BaseSubGraph):
       insert_objs()
       insert_datas()
       
-      if reindex:
-        cur.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
-        if self.parent.indexed:
-          cur.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
-          cur.execute("""CREATE INDEX index_objs_op ON objs(o,p)""")
-          cur.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
-          cur.execute("""CREATE INDEX index_datas_op ON datas(o,p)""")
+      #if reindex:
+      #  cur.execute("""CREATE UNIQUE INDEX index_resources_iri ON resources(iri)""")
+      #  if self.parent.indexed:
+      #    cur.execute("""CREATE INDEX index_objs_sp ON objs(s,p)""")
+      #    cur.execute("""CREATE INDEX index_objs_op ON objs(o,p)""")
+      #    cur.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
+      #    cur.execute("""CREATE INDEX index_datas_op ON datas(o,p)""")
           
       t0 = time.time()
       onto_base_iri = cur.execute("SELECT resources.iri FROM objs, resources WHERE objs.c=? AND objs.o=? AND resources.storid=objs.s LIMIT 1", (self.c, owl_ontology)).fetchone()
@@ -1146,7 +1156,7 @@ class SubGraph(BaseSubGraph):
     
   def _add_obj_triple_raw_spo(self, s, p, o):
     if (s is None) or (p is None) or (o is None): raise ValueError
-    self.execute("INSERT INTO objs VALUES (?, ?, ?, ?)", (self.c, s, p, o))
+    self.execute("INSERT OR IGNORE INTO objs VALUES (?, ?, ?, ?)", (self.c, s, p, o))
     
   def _del_obj_triple_raw_spo(self, s = None, p = None, o = None):
     if s is None:
@@ -1171,7 +1181,7 @@ class SubGraph(BaseSubGraph):
     
   def _add_data_triple_raw_spod(self, s, p, o, d):
     if (s is None) or (p is None) or (o is None) or (d is None): raise ValueError
-    self.execute("INSERT INTO datas VALUES (?, ?, ?, ?, ?)", (self.c, s, p, o, d))
+    self.execute("INSERT OR IGNORE INTO datas VALUES (?, ?, ?, ?, ?)", (self.c, s, p, o, d))
     
   def _del_data_triple_raw_spod(self, s, p, o, d):
     if s is None:
@@ -1192,7 +1202,7 @@ class SubGraph(BaseSubGraph):
         if o is None:   self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=?", (self.c, s, p,))
         elif d is None: self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
         else:           self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=? AND o=? AND d=?", (self.c, s, p, o, d,))
-
+        
   def _has_obj_triple_spo(self, s = None, p = None, o = None):
     if s is None:
       if p is None:
@@ -1435,7 +1445,7 @@ class _SearchMixin(list):
   
   def __len__(self):
     sql, params = self.sql_request()
-    sql = """select count(*) FROM (%s)""" % sql
+    sql =  "SELECT COUNT(*) FROM (%s)" % sql
     return self.world.graph.execute(sql, params).fetchone()[0]
         
       
