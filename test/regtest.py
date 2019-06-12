@@ -2189,6 +2189,15 @@ class Test(BaseTest, unittest.TestCase):
     o2    = world.get_ontology("http://www.semanticweb.org/test2.owl").load()
     assert issubclass(p2, p1)
     
+  def test_prop_40(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.semanticweb.org/test1.owl")
+    with onto:
+      class i(Thing >> Thing, SymmetricProperty): pass
+
+    assert i.inverse_property is i
+    assert i.inverse is i
+    
     
   def test_prop_inverse_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

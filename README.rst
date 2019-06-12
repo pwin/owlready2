@@ -391,6 +391,11 @@ version 2 - 0.18
 * Bugfixes:
   - Force UTF-8 encoding when importing UMLS
   - Be more tolerant when loading OWL file
+   
+version 2 - 0.19
+****************
+
+* Consider symmetric properties as their own inverse properties
 
     
 Links

@@ -420,6 +420,7 @@ class ObjectPropertyClass(ReasoningPropertyClass):
     
     if issubclass_python(Prop, SymmetricProperty):
       type.__setattr__(Prop, "_inverse_storid", Prop.storid)
+      Prop._inverse_property = Prop
       
     else:
       for inverse_storid in Prop.namespace.world._get_obj_triples_sp_o(Prop.storid, owl_inverse_property):
