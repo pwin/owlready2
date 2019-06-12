@@ -349,6 +349,13 @@ owl_world = None
 _cache = [None] * (2 ** 16)
 _cache_index = 0
 
+def _cache_entity(entity):
+  global _cache, _cache_index
+  _cache[_cache_index] = entity
+  _cache_index += 1
+  if _cache_index >= len(_cache): _cache_index = 0
+  return entity
+
 def _clear_cache():
   import gc
   global _cache, _cache_index
@@ -358,16 +365,16 @@ def _clear_cache():
     if i is None: break
     d[i] = 1
   
-  _cache = [None] * len(_cache)
+  _cache.__init__([None] * len(_cache))
   _cache_index = 0
-
+  
   gc.collect()
   gc.collect()
   gc.collect()
   
   for i in d.keys():
     pass
-  
+
 
 class World(_GraphManager):
   def __init__(self, backend = "sqlite", filename = ":memory:", dbname = "owlready2_quadstore", **kargs):
@@ -609,10 +616,7 @@ class World(_GraphManager):
       if is_a_bnodes:
         list.extend(entity.is_a, (onto._parse_bnode(bnode) for onto, bnode in is_a_bnodes))
         
-    global _cache, _cache_index
-    _cache[_cache_index] = entity
-    _cache_index += 1
-    if _cache_index >= len(_cache): _cache_index = 0
+    #_cache_entity(entity)
     
     return entity
   

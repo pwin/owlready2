@@ -20,6 +20,7 @@
 import owlready2
 from owlready2.base      import *
 from owlready2.namespace import *
+from owlready2.namespace import _cache_entity
 
 
 
@@ -129,6 +130,7 @@ class EntityClass(type):
       )
       
       Class = namespace.world._entities[storid] = _is_a._obj = type.__new__(MetaClass, name, superclasses, obj_dict)
+      _cache_entity(Class)
       
       if not LOADING:
         namespace.ontology._add_obj_triple_spo(storid, rdf_type, MetaClass._owl_type)

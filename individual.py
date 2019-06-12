@@ -19,6 +19,7 @@
 
 import owlready2
 from owlready2.namespace import *
+from owlready2.namespace import _cache_entity
 from owlready2.entity    import *
 from owlready2.entity    import _inherited_property_value_restrictions
 
@@ -103,7 +104,9 @@ class Thing(metaclass = ThingClass):
           
         return already_existing
       
-    return object.__new__(Class)
+    #_cache_entity(entity)
+    #return object.__new__(Class)
+    return _cache_entity(object.__new__(Class))
   
   def __init__(self, name = None, namespace = None, **kargs):
     self.namespace = namespace or (CURRENT_NAMESPACES.get() and CURRENT_NAMESPACES.get()[-1]) or self.__class__.namespace

@@ -5121,9 +5121,9 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
   def test_rdflib_9(self):
     world = self.new_world()
-    o = world.get_ontology("http://www.semanticweb.org/onto.owl")
+    o = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     g = world.as_rdflib_graph()
-    g.bind("onto", "http://www.semanticweb.org/onto.owl#")
+    g.bind("onto", "http://www.semanticweb.org/jiba/ontologies/2017/0/test#")
 
     with o:
       r = g.update("""
@@ -5137,9 +5137,9 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     
   def test_rdflib_10(self):
     world = self.new_world()
-    o = world.get_ontology("http://www.semanticweb.org/onto.owl")
+    o = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
     g = world.as_rdflib_graph()
-    g.bind("onto", "http://www.semanticweb.org/onto.owl#")
+    g.bind("onto", "http://www.semanticweb.org/jiba/ontologies/2017/0/test#")
 
     r = g.update("""
     DELETE {
@@ -5149,6 +5149,79 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     } WHERE {}""")
     
     self.assert_not_triple(world._abbreviate("http://www.semanticweb.org/onto.owl#ma_pizza"), rdf_type, world._abbreviate("http://www.semanticweb.org/onto.owl#Pizza"), world = world)
+    
+  def test_rdflib_11(self):
+    world = self.new_world()
+    o = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    g = world.as_rdflib_graph()
+    g.bind("onto", "http://www.semanticweb.org/jiba/ontologies/2017/0/test#")
+    
+    p2 = o.Pizza("ma_pizza2")
+    storid = p2.storid
+    p2.price
+    p2.is_a
+    p2.has_topping
+    assert p2 in owlready2.namespace._cache
+    
+    with o:
+      r = g.update("""
+      INSERT {
+      onto:ma_pizza2
+      onto:price
+      12.9 .
+      } WHERE {}""")
+      
+    assert p2.price == 12.9
+    
+    with o:
+      r = g.update("""
+      INSERT {
+      onto:ma_pizza2
+      a
+      onto:Cheese .
+      } WHERE {}""")
+      
+    assert o.Cheese in p2.is_a
+    
+    with o:
+      r = g.update("""
+      INSERT {
+      onto:ma_pizza2
+      onto:has_topping
+      onto:ma_tomate .
+      } WHERE {}""")
+      
+    assert p2.has_topping == [o.ma_tomate]
+
+    with o:
+      r = g.update("""
+      DELETE {
+      onto:ma_pizza2
+      onto:price
+      12.9 .
+      } WHERE {}""")
+      
+    assert p2.price == None
+    
+    with o:
+      r = g.update("""
+      DELETE {
+      onto:ma_pizza2
+      a
+      onto:Cheese .
+      } WHERE {}""")
+      
+    assert p2.is_a == [o.Pizza]
+    
+    with o:
+      r = g.update("""
+      DELETE {
+      onto:ma_pizza2
+      onto:has_topping
+      onto:ma_tomate .
+      } WHERE {}""")
+      
+    assert p2.has_topping == []
     
       
   def test_refactor_1(self):

@@ -396,8 +396,9 @@ version 2 - 0.19
 ****************
 
 * Consider symmetric properties as their own inverse properties
+* Update Python objects after basic SPARQL update/delete queries (works on user-defined properties, hierarchical properties (type/subclassof) and equivalence properties)
 
-    
+  
 Links
 -----
 
