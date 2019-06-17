@@ -72,6 +72,7 @@ class CallbackList(FirstList):
   def _set  (self, l):          super().__init__(l)
   def _append(self, x):         super().append(x)
   def _remove(self, x):         super().remove(x)
+  def _replace(self, old, new): super().__setitem__(self.index(old), new)
   def reinit(self, l):          old = list(self); super().__init__(l)       ; self._callback(self._obj, old)
   def append(self, x):          old = list(self); super().append(x)         ; self._callback(self._obj, old)
   def insert(self, i, x):       old = list(self); super().insert(i, x)      ; self._callback(self._obj, old)

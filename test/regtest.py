@@ -5223,7 +5223,7 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       
     assert p2.has_topping == []
     
-      
+    
   def test_refactor_1(self):
     world = self.new_world()
     n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()

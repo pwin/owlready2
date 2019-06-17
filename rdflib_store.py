@@ -53,10 +53,10 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
   def _rdflib_2_owlready(self, spo):
     s,p,o = spo
     if   isinstance(s, rdflib.term.URIRef ): s = self.triplelite._abbreviate(str(s))
-    elif isinstance(s, rdflib.term.BNode  ): s = str(s)
+    elif isinstance(s, rdflib.term.BNode  ): s = -int(s)
     if   isinstance(p, rdflib.term.URIRef ): p = self.triplelite._abbreviate(str(p))
     if   isinstance(o, rdflib.term.URIRef ): o = self.triplelite._abbreviate(str(o)); d = None
-    elif isinstance(o, rdflib.term.BNode  ): o = str(o); d = None
+    elif isinstance(o, rdflib.term.BNode  ): o = -int(o); d = None
     elif isinstance(o, rdflib.term.Literal):
       if o.language is None:
         if o.datatype:
@@ -105,6 +105,10 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
       if   prop:
         try: delattr(sub, prop.python_name)
         except: pass
+        
+      #elif isinstance(sub, owlready2.class_construct.ClassConstruct):
+      #  self._bn_needing_update.append((triplelite.ontology, s))
+      
       elif d is None:
         obj = self.world._load_by_storid(o)
         if not obj is None:
@@ -127,11 +131,7 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
           elif (p == rdf_range):
             sub.range.append(obj)
             return
-          
-          elif (p == owl_onproperty):
-            sub.property = obj
-            return
-          
+        
     if d is None: triplelite._add_obj_triple_raw_spo(s,p,o)
     else:         triplelite._add_data_triple_raw_spod(s,p,o,d)
     
@@ -170,17 +170,13 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
             sub.range.remove(obj)
             return
           
-          elif (p == owl_onproperty):
-            sub.property = None
-            return
-          
     if d is None: context.triplelite._del_obj_triple_raw_spo(s,p,o)
     else:         context.triplelite._del_data_triple_raw_spod(s,p,o,d)
     
     
   def triples(self, triple_pattern, context = None):
     rs,rp,ro,rd = self._rdflib_2_owlready(triple_pattern)
-    
+
     if   ro is None:
       for s,p,o,d in context.triplelite._get_triples_spod_spod(rs,rp,None, None):
         yield self._owlready_2_rdflib(s,p,o,d), context
@@ -261,6 +257,13 @@ class TripleLiteRDFlibGraph(rdflib.Graph):
       line2 = [self._rdflib_2_owlready(i) for i in line]
       yield line2
       
+  # def update(self, query, *args, **kargs):
+  #   self.store._bn_needing_update = set()
+  #   r = rdflib.Graph.update(self, query, *args, **kargs)
+  #   for onto, bn in self.store._bn_needing_update:
+  #     onto._reload_bnode(bn)
+  #   return r
+  
   def _rdflib_2_owlready(self, o):
     if   isinstance(o, rdflib.term.URIRef ): o = self.store.world[str(o)]
     elif isinstance(o, rdflib.term.BNode  ): o = (self.store.onto or self.store.world)._parse_bnode(o)

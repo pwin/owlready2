@@ -913,6 +913,18 @@ class Ontology(Namespace, _GraphManager):
             self._del_data_triple_spod(bnode, None, None, None)
           return bnode
 
+        
+  def _reload_bnode(self, bnode):
+    if bnode in self._bnodes:
+      old = self._bnodes[bnode]
+      subclasses = set(old.subclasses(only_loaded = True))
+      equivalentclasses = { entity for entity in subclasses if old in entity.equivalent_to }
+      subclasses = subclasses - equivalentclasses
+      del self._bnodes[bnode]
+      
+      new = self._parse_bnode(bnode)
+      for e in subclasses:        e.is_a         ._replace(old, new)
+      for e in equivalentclasses: e.equivalent_to._replace(old, new)
       
   def _parse_bnode(self, bnode):
     r = self._bnodes.get(bnode)

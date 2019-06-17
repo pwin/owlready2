@@ -340,7 +340,18 @@ class FusionClass(ThingClass):
     Class = FusionClass._CACHES.get(key)
     if Class: return Class
     
-    Classes = _keep_most_specific(Classes0)
+    Classes = _keep_most_specific(Classes0, consider_equivalence = False)
+    try:
+      fusion_class = FusionClass._create_fusion_class(key, Classes)
+      
+    except: # Too complex hierarchy => do not consider equivalent classes
+      Classes = _keep_most_specific(Classes0, consider_equivalence = True)
+      fusion_class = FusionClass._create_fusion_class(key, Classes)
+      
+    return fusion_class
+  
+  @staticmethod
+  def _create_fusion_class(key, Classes):
     if len(Classes) == 1:
       FusionClass._CACHES[key] = Class = tuple(Classes)[0]
       return Class
@@ -348,7 +359,10 @@ class FusionClass(ThingClass):
     Classes = tuple(sorted(Classes, key = lambda Class: Class.__name__))
     if Classes in FusionClass._FUSION_CLASSES: return FusionClass._FUSION_CLASSES[Classes]
     name = "_AND_".join(Class.__name__ for Class in Classes)
-    with anonymous: # Force triple insertion into anonymous
-      fusion_class = FusionClass._FUSION_CLASSES[Classes] = FusionClass._CACHES[key] = FusionClass(name, Classes, { "namespace" : anonymous })
     
+    with anonymous: # Force triple insertion into anonymous
+      fusion_class = FusionClass(name, Classes, { "namespace" : anonymous })
+      
+    FusionClass._FUSION_CLASSES[Classes] = FusionClass._CACHES[key] = fusion_class
     return fusion_class
+  
