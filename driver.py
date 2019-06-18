@@ -352,6 +352,7 @@ def _save(f, format, graph):
       "owl:unionOf",
       "owl:members",
       "owl:distinctMembers",
+      "owl:oneOf",
       }
     bad_types = {
       "rdf:Description",
@@ -365,8 +366,8 @@ def _save(f, format, graph):
       }
     
     def parse_list(bn):
-      inner_lists_used.add(id(bn_2_inner_list[bn]))
       while bn and (bn != rdf_nil):
+        inner_lists_used.add(id(bn_2_inner_list[bn]))
         first = graph._get_obj_triple_sp_o(bn, rdf_first)
         if first != rdf_nil: yield first
         bn = graph._get_obj_triple_sp_o(bn, rdf_rest)
@@ -378,11 +379,13 @@ def _save(f, format, graph):
         l = bn_2_inner_list[current_s]
         current_s = 0
       else:
-        l = liness.get(type) or lines[-1]
+        #l = liness.get(type) or l = lines[-1]
+        l = liness.get(type)
+        if l is None: l = lines[-1]
         
       if s_lines:
         if current_s < 0:
-          l.append("""<%s rdf:nodeID="%s">""" % (type, current_s))
+          l.append("""<%s rdf:nodeID="node%s">""" % (type, -current_s))
           
         elif current_s > 0:
           current_s = _unabbreviate(current_s)
@@ -398,7 +401,7 @@ def _save(f, format, graph):
         
       else:
         if current_s < 0:
-          l.append("""<%s rdf:nodeID="%s"/>""" % (type, current_s))
+          l.append("""<%s rdf:nodeID="node%s"/>""" % (type, -current_s))
           
         elif current_s > 0:
           current_s = _unabbreviate(current_s)
@@ -458,17 +461,18 @@ def _save(f, format, graph):
         s_lines.append("""  <%s rdf:resource="%s"/>""" % (p, o))
         
     purge()
-    
-    lines.append([])
-    for l in bn_2_inner_list.values():
-      if not id(l) in inner_lists_used:
-        lines[-1].extend(l)
-        lines[-1].append("")
-        
+
+    if len(bn_2_inner_list) != len(inner_lists_used):
+      lines.append([])
+      for l in bn_2_inner_list.values():
+        if not id(l) in inner_lists_used:
+          lines[-1].extend(l)
+          lines[-1].append("")
+          
     def flatten(l, deep = ""):
       for i in l:
-        if isinstance(i, list): yield from flatten(i, deep + "    ")
-        else:                   yield deep + i
+        if isinstance(i, list): yield from flatten(i, "%s    " % deep)
+        else:                   yield "%s%s" % (deep, i)
         
     decls = []
     for iri, abbrev in xmlns.items():
@@ -481,4 +485,6 @@ def _save(f, format, graph):
     f.write(b"""<?xml version="1.0"?>\n""")
     f.write(("""<rdf:RDF %s>\n\n""" % "\n         ".join(decls)).encode("utf8"))
     f.write( """\n""".join(flatten(sum(lines, []))).encode("utf8"))
+    
+
     f.write(b"""\n\n</rdf:RDF>\n""")

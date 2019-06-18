@@ -88,7 +88,8 @@ def close_world(self, Properties = None, close_instance_list = True, recursive =
   elif isinstance(self, Ontology):
     for individual in self.individuals():
       close_world(individual, Properties, close_instance_list, recursive)
-      
+    
     for Class in self.classes():
+      print(Class, "...")
       close_world(Class, Properties, close_instance_list, False) # False because all the loop will already close subclasses 
       

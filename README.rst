@@ -399,7 +399,8 @@ version 2 - 0.19
 * Update Python objects after basic SPARQL update/delete queries (works on user-defined properties, hierarchical properties (type/subclassof) and equivalence properties)
 * Bugfixes:
   - After reasoning, keep all equivalent classes as parents of individuals (as they may have methods)
-
+  - Fix RDF serialization for nested RDF lists
+    
   
 Links
 -----
