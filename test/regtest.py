@@ -793,6 +793,7 @@ class Test(BaseTest, unittest.TestCase):
     assert set(n.Topping.descendants(include_self = False)) == { n.Cheese, n.Meat, n.Vegetable, n.Olive, n.Tomato, n.Eggplant }
     assert set(n.Topping.descendants()) == { n.Topping, n.Cheese, n.Meat, n.Vegetable, n.Olive, n.Tomato, n.Eggplant }
     assert set(n.Tomato.ancestors(include_self = False)) == { n.Vegetable, n.Topping, Thing }
+    assert set(n.Tomato.ancestors(include_self = False, include_constructs = True)) == { n.Vegetable, n.Topping, Thing, n.Eggplant | n.Olive | n.Tomato }
     assert set(n.Tomato.ancestors()) == { n.Tomato, n.Vegetable, n.Topping, Thing }
     
   def test_class_9(self):
@@ -1468,7 +1469,26 @@ class Test(BaseTest, unittest.TestCase):
     c = C4()
     c.is_a.append(p.value(2))
     
-    assert set(c.INDIRECT_is_instance_of) == { Thing, C, C2, C4 }
+    assert set(c.INDIRECT_is_instance_of) == { Thing, C, C2, C4, p.value(2) }
+    
+  def test_individual_24(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/onto.owl")
+    
+    with onto:
+      class Person(Thing): pass
+      class love(Person >> Person):
+        pass
+
+      Person.is_a.append(love.some(Person))  # a person loves someone.
+      
+      x = Person('x')
+      y = Person('y')
+      x.is_a.append(love.value(y))
+
+    assert set(x.INDIRECT_is_a) == set([Person, love.value(y), Thing, love.some(Person)])
+    assert set(Person.ancestors()) == set([Person, Thing])
+    assert set(Person.ancestors(include_constructs = True)) == set([Person, Thing, love.some(Person)])
     
     
   def test_prop_1(self):

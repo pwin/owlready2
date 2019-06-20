@@ -220,9 +220,10 @@ class Thing(metaclass = ThingClass):
           if eq._indirect is None: eq._build_indirect()
           return eq._indirect
         elif (attr == "INDIRECT_is_a") or (attr == "INDIRECT_is_instance_of"):
-          return list({ ancestor for parent in self.is_a if isinstance(parent, ThingClass) for ancestor in parent.ancestors() })
+          #return list({ ancestor for parent in self.is_a if isinstance(parent, ThingClass) for ancestor in parent.ancestors() })
+          return list({ ancestor for parent in self.is_a for ancestor in parent.ancestors(True, True) })
         else: raise AttributeError("'%s' property is not defined." % attr)
-          
+        
       if Prop.is_functional_for(self.__class__):
         return Prop._get_indirect_value_for_individual(self)
       else:

@@ -397,6 +397,8 @@ version 2 - 0.19
 
 * Consider symmetric properties as their own inverse properties
 * Update Python objects after basic SPARQL update/delete queries (works on user-defined properties, hierarchical properties (type/subclassof) and equivalence properties)
+* Add Class.INDIRECT_is_a
+* INDIRECT_is_a / INDIRECT_is_instance_of now include class contructs. ancestors() has a 'include_constructs' parameter, which defaults to False.
 * Bugfixes:
   - After reasoning, keep all equivalent classes as parents of individuals (as they may have methods)
   - Fix RDF serialization for nested RDF lists

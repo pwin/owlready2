@@ -258,9 +258,9 @@ class EntityClass(type):
       with LOADING: a = AllDisjoint((s, p, o), Class.namespace.world.graph.context_2_user_context(c), None)
       yield a
     
-  def ancestors(Class, include_self = True):
+  def ancestors(Class, include_self = True, include_constructs = False):
     s = set()
-    Class._fill_ancestors(s, include_self)
+    Class._fill_ancestors(s, include_self, include_constructs)
     return s
   
   def descendants(Class, include_self = True, only_loaded = False, world = None):
@@ -274,18 +274,28 @@ class EntityClass(type):
       Class._fill_descendants(s, include_self, only_loaded, Class.namespace.world, Class.namespace.ontology)
     return s
   
-  def _fill_ancestors(Class, s, include_self):
+  def _fill_ancestors(Class, s, include_self, include_constructs):
     if include_self:
       if not Class in s:
         s.add(Class)
         for equivalent in Class.equivalent_to.indirect():
           if isinstance(equivalent, EntityClass):
-            if not equivalent in s: equivalent._fill_ancestors(s, True)
-    for parent in Class.__bases__:
-      if isinstance(parent, EntityClass):
-        if not parent in s:
-          parent._fill_ancestors(s, True)
-          
+            if not equivalent in s: equivalent._fill_ancestors(s, True, include_constructs)
+          elif include_constructs:
+            if not equivalent in s: s.add(equivalent)
+    if include_constructs:
+      for parent in Class.is_a:
+        if isinstance(parent, EntityClass):
+          if not parent in s:
+            parent._fill_ancestors(s, True, True)
+        elif include_constructs and (not parent is object):
+          if not parent in s: s.add(parent)
+    else:
+      for parent in Class.__bases__:
+        if isinstance(parent, EntityClass):
+          if not parent in s:
+            parent._fill_ancestors(s, True, False)
+        
   def _fill_descendants(Class, s, include_self, only_loaded, world, onto):
     if include_self:
       s.add(Class)
@@ -477,6 +487,7 @@ class ThingClass(EntityClass):
   
   def __getattr__(Class, attr):
     if attr.startswith("INDIRECT_"):
+      if attr == "INDIRECT_is_a": return Class.ancestors(True, True)
       Prop = Class.namespace.world._props.get(attr[9:])
       if not Prop: raise AttributeError("'%s' property is not defined." % attr)
       #if Prop.is_functional_for(Class): return Prop._get_indirect_value_for_class(Class)

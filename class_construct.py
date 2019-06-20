@@ -74,6 +74,10 @@ class ClassConstruct(object):
                        self.ontology.world._get_obj_triples_po_s(owl_equivalentclass, self.storid))
         if not x < 0
       ]
+    
+  def ancestors(Class, include_self = True, include_constructs = False):
+    if include_self and include_constructs: return { Class }
+    return set()
   
 
 class Not(ClassConstruct):
