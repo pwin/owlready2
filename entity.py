@@ -322,20 +322,31 @@ class EntityClass(type):
       if world is None:
         import owlready2
         world = owlready2.default_world
-      r = []
-      for x in world._get_obj_triples_po_s(rdf_type, owl_class):
-        if x < 0: continue
-        for y in world._get_obj_triples_sp_o(x, Class._rdfs_is_a):
-          if (y == owl_thing) or y < 0: continue
-          break
+        
+      for x, in world.graph.db.execute(
+    """SELECT q1.s FROM objs q1 WHERE q1.s > 0 and q1.p = ? AND q1.o = ?
+EXCEPT SELECT q2.s FROM objs q2 WHERE q2.p = ? and q2.p != ?""",
+          (rdf_type, owl_class, rdfs_subclassof, owl_thing)):
+        if only_loaded:
+          subclass = world._entities.get(x)
+          if not subclass is None: yield subclass
         else:
-          if only_loaded:
-            subclass = world._entities.get(x)
-            if not subclass is None: yield subclass
-          else:
-            yield world._get_by_storid(x, None, ThingClass)
-      return r
-    
+          yield world._get_by_storid(x, None, ThingClass)
+          
+      #r = []
+      #for x in world._get_obj_triples_po_s(rdf_type, owl_class):
+      #  if x < 0: continue
+      #  for y in world._get_obj_triples_sp_o(x, Class._rdfs_is_a):
+      #    if (y == owl_thing) or y < 0: continue
+      #    break
+      #  else:
+      #    if only_loaded:
+      #      subclass = world._entities.get(x)
+      #      if not subclass is None: yield subclass
+      #    else:
+      #      yield world._get_by_storid(x, None, ThingClass)
+      #return r
+      
     else:
       world = world or Class.namespace.world
       if only_loaded:
