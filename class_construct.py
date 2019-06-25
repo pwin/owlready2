@@ -121,6 +121,7 @@ class Not(ClassConstruct):
   
   
 class Inverse(ClassConstruct):
+  is_a = ()
   def __new__(Class, Property, ontology = None, bnode = None, simplify = True):
     if simplify:
       if isinstance(Property, Inverse): return Property.property
