@@ -400,6 +400,7 @@ version 2 - 0.19
 * Add Class.INDIRECT_is_a
 * INDIRECT_is_a / INDIRECT_is_instance_of now include class contructs. ancestors() has a 'include_constructs' parameter, which defaults to False.
 * Add more aliases for XMLSchema datatypes
+* Add is_a property to class constructs
 * Bugfixes:
   - After reasoning, keep all equivalent classes as parents of individuals (as they may have methods)
   - Fix RDF serialization for nested RDF lists

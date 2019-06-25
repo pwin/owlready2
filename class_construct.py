@@ -81,6 +81,7 @@ class ClassConstruct(object):
   
 
 class Not(ClassConstruct):
+  is_a = ()
   def __init__(self, Class, ontology = None, bnode = None):
     super().__init__(ontology, bnode)
     if not Class is None: self.__dict__["Class"] = Class
@@ -225,6 +226,7 @@ class LogicalClassConstruct(ClassConstruct):
 class Or(LogicalClassConstruct):
   _owl_op = owl_unionof
   _char   = " | "
+  is_a = ()
   
   def __or__ (self, b):
     return Or([*self.Classes, b])
@@ -245,8 +247,11 @@ class And(LogicalClassConstruct):
     for Class in self.Classes:
       if not Class._satisfied_by(x): return False
     return True
-
-
+  
+  def get_is_a(self): return self.Classes
+  is_a = property(get_is_a)
+  
+  
 _qualified_2_non_qualified = {
   EXACTLY : owl_cardinality,
   MIN     : owl_min_cardinality,
@@ -263,6 +268,7 @@ _restriction_type_2_label = {
   }
 
 class Restriction(ClassConstruct):
+  is_a = ()
   def __init__(self, Property, type, cardinality = None, value = None, ontology = None, bnode = None):
     self.__dict__["property"]    = Property
     self.__dict__["type"]        = type
@@ -365,6 +371,7 @@ class Restriction(ClassConstruct):
       
       
 class OneOf(ClassConstruct):
+  is_a = ()
   def __init__(self, instances, ontology = None, bnode = None):
     if isinstance(instances, int):
       self._list_bnode = instances
