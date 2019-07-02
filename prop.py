@@ -384,7 +384,7 @@ class Property(metaclass = PropertyClass):
           cache[Prop] = True
           return True
         singles.add(restriction.value)
-
+        
     cache[Prop] = r = not ranges.isdisjoint(singles)
     
     return r
@@ -438,13 +438,17 @@ class ObjectPropertyClass(ReasoningPropertyClass):
     return Prop._inverse_property
   
   def set_inverse_property(Prop, value):
-    Prop.namespace.ontology._set_obj_triple_spo(Prop.storid, owl_inverse_property, value and value.storid)
-    type.__setattr__(Prop, "_inverse_property", value)
     if value:
+      Prop.namespace.ontology._set_obj_triple_spo(Prop.storid, owl_inverse_property, value and value.storid)
+      type.__setattr__(Prop, "_inverse_property", value)
       type.__setattr__(Prop, "_inverse_storid", value.storid)
       if not value._inverse_property is Prop: value.inverse_property = Prop
     else:
+      inverse = Prop._inverse_property
+      type.__setattr__(Prop, "_inverse_property", value)
+      Prop.namespace.ontology._del_obj_triple_spo(Prop.storid, owl_inverse_property, None)
       type.__setattr__(Prop, "_inverse_storid", 0)
+      if inverse._inverse_property: inverse.inverse_property = None
       
   inverse_property = inverse = property(get_inverse_property, set_inverse_property)
   
@@ -464,6 +468,13 @@ class ObjectPropertyClass(ReasoningPropertyClass):
     if value:
       return entity.namespace.ontology._to_python(value)
     
+  def _get_inverse_value_for_individual(Prop, entity):
+    value = (entity.namespace.world._get_obj_triple_po_s(Prop.storid, entity.storid)
+         or (Prop._inverse_storid and
+             entity.namespace.world._get_obj_triple_sp_o(entity.storid, Prop._inverse_storid)) )
+    if value:
+      return entity.namespace.ontology._to_python(value)
+    
   def _get_value_for_class(Prop, entity):
     if   Prop._class_property_relation: return Prop._get_value_for_individual(entity)
     
@@ -479,18 +490,24 @@ class ObjectPropertyClass(ReasoningPropertyClass):
           
   def _get_values_for_individual(Prop, entity):
     if Prop._inverse_storid:
-      #return IndividualValueList((entity.namespace.ontology._to_python(o)
-      #                            for g in (entity.namespace.world._get_obj_triples_sp_o(entity.storid, Prop.storid),
-      #                                      entity.namespace.world._get_obj_triples_po_s(Prop._inverse_storid, entity.storid))
-      #                            for o in g ), entity, Prop)
       return IndividualValueList((entity.namespace.ontology._to_python(o)
-                                  for o in  entity.namespace.world._get_obj_triples_spi_o(entity.storid, Prop.storid, Prop._inverse_storid)),
+                                  for o in entity.namespace.world._get_obj_triples_spi_o(entity.storid, Prop.storid, Prop._inverse_storid)),
                                   entity, Prop)
     else:
       return IndividualValueList((entity.namespace.ontology._to_python(o)
-                                  for o in  entity.namespace.world._get_obj_triples_sp_o(entity.storid, Prop.storid)),
+                                  for o in entity.namespace.world._get_obj_triples_sp_o(entity.storid, Prop.storid)),
                                   entity, Prop)
-                                 
+    
+  def _get_inverse_values_for_individual(Prop, entity):
+    if Prop._inverse_storid:
+      return InverseIndividualValueList((entity.namespace.ontology._to_python(s)
+                                         for s in entity.namespace.world._get_obj_triples_pio_s(Prop.storid, Prop._inverse_storid, entity.storid)),
+                                         entity, Prop)
+    else:
+      return InverseIndividualValueList((entity.namespace.ontology._to_python(s)
+                                         for s in entity.namespace.world._get_obj_triples_po_s(Prop.storid, entity.storid)),
+                                         entity, Prop)
+    
   def _get_values_for_class(Prop, entity):
     if   Prop._class_property_relation: return Prop._get_values_for_individual(entity)
     
@@ -532,6 +549,53 @@ class ObjectPropertyClass(ReasoningPropertyClass):
     if prop_storids:
       for eq in eqs:
         new_values = [onto._to_python(o) for o in world._get_obj_triples_transitive_sp_indirect(eq.storid, prop_storids)]
+        
+        for o in new_values:
+          values.add(o)
+          if not o.__class__ in already_applied_class:
+            values.update(Prop._get_indirect_values_for_class(o.__class__, True))
+            already_applied_class.add(o.__class__)
+          for o2 in o.equivalent_to.indirect():
+            if not ((o2 in new_values) or (o2 in values)):
+              values.add(o2)
+              if not o2.__class__ in already_applied_class:
+                values.update(Prop._get_indirect_values_for_class(o2.__class__, True))
+                already_applied_class.add(o2.__class__)
+                
+    for eq in eqs:
+      if not eq.__class__ in already_applied_class:
+        values.update(Prop._get_indirect_values_for_class(eq.__class__, True))
+        already_applied_class.add(eq.__class__)
+        
+    return list(values)
+                        
+  def _get_indirect_inverse_values_for_individual(Prop, entity):
+    world   = entity.namespace.world
+    onto    = entity.namespace.ontology
+    Props   = Prop.descendants()
+    eqs     = list(entity.equivalent_to.self_and_indirect_equivalent())
+    already_applied_class = set()
+    
+    prop_storids = []
+    values       = set()
+    for P in Props:
+      if issubclass(P, TransitiveProperty):
+        if P._inverse_storid: prop_storids.append((P.storid, P._inverse_storid))
+        else:                 prop_storids.append((P.storid, None))
+      else:
+        if P._inverse_storid:
+          values.update(onto._to_python(o)
+                        for eq in eqs
+                        for g in (world._get_obj_triples_sp_o(eq.storid, P.storid), world._get_obj_triples_po_s(P._inverse_storid, eq.storid))
+                        for o in g )
+        else:
+          values.update(onto._to_python(o)
+                        for eq in eqs
+                        for o in  world._get_obj_triples_sp_o(eq.storid, P.storid) )
+          
+    if prop_storids:
+      for eq in eqs:
+        new_values = [onto._to_python(s) for s in world._get_obj_triples_transitive_po_indirect(eq.storid, prop_storids)]
         
         for o in new_values:
           values.add(o)
@@ -961,18 +1025,23 @@ class IndividualValueList(CallbackListWithLanguage):
   def _callback(self, obj, old):
     old = set(old)
     new = set(self)
-    inverse  = self._Prop.inverse_property
-    
+
     if   self._Prop._owl_type == owl_object_property:
+      inverse = self._Prop.inverse_property
+      if inverse:
+        inverse_python_name = inverse.python_name
+      else:
+        inverse_python_name = "INVERSE_%s" % self._Prop.python_name
+        
       for removed in old - new:
         obj.namespace.ontology._del_obj_triple_spo(obj.storid, self._Prop.storid, removed.storid)
         if inverse:
           obj.namespace.ontology._del_obj_triple_spo(removed.storid, inverse.storid, obj.storid) # Also remove inverse
-          removed.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
-          
+        removed.__dict__.pop(inverse_python_name, None) # Remove => force reloading; XXX optimizable
+        
       for added in new - old:
         obj.namespace.ontology._add_obj_triple_spo(obj.storid, self._Prop.storid, added.storid)
-        if inverse: added.__dict__.pop(inverse.python_name, None) # Remove => force reloading; XXX optimizable
+        added.__dict__.pop(inverse_python_name, None) # Remove => force reloading; XXX optimizable
         
     elif self._Prop._owl_type == owl_data_property:
       for removed in old - new:
@@ -993,7 +1062,7 @@ class IndividualValueList(CallbackListWithLanguage):
           obj.namespace.ontology._add_obj_triple_spo(obj.storid, self._Prop.storid, added.storid)
         else:
           obj.namespace.ontology._add_data_triple_spod(obj.storid, self._Prop.storid, *obj.namespace.ontology._to_rdf(added))
-
+          
 class FunctionalIndividualValueList(IndividualValueList):
   __slots__ = []
   def _callback(self, obj, old):
@@ -1002,7 +1071,39 @@ class FunctionalIndividualValueList(IndividualValueList):
       if self: obj.__dict__[self._Prop.python_name] = self[0]
       else:    obj.__dict__[self._Prop.python_name] = None
       
-          
+class InverseIndividualValueList(CallbackListWithLanguage):
+  __slots__ = ["_Prop"]
+  def __init__(self, l, obj, Prop):
+    list.__init__(self, l)
+    self._obj  = obj
+    self._Prop = Prop
+    
+  def indirect(self):
+    return self._Prop._get_indirect_inverse_values_for_individual(self._obj)
+  
+  def _callback(self, obj, old):
+    old = set(old)
+    new = set(self)
+
+    inverse = self._Prop.inverse_property
+    if inverse:
+      inverse_python_name = inverse.python_name
+    else:
+      inverse_python_name = "INVERSE_%s" % self._Prop.python_name
+
+    for removed in old - new:
+      if self._Prop.is_functional_for(removed.__class__):
+        setattr(removed, self._Prop.python_name, None)
+      else:
+        getattr(removed, self._Prop.python_name).remove(self._obj)
+      
+    for added in new - old:
+      if self._Prop.is_functional_for(added.__class__):
+        setattr(added, self._Prop.python_name, self._obj)
+      else:
+        getattr(added, self._Prop.python_name).append(self._obj)
+      
+  
 class ClassValueList(CallbackListWithLanguage):
   __slots__ = ["_Prop"]
   def __init__(self, l, obj, Prop):

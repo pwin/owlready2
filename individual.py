@@ -229,6 +229,15 @@ class Thing(metaclass = ThingClass):
       else:
         return list(Prop._get_indirect_values_for_individual(self))
       
+    elif attr.startswith("INVERSE_"):
+      Prop = self.namespace.world._props.get(attr[8:])
+      if Prop.inverse:
+        return getattr(self, Prop.inverse.python_name)
+      else:
+        if issubclass_python(Prop, InverseFunctionalProperty): self.__dict__[attr] = r = Prop._get_inverse_value_for_individual (self)
+        else:                                                  self.__dict__[attr] = r = Prop._get_inverse_values_for_individual(self)
+        return r
+      
     else:
       Prop = self.namespace.world._props.get(attr)
       if not Prop:
@@ -249,10 +258,16 @@ class Thing(metaclass = ThingClass):
         if Prop.is_functional_for(self.__class__):
           if   Prop._owl_type == owl_object_property:
             old_value = self.__dict__.get(attr, None)
-            if Prop.inverse_property and (not old_value is None):
-              old_value.__dict__.pop(Prop.inverse_property.python_name, None) # Remove => force reloading; XXX optimizable
-              self.namespace.ontology._del_obj_triple_spo(old_value.storid, Prop.inverse_property.storid, self.storid) # Also remove inverse
-              
+            #if Prop.inverse_property and (not old_value is None):
+            #  old_value.__dict__.pop(Prop.inverse_property.python_name, None) # Remove => force reloading; XXX optimizable
+            #  self.namespace.ontology._del_obj_triple_spo(old_value.storid, Prop.inverse_property.storid, self.storid) # Also remove inverse
+            if not old_value is None:
+              if Prop.inverse_property:
+                old_value.__dict__.pop(Prop.inverse_property.python_name, None) # Remove => force reloading; XXX optimizable
+                self.namespace.ontology._del_obj_triple_spo(old_value.storid, Prop.inverse_property.storid, self.storid) # Also remove inverse
+              else:
+                old_value.__dict__.pop("INVERSE_%s" % Prop.python_name, None) # Remove => force reloading; XXX optimizable
+                
             super().__setattr__(attr, value)
             
             if value is None:
@@ -260,7 +275,7 @@ class Thing(metaclass = ThingClass):
             else:
               self.namespace.ontology._set_obj_triple_spo(self.storid, Prop.storid, value.storid)
               if Prop.inverse_property: value.__dict__.pop(Prop.inverse_property.python_name, None) # Remove => force reloading; XXX optimizable
-            
+              
           elif Prop._owl_type == owl_data_property:
             old_value = self.__dict__.get(attr, None)
             
@@ -280,6 +295,26 @@ class Thing(metaclass = ThingClass):
               raise ValueError("Property '%s' is not functional, cannot assign directly (use .append() or assign a list)." % attr)
           getattr(self, attr).reinit(value)
           
+      elif attr.startswith("INVERSE_"):
+        Prop = self.namespace.world._props.get(attr[8:])
+        if Prop:
+          if Prop.inverse: setattr(self, Prop.inverse.python_name, value)
+          else:
+            if issubclass_python(Prop, InverseFunctionalProperty):
+              old_value = self.__dict__.get(attr, None)
+              if not old_value is None:
+                if Prop.is_functional_for(old_value): setattr(old_value, Prop.python_name, None)
+                else:                                 getattr(old_value, Prop.python_name).remove(self)
+              if not value is None:
+                if Prop.is_functional_for(value): setattr(value, Prop.python_name, self)
+                else:                             getattr(value, Prop.python_name).append(self)
+            else:
+              if not isinstance(value, list): raise ValueError("Property '%s' is not inverse functional, cannot assign directly (use .append() or assign a list)." % attr)
+              getattr(self, attr).reinit(value)
+            
+        else:
+          raise ValueError("Property '%s' do not exist, cannot use its INVERSE." % attr[8:])
+        
       else: super().__setattr__(attr, value)
         
   def _get_instance_possible_relations(self, ignore_domainless_properties = False):

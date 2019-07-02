@@ -2218,6 +2218,132 @@ class Test(BaseTest, unittest.TestCase):
     assert i.inverse_property is i
     assert i.inverse is i
     
+  def test_prop_40(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    onto.has_topping.inverse = None
+    assert onto.has_topping.inverse is None
+    assert onto.topping_of.inverse is None
+    
+  def test_prop_41(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    onto.has_topping.inverse_property = None
+    
+    assert onto.ma_tomate.INVERSE_has_topping == [onto.ma_pizza]
+    assert onto.ma_pizza .INVERSE_topping_of  == []
+    
+  def test_prop_42(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test").load()
+    
+    assert onto.ma_tomate.INVERSE_has_topping == [onto.ma_pizza]
+    assert onto.ma_pizza .INVERSE_topping_of  == [onto.ma_tomate, onto.mon_frometon]
+    
+  def test_prop_43(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.test.org/onto.owl")
+
+    with onto:
+      class D(Thing): pass
+      class R(Thing): pass
+      class p(D >> R): pass
+      d1 = D()
+      d2 = D()
+      r1 = R()
+      r2 = R()
+      d1.p = [r1, r2]
+      d2.p = [r1]
+      
+    assert set(r1.INVERSE_p) == set([d1, d2])
+    assert set(r2.INVERSE_p) == set([d1])
+    r1.INVERSE_p.remove(d1)
+    r2.INVERSE_p.append(d2)
+    assert set(r1.INVERSE_p) == set([d2])
+    assert set(r2.INVERSE_p) == set([d1, d2])
+    assert set(d1.p) == set([r2])
+    assert set(d2.p) == set([r1, r2])
+    
+  def test_prop_44(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.test.org/onto.owl")
+
+    with onto:
+      class D(Thing): pass
+      class R(Thing): pass
+      class p(D >> R, FunctionalProperty): pass
+      d1 = D()
+      d2 = D()
+      r1 = R()
+      r2 = R()
+      d1.p = r1
+      d2.p = r1
+
+    assert set(r1.INVERSE_p) == set([d1, d2])
+    assert set(r2.INVERSE_p) == set([])
+    r1.INVERSE_p.remove(d1)
+    assert set(r1.INVERSE_p) == set([d2])
+    assert set(r2.INVERSE_p) == set([])
+    assert d1.p == None
+    assert d2.p == r1
+    r2.INVERSE_p.append(d2)
+    assert set(r1.INVERSE_p) == set([])
+    assert set(r2.INVERSE_p) == set([d2])
+    assert d1.p == None
+    assert d2.p == r2
+    
+  def test_prop_45(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.test.org/onto.owl")
+
+    with onto:
+      class D(Thing): pass
+      class R(Thing): pass
+      class p(D >> R, InverseFunctionalProperty): pass
+      d1 = D()
+      d2 = D()
+      r1 = R()
+      r2 = R()
+      d1.p = [r1]
+      d2.p = [r2]
+      
+    assert r1.INVERSE_p == d1
+    assert r2.INVERSE_p == d2
+    r1.INVERSE_p = d2
+    assert r1.INVERSE_p == d2
+    assert r2.INVERSE_p == d2
+    assert set(d1.p) == set([])
+    assert set(d2.p) == set([r2, r1])
+    r2.INVERSE_p = None
+    assert r1.INVERSE_p == d2
+    assert r2.INVERSE_p == None
+    assert set(d1.p) == set([])
+    assert set(d2.p) == set([r1])
+    
+  def test_prop_46(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.test.org/onto.owl")
+
+    with onto:
+      class D(Thing): pass
+      class R(Thing): pass
+      class p(D >> R, FunctionalProperty, InverseFunctionalProperty): pass
+      d1 = D()
+      d2 = D()
+      r1 = R()
+      r2 = R()
+      d1.p = r1
+      d2.p = r2
+      
+    assert r1.INVERSE_p == d1
+    assert r2.INVERSE_p == d2
+    r1.INVERSE_p = d2
+    assert r1.INVERSE_p == d2
+    assert r2.INVERSE_p == None
+    assert d1.p == None
+    assert d2.p == r1
+    
     
   def test_prop_inverse_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

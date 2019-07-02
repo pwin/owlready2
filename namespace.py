@@ -72,7 +72,6 @@ class Namespace(object):
   
   def __getattr__(self, attr): return self.world["%s%s" % (self.base_iri, attr)] #return self[attr]
   def __getitem__(self, name): return self.world["%s%s" % (self.base_iri, name)]
-  
 
 class _GraphManager(object):
   def _abbreviate  (self, iri, create_if_missing = True):

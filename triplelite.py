@@ -681,6 +681,9 @@ class Graph(BaseMainGraph):
   def _get_obj_triples_spi_o(self, s, p, i):
     for (x,) in self.execute("SELECT o FROM objs WHERE s=? AND p=? UNION SELECT s FROM objs WHERE p=? AND o=?", (s, p, i, s)).fetchall(): yield x
     
+  def _get_obj_triples_pio_s(self, p, i, o):
+    for (x,) in self.execute("SELECT s FROM objs WHERE p=? AND o=? UNION SELECT o FROM objs WHERE s=? AND p=?", (p, o, o, i)).fetchall(): yield x
+    
   def _get_obj_triple_sp_o(self, s, p):
     r = self.execute("SELECT o FROM objs WHERE s=? AND p=? LIMIT 1", (s, p)).fetchone()
     if r: return r[0]
@@ -1352,6 +1355,9 @@ class SubGraph(BaseSubGraph):
     
   def _get_obj_triples_spi_o(self, s, p, i):
     for (x,) in self.execute("SELECT o FROM objs WHERE c=? AND s=? AND p=? UNION SELECT s FROM objs WHERE c=? AND p=? AND o=?", (self.c, s, p, self.c, i, s)).fetchall(): yield x
+    
+  def _get_obj_triples_pio_s(self, p, i, o):
+    for (x,) in self.execute("SELECT s FROM objs WHERE c=? AND p=? AND o=? UNION SELECT o FROM objs WHERE c=? AND s=? AND p=?", (self.c, p, o, self.c, o, i)).fetchall(): yield x
     
   def _get_obj_triple_sp_o(self, s, p):
     r = self.execute("SELECT o FROM objs WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,)).fetchone()
