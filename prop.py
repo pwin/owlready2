@@ -531,6 +531,8 @@ class ObjectPropertyClass(ReasoningPropertyClass):
     
     prop_storids = []
     values       = set()
+    if issubclass_python(Prop, ReflexiveProperty): values.add(entity)
+    
     for P in Props:
       if issubclass(P, TransitiveProperty):
         if P._inverse_storid: prop_storids.append((P.storid, P._inverse_storid))
@@ -569,52 +571,52 @@ class ObjectPropertyClass(ReasoningPropertyClass):
         
     return list(values)
                         
-  def _get_indirect_inverse_values_for_individual(Prop, entity):
-    world   = entity.namespace.world
-    onto    = entity.namespace.ontology
-    Props   = Prop.descendants()
-    eqs     = list(entity.equivalent_to.self_and_indirect_equivalent())
-    already_applied_class = set()
+  # def _get_indirect_inverse_values_for_individual(Prop, entity):
+  #   world   = entity.namespace.world
+  #   onto    = entity.namespace.ontology
+  #   Props   = Prop.descendants()
+  #   eqs     = list(entity.equivalent_to.self_and_indirect_equivalent())
+  #   already_applied_class = set()
     
-    prop_storids = []
-    values       = set()
-    for P in Props:
-      if issubclass(P, TransitiveProperty):
-        if P._inverse_storid: prop_storids.append((P.storid, P._inverse_storid))
-        else:                 prop_storids.append((P.storid, None))
-      else:
-        if P._inverse_storid:
-          values.update(onto._to_python(o)
-                        for eq in eqs
-                        for g in (world._get_obj_triples_sp_o(eq.storid, P.storid), world._get_obj_triples_po_s(P._inverse_storid, eq.storid))
-                        for o in g )
-        else:
-          values.update(onto._to_python(o)
-                        for eq in eqs
-                        for o in  world._get_obj_triples_sp_o(eq.storid, P.storid) )
+  #   prop_storids = []
+  #   values       = set()
+  #   for P in Props:
+  #     if issubclass(P, TransitiveProperty):
+  #       if P._inverse_storid: prop_storids.append((P.storid, P._inverse_storid))
+  #       else:                 prop_storids.append((P.storid, None))
+  #     else:
+  #       if P._inverse_storid:
+  #         values.update(onto._to_python(o)
+  #                       for eq in eqs
+  #                       for g in (world._get_obj_triples_sp_o(eq.storid, P.storid), world._get_obj_triples_po_s(P._inverse_storid, eq.storid))
+  #                       for o in g )
+  #       else:
+  #         values.update(onto._to_python(o)
+  #                       for eq in eqs
+  #                       for o in  world._get_obj_triples_sp_o(eq.storid, P.storid) )
           
-    if prop_storids:
-      for eq in eqs:
-        new_values = [onto._to_python(s) for s in world._get_obj_triples_transitive_po_indirect(eq.storid, prop_storids)]
+  #   if prop_storids:
+  #     for eq in eqs:
+  #       new_values = [onto._to_python(s) for s in world._get_obj_triples_transitive_po_indirect(eq.storid, prop_storids)]
         
-        for o in new_values:
-          values.add(o)
-          if not o.__class__ in already_applied_class:
-            values.update(Prop._get_indirect_values_for_class(o.__class__, True))
-            already_applied_class.add(o.__class__)
-          for o2 in o.equivalent_to.indirect():
-            if not ((o2 in new_values) or (o2 in values)):
-              values.add(o2)
-              if not o2.__class__ in already_applied_class:
-                values.update(Prop._get_indirect_values_for_class(o2.__class__, True))
-                already_applied_class.add(o2.__class__)
+  #       for o in new_values:
+  #         values.add(o)
+  #         if not o.__class__ in already_applied_class:
+  #           values.update(Prop._get_indirect_values_for_class(o.__class__, True))
+  #           already_applied_class.add(o.__class__)
+  #         for o2 in o.equivalent_to.indirect():
+  #           if not ((o2 in new_values) or (o2 in values)):
+  #             values.add(o2)
+  #             if not o2.__class__ in already_applied_class:
+  #               values.update(Prop._get_indirect_values_for_class(o2.__class__, True))
+  #               already_applied_class.add(o2.__class__)
                 
-    for eq in eqs:
-      if not eq.__class__ in already_applied_class:
-        values.update(Prop._get_indirect_values_for_class(eq.__class__, True))
-        already_applied_class.add(eq.__class__)
+  #   for eq in eqs:
+  #     if not eq.__class__ in already_applied_class:
+  #       values.update(Prop._get_indirect_values_for_class(eq.__class__, True))
+  #       already_applied_class.add(eq.__class__)
         
-    return list(values)
+  #   return list(values)
   
   def _get_indirect_values_for_class(Prop, entity, transitive_exclude_self = True):
     world = entity.namespace.world

@@ -402,6 +402,7 @@ version 2 - 0.19
 * INDIRECT_is_a / INDIRECT_is_instance_of now include class contructs. ancestors() has a 'include_constructs' parameter, which defaults to False.
 * Add more aliases for XMLSchema datatypes
 * Add is_a property to class constructs
+* Support ReflexiveProperties in individual.INDIRECT_property
 * Optimize Thing.subclasses()
 * Bugfixes:
   - After reasoning, keep all equivalent classes as parents of individuals (as they may have methods)

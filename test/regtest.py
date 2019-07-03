@@ -2344,7 +2344,22 @@ class Test(BaseTest, unittest.TestCase):
     assert d1.p == None
     assert d2.p == r1
     
+  def test_prop_47(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.test.org/onto.owl")
     
+    with onto:
+      class C(Thing): pass
+      class p(C >> C, ReflexiveProperty): pass
+      c1 = C()
+      c2 = C(p = [c1])
+      
+    assert set(c1.p) == set([])
+    assert set(c2.p) == set([c1])
+    assert set(c1.INDIRECT_p) == set([c1])
+    assert set(c2.INDIRECT_p) == set([c1, c2])
+      
+      
   def test_prop_inverse_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     assert n.price.inverse_property is None
