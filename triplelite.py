@@ -1114,7 +1114,7 @@ class SubGraph(BaseSubGraph):
       #    cur.execute("""CREATE INDEX index_objs_op ON objs(o,p)""")
       #    cur.execute("""CREATE INDEX index_datas_sp ON datas(s,p)""")
       #    cur.execute("""CREATE INDEX index_datas_op ON datas(o,p)""")
-          
+      
       t0 = time.time()
       onto_base_iri = cur.execute("SELECT resources.iri FROM objs, resources WHERE objs.c=? AND objs.o=? AND resources.storid=objs.s LIMIT 1", (self.c, owl_ontology)).fetchone()
       if onto_base_iri: onto_base_iri = onto_base_iri[0]

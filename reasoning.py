@@ -370,7 +370,7 @@ def _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, en
     for concept1, concepts2 in new_equivs_loaded.items():
       for concept2 in concepts2:
         if debug: print("* Owlready * Equivalenting:", concept1, concept2, file = sys.stderr)
-        concept1.equivalent_to._append(concept2)
+        if not concept2 in concept1.equivalent_to: concept1.equivalent_to._append(concept2)
         
     for child, parents in new_parents_loaded.items():
       old = set(parent for parent in child.is_a if not isinstance(parent, ClassConstruct))

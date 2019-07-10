@@ -2359,7 +2359,19 @@ class Test(BaseTest, unittest.TestCase):
     assert set(c1.INDIRECT_p) == set([c1])
     assert set(c2.INDIRECT_p) == set([c1, c2])
       
-      
+  def test_prop_48(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://www.test.org/onto.owl")
+    
+    with onto:
+      class C(Thing): pass
+      class p(C >> C): pass
+      C.is_a.append(p.only(Nothing))
+
+    sync_reasoner(world, debug = 0)
+    assert p.equivalent_to == [bottomObjectProperty]
+    
+    
   def test_prop_inverse_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     assert n.price.inverse_property is None

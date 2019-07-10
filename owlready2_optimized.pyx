@@ -202,8 +202,9 @@ def parse_rdfxml(object f, list objs, list datas, object insert_objs, object ins
         namespace_base = attrs.get("http://www.w3.org/XML/1998/namespacebase")
         if namespace_base:
           xml_base = namespace_base
-          xml_dir  = namespace_base.rsplit("/", 1)[0] + "/"
-          
+          if "/" in namespace_base:
+            xml_dir  = namespace_base.rsplit("/", 1)[0] + "/"
+            
       else:
         iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#resource")
         if not iri is None:

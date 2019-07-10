@@ -942,6 +942,9 @@ def destroy_entity(e):
   e.namespace.world._entities.pop(e.storid, None)
 
 
+class bottomObjectProperty(ObjectProperty): pass
+class bottomDataProperty(DataProperty): pass
+
 
 
 

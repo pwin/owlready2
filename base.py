@@ -245,6 +245,8 @@ swrl_arguments               = _universal_abbrev("http://www.w3.org/2003/11/swrl
 swrl_equivalentindividual    = _universal_abbrev("http://www.w3.org/2003/11/swrl#SameIndividualAtom")
 swrl_differentfrom           = _universal_abbrev("http://www.w3.org/2003/11/swrl#DifferentIndividualAtom")
 
+owl_bottomobjectproperty     = _universal_abbrev("http://www.w3.org/2002/07/owl#bottomObjectProperty")
+owl_bottomdataproperty       = _universal_abbrev("http://www.w3.org/2002/07/owl#bottomDataProperty")
 
 issubclass_python = issubclass
 
