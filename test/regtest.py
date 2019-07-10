@@ -6271,15 +6271,12 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     for rule in rules:
       with onto:
         imp = Imp().set_as_rule(rule)
-        #print(rule)
-        #print(imp)
-        #print()
         assert rule == str(imp)
         
     with onto:
       imp = Imp().set_as_rule("""http://test.org/t.owl#Person(?p), http://test.org/t.owl#size(?p, ?s) -> http://test.org/t.owl#weight(?p, ?s)""")
       assert str(imp) == """Person(?p), size(?p, ?s) -> weight(?p, ?s)"""
-      
+
   def test_swrl_2(self):
     world = self.new_world()
     onto = world.get_ontology("http://test.org/t.owl#")
@@ -6292,10 +6289,39 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
 
       p1 = Person(size = 2.0, weight = 100.0)
 
-    onto.save("/tmp/t.owl")
     sync_reasoner_pellet(world, infer_property_values = True, infer_data_property_values = True, debug = 0)
     
     assert p1.imc == 25.0
+    
+  def test_swrl_3(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/t.owl#")
+    with onto:
+      class C(Thing): pass
+      class p1(C >> C): pass
+      class p2(C >> C): pass
+      Imp().set_as_rule("""p1(?x, ?y) -> p2(?x, ?y)""")
+      
+      c1 = C()
+      c2 = C(p1 = [c1])
+      
+    sync_reasoner_pellet(world, infer_property_values = True, infer_data_property_values = True, debug = 0)
+    
+    assert c2.p2 == [c1]
+    
+  def test_swrl_4(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/t.owl#")
+    with onto:
+      class C(Thing): pass
+      class p(C >> float): pass
+      Imp().set_as_rule("""C(?x) -> p(?x, 1.0)""")
+      
+      c = C()
+      
+    sync_reasoner_pellet(world, infer_property_values = True, infer_data_property_values = True, debug = 0)
+    
+    assert c.p == [1.0]
     
       
 class Paper(BaseTest, unittest.TestCase):

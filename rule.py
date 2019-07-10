@@ -228,7 +228,7 @@ class DatavaluedPropertyAtom(_FixedArguments, Thing):
   def __str__(self):
     return "%s(%s)" % (self.property_predicate.name, ", ".join(str(i) for i in self.arguments))
   
-class IndividualPropertyAtom(Thing, _FixedArguments):
+class IndividualPropertyAtom(_FixedArguments, Thing):
   namespace = swrl
   
   def __init__(self, name = 0, namespace = None, **kargs): # Use a blanck node by default
@@ -348,8 +348,8 @@ def _create_rule_parser():
   lg.add(")", r"\)")
   lg.add(",", r",")
   lg.add("IMP", r"->")
-  lg.add("FLOAT", r"-[0-9]*.[0-9]+")
-  lg.add("FLOAT", r"[0-9]*.[0-9]+")
+  lg.add("FLOAT", r"-[0-9]*\.[0-9]+")
+  lg.add("FLOAT", r"[0-9]*\.[0-9]+")
   lg.add("INT", r"-[0-9]+")
   lg.add("INT", r"[0-9]+")
   lg.add("STR", r'".*?"')

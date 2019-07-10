@@ -407,6 +407,8 @@ version 2 - 0.19
 * Optimize Thing.subclasses()
 * Bugfixes:
   - After reasoning, keep all equivalent classes as parents of individuals (as they may have methods)
+  - Fix IndividualPropertyAtom when creating SWRL rule
+  - Fix SWRL parser
   - Fix RDF serialization for nested RDF lists
   - Fix removing inverse property (i.e. Prop.inverse = None)
   
