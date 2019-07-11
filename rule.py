@@ -142,14 +142,22 @@ class Imp(Thing):
             if   arg.name == "VAR":   arguments.append(self.get_variable(arg.value))
             elif arg.name == "NAME":  arguments.append(_find_entity(arg.value, namespaces))
             else:                     arguments.append(arg.value)
-
+            
           atom.arguments = arguments
           l.append(atom)
         ls.append(l)
         
       self.body, self.head = ls
     return self
-      
+
+  def __destroy__(self):
+    for atom in self.head + self.body:
+      atom.__destroy__()
+    for bn in (self.namespace.world._get_obj_triple_sp_o(self.storid, swrl_body), self.namespace.world._get_obj_triple_sp_o(self.storid, swrl_head)):
+      if not bn is None:
+        self.namespace.ontology._del_list(bn)
+        
+        
 def _find_entity(name, namespaces):
   if ":" in name:
     entity = namespaces[0].world[name]
@@ -174,12 +182,22 @@ class _FixedArguments(object):
       object.__setattr__(self, attr, l)
       return l
     return super().__getattr__(attr)  
-
+  
+  def __destroy__(self):
+    bn = self.namespace.world._get_obj_triple_sp_o(self.storid, swrl_arguments)
+    if not bn is None:
+      self.namespace.ontology._del_obj_triple_spo(bn, None, None)
+      self.namespace.ontology._del_data_triple_spod(bn, None, None, None)
+    self.namespace.ontology._del_obj_triple_spo(self.storid, None, None)
+    self.namespace.ontology._del_data_triple_spod(self.storid, None, None, None)
+    
+    
 class ClassAtom(_FixedArguments, Thing):
   namespace = swrl
   
   def __str__(self):
     return "%s(%s)" % (self.class_predicate.name, ", ".join(str(i) for i in self.arguments))
+    
   
 class DataRangeAtom(_FixedArguments, Thing):
   namespace = swrl
@@ -292,7 +310,14 @@ class BuiltinAtom(Thing):
       object.__setattr__(self, attr, value)
       self.namespace.ontology._set_obj_triple_spo(self.storid, swrl_builtin, self.namespace.world._abbreviate("http://www.w3.org/2003/11/swrlb#%s" % value))
     else: super().__setattr__(attr, value)
-  
+    
+  def __destroy__(self):
+    bn = self.namespace.world._get_obj_triple_sp_o(self.storid, swrl_arguments)
+    if not bn is None: self.namespace.ontology._del_list(bn)
+    self.namespace.ontology._del_obj_triple_spo(self.storid, None, None)
+    self.namespace.ontology._del_data_triple_spod(self.storid, None, None, None)
+    
+    
 
 class OrderedValueList(CallbackList):
   __slots__ = ["_Prop", "_bn"]

@@ -874,7 +874,9 @@ class PropertyChain(object):
 
 
 def destroy_entity(e):
-  if isinstance(e, PropertyClass):
+  if   hasattr(e, "__destroy__"): e.__destroy__()
+
+  elif isinstance(e, PropertyClass):
     modified_entities = set()
     if   e._owl_type == owl_object_property:
       for s,p,o in e.namespace.world._get_obj_triples_spo_spo(None, e.storid, None):
