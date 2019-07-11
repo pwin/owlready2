@@ -128,7 +128,7 @@ class EntityClass(type):
         is_a           = _is_a,
         _equivalent_to = None,
       )
-      
+
       Class = namespace.world._entities[storid] = _is_a._obj = type.__new__(MetaClass, name, superclasses, obj_dict)
       _cache_entity(Class)
       
@@ -359,7 +359,7 @@ EXCEPT SELECT q2.s FROM objs q2 WHERE q2.p = ? and q2.p != ?""",
         for x in world._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid):
           if not x < 0:
             yield world._get_by_storid(x, None, ThingClass, Class.namespace.ontology)
-            
+        
   def constructs(Class, Prop = None):
     def _top_bn(onto, s):
       for relation in [rdf_first, rdf_rest, owl_complementof, owl_unionof, owl_intersectionof, owl_onclass, SOME, ONLY]:

@@ -192,7 +192,8 @@ class Graph(BaseMainGraph):
         self.db.cursor().executescript(s)
         
       version, self.current_blank, self.current_resource = self.execute("SELECT version, current_blank, current_resource FROM store").fetchone()
-
+      self.current_resource = self.execute("SELECT MAX(storid) FROM resources").fetchone()[0]
+      
       if clone:
         self.current_blank    = clone.current_blank
         self.current_resource = clone.current_resource
