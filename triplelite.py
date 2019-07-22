@@ -1104,7 +1104,7 @@ class SubGraph(BaseSubGraph):
     def on_finish():
       if filename: date = os.path.getmtime(filename)
       else:        date = time.time()
-      
+
       insert_objs()
       insert_datas()
       
@@ -1493,11 +1493,16 @@ class _SearchList(FirstList, _SearchMixin, _LazyListMixin):
       
       n += 1
       i = "%s_%s" % (self.id, n)
-      if n == 1: self.target = i
-      if   d is None:    self.tables.append("objs q%s" % i)
-      elif d == "quads": self.tables.append("quads q%s" % i)
-      else:              self.tables.append("datas q%s" % i)
-      
+      if n == 1:
+        self.target = i
+        if   d is None:    self.tables.append("objs q%s" % i)
+        elif d == "quads": self.tables.append("quads q%s" % i)
+        else:              self.tables.append("datas q%s" % i)
+      else:
+        if   d is None:    self.tables.append("objs q%s INDEXED BY index_objs_sp" % i)
+        elif d == "quads": self.tables.append("quads q%s" % i)
+        else:              self.tables.append("datas q%s INDEXED BY index_datas_sp" % i)
+        
       if not c is None:
         self.conditions  .append("q%s.c = ?" % i)
         self.params      .append(c)

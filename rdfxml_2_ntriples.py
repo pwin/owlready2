@@ -160,11 +160,12 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
         stack.append(["RDF", ""])
         
         namespace_base = attrs.get("http://www.w3.org/XML/1998/namespacebase")
+
         if namespace_base:
           xml_base = namespace_base
           if "/" in namespace_base:
             xml_dir  = namespace_base.rsplit("/", 1)[0] + "/"
-          
+            
       else:
         iri = attrs.get("http://www.w3.org/1999/02/22-rdf-syntax-ns#resource")
         if iri:

@@ -405,6 +405,7 @@ version 2 - 0.19
 * Add bottomObjectProperty and bottomDataProperty
 * Support ReflexiveProperties in individual.INDIRECT_property
 * Optimize Thing.subclasses()
+* Optimize search() with multiple criteria, including those done by PyMedTermino
 * Add support for destroy_entity(SWRL_rule)
 * Bugfixes:
   - After reasoning, keep all equivalent classes as parents of individuals (as they may have methods)
