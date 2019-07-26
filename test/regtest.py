@@ -5486,6 +5486,17 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     del c.has_time
     assert c.has_time == d
     
+  def test_date_4(self):
+    world = self.new_world()
+    onto = world.get_ontology("./owlready2/test/test_datetime.owl").load()
+    
+    assert set(onto.c1.d) == set([
+      datetime.datetime(2017, 9, 17, 13, 52, 24, tzinfo=datetime.timezone.utc),
+      datetime.datetime(2019, 7, 26, 17, 44, 50, 984100),
+      datetime.datetime(2019, 7, 26, 17, 44, 50, 984100, tzinfo=datetime.timezone.utc),
+      datetime.datetime(2019, 7, 26, 17, 44, 50)
+    ])
+    
     
   def test_datatype_1(self):
     world = self.new_world()

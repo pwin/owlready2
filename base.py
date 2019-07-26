@@ -154,6 +154,12 @@ def _parse_date(s):
     return None
   return r
 
+def _parse_datetime(s):
+  for format in ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S.%f%z"]:
+    try:    return datetime.datetime.strptime(s, format)
+    except: pass
+  raise ValueError("Cannot parse ISO datetime '%s'!" % s)
+
 _universal_abbrev_datatype(int, None, number_unparser, "http://www.w3.org/2001/XMLSchema#integer", "http://www.w3.org/2001/XMLSchema#byte", "http://www.w3.org/2001/XMLSchema#short", "http://www.w3.org/2001/XMLSchema#int", "http://www.w3.org/2001/XMLSchema#long", "http://www.w3.org/2001/XMLSchema#unsignedByte", "http://www.w3.org/2001/XMLSchema#unsignedShort", "http://www.w3.org/2001/XMLSchema#unsignedInt", "http://www.w3.org/2001/XMLSchema#unsignedLong", "http://www.w3.org/2001/XMLSchema#negativeInteger", "http://www.w3.org/2001/XMLSchema#nonNegativeInteger", "http://www.w3.org/2001/XMLSchema#positiveInteger")
 _universal_abbrev_datatype(bool, bool_parser, bool_unparser, "http://www.w3.org/2001/XMLSchema#boolean")
 _universal_abbrev_datatype(float, None, number_unparser, "http://www.w3.org/2001/XMLSchema#decimal", "http://www.w3.org/2001/XMLSchema#double", "http://www.w3.org/2001/XMLSchema#float", "http://www.w3.org/2002/07/owl#real")
@@ -161,8 +167,9 @@ _universal_abbrev_datatype(str, None, None, "http://www.w3.org/2001/XMLSchema#st
 _universal_abbrev_datatype(normstr, None, None, "http://www.w3.org/2001/XMLSchema#normalizedString", "http://www.w3.org/2001/XMLSchema#anyURI", "http://www.w3.org/2001/XMLSchema#Name", "http://www.w3.org/2001/XMLSchema#NCName", "http://www.w3.org/2001/XMLSchema#language", "http://www.w3.org/2001/XMLSchema#token", "http://www.w3.org/2001/XMLSchema#NMTOKEN", "http://www.w3.org/2001/XMLSchema#ID", "http://www.w3.org/2001/XMLSchema#IDREF", "http://www.w3.org/2001/XMLSchema#ENTITY")
 _universal_abbrev_datatype(locstr, None, None, "http://www.w3.org/1999/02/22-rdf-syntax-ns#PlainLiteral")
 _universal_abbrev_datatype(datetime.datetime,
-                           lambda s: datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S"),
-                           datetime.datetime.isoformat, "http://www.w3.org/2001/XMLSchema#dateTime")
+                           _parse_datetime,
+                           datetime.datetime.isoformat,
+                           "http://www.w3.org/2001/XMLSchema#dateTime")
 _universal_abbrev_datatype(datetime.date,
                            _parse_date,
                            datetime.date.isoformat, "http://www.w3.org/2001/XMLSchema#date")

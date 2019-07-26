@@ -413,6 +413,7 @@ version 2 - 0.19
   - Fix SWRL parser
   - Fix RDF serialization for nested RDF lists
   - Fix removing inverse property (i.e. Prop.inverse = None)
+  - Fix datetime parsing for date with time zone or milliseconds
   
 Links
 -----
