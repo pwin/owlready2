@@ -48,8 +48,10 @@ Installation
 #. After registration with NLM, download UMLS data (Warning: some restriction may apply depending on country; see UMLS licence and its SNOMED CT appendix):
 
    - https://www.nlm.nih.gov/research/umls/licensedcontent/umlsknowledgesources.html
-    
-     (e.g. download “2018AB-full.zip”; do not unzip it!)
+
+     PyMedTermino2 suports both the "Full UMLS Release Files" and the "UMLS Metathesaurus Files", but the latter
+     is recommended since it is faster to uncompress.
+     E.g. download “umls-2019AA-metathesaurus.zip”. Do not unzip it!
 
 #. Import UMLS data in Python as follows:
 
@@ -57,7 +59,7 @@ Installation
 >>> from owlready2.pymedtermino2 import *
 >>> from owlready2.pymedtermino2.umls import *
 >>> default_world.set_backend(filename = "pym.sqlite3")
->>> import_umls("umls-2018AB-full.zip", terminologies = ["ICD10", "SNOMEDCT_US", "CUI"])
+>>> import_umls("umls-2019AA-metathesaurus.zip", terminologies = ["ICD10", "SNOMEDCT_US", "CUI"])
 >>> default_world.save()
 
 were:

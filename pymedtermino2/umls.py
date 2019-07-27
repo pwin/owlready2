@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import sys, os, types, zipfile, gzip
+import sys, os, types, zipfile, gzip, io
 from collections import defaultdict, Counter
 from owlready2 import *
 
@@ -646,7 +646,7 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index
   previous_parser = None
   
   if os.path.isdir(umls_zip_filename):
-    print("Importing UMLS from directory %s with Python version %s..." % (umls_zip_filename, sys.version))
+    print("Importing UMLS from directory %s with Python version %s.%s..." % (umls_zip_filename, sys.version_info.major, sys.version_info.minor))
     inner_filenames = sorted(os.listdir(umls_zip_filename))
     print("Files found in this directory: %s" % ", ".join(inner_filenames))
     if not "MRCONSO.RRF" in inner_filenames:
@@ -663,29 +663,76 @@ def import_umls(umls_zip_filename, terminologies = None, langs = None, fts_index
           default_world.save()
           previous_parser = table_name
   else:
+    print("Importing UMLS from Zip file %s with Python version %s.%s..." % (umls_zip_filename, sys.version_info.major, sys.version_info.minor))
+
+    def parse_umls_zip(umls_inner_zip):
+      nonlocal previous_parser
+      inner_filenames = sorted(umls_inner_zip.namelist())
+      for table_name, parser in parsers:
+        for inner_filename in inner_filenames:
+          if ("/%s.RRF" % table_name) in inner_filename:
+            if previous_parser != table_name: importer.after(previous_parser)
+            print("  Parsing %s as %s" % (inner_filename, table_name), end = "")
+            if inner_filename.lower().endswith(".gz"):
+              f = gzip.open(umls_inner_zip.open(inner_filename), "rt", encoding = "UTF-8")
+              print(" with encoding %s" % f.encoding)
+            else:
+              f = io.TextIOWrapper(umls_inner_zip.open(inner_filename), "UTF-8")
+              print()
+            remnants[table_name] = parser(PYM, terminologies, langs, importer,
+                                          f,
+                                          remnants[table_name])
+            importer.force_insert()
+            default_world.save()
+            previous_parser = table_name
+            
+    
     with zipfile.ZipFile(umls_zip_filename, "r") as umls_zip:
-      for filename in sorted(umls_zip.namelist()):
+      filenames = sorted(umls_zip.namelist())
+      
+      #for filename in filenames:
+      #  if filename.endwiths("/META/") or filename.endwiths("/META"):
+      #    full_umls = False
+      #    break
+      #else: full_umls = True
+
+      #if full_umls:
+      parse_umls_zip(umls_zip)
+      for filename in filenames:
         if filename.endswith("-meta.nlm"):
-          print("Importing UMLS from Zip file %s with Python version %s..." % (filename, sys.version))
-          
+          print("Full UMLS release - importing UMLS from inner Zip file %s..." % filename)
           fp = umls_zip.open(filename)
           if not fp.seekable():
             raise Exception("PyMedTermino2 import require Python version >= 3.7 (but after import, the quadstore can be used by Python 3.6)")
           with zipfile.ZipFile(fp, "r") as umls_inner_zip:
-            inner_filenames = sorted(umls_inner_zip.namelist())
-            for table_name, parser in parsers:
-              for inner_filename in inner_filenames:
-                if ("/%s.RRF" % table_name) in inner_filename:
-                  if previous_parser != table_name: importer.after(previous_parser)
-                  print("  Parsing %s as %s" % (inner_filename, table_name), end = "")
-                  f = gzip.open(umls_inner_zip.open(inner_filename), "rt", encoding = "UTF-8")
-                  print(" with encoding %s" % f.encoding)
-                  remnants[table_name] = parser(PYM, terminologies, langs, importer,
-                                                f,
-                                                remnants[table_name])
-                  importer.force_insert()
-                  default_world.save()
-                  previous_parser = table_name
+            parse_umls_zip(umls_inner_zip)
+            
+      #else:
+      #  parse_inner_zip(umls_zip)
+        
+      #for filename in filenames:
+      #  if filename.endswith("-meta.nlm"):
+      #    print("Importing UMLS from Zip file %s with Python version %s..." % (filename, sys.version))
+      #    
+      #    fp = umls_zip.open(filename)
+      #    if not fp.seekable():
+      #      raise Exception("PyMedTermino2 import require Python version >= 3.7 (but after import, the quadstore can be used by Python 3.6)")
+      #    with zipfile.ZipFile(fp, "r") as umls_inner_zip:
+      #      parse_inner_zip(umls_inner_zip)
+            #inner_filenames = sorted(umls_inner_zip.namelist())
+            #for table_name, parser in parsers:
+            #  for inner_filename in inner_filenames:
+            #    if ("/%s.RRF" % table_name) in inner_filename:
+            #      if previous_parser != table_name: importer.after(previous_parser)
+            #      print("  Parsing %s as %s" % (inner_filename, table_name), end = "")
+            #      f = gzip.open(umls_inner_zip.open(inner_filename), "rt", encoding = "UTF-8")
+            #      print(" with encoding %s" % f.encoding)
+            #      remnants[table_name] = parser(PYM, terminologies, langs, importer,
+            #                                    f,
+            #                                    remnants[table_name])
+            #      importer.force_insert()
+            #      default_world.save()
+            #      previous_parser = table_name
                   
   finalize(PYM, importer)
   importer.force_insert()

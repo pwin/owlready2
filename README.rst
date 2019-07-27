@@ -407,6 +407,7 @@ version 2 - 0.19
 * Optimize Thing.subclasses()
 * Optimize search() with multiple criteria, including those done by PyMedTermino
 * Add support for destroy_entity(SWRL_rule)
+* Add support for UMLS "metathesaurus" format in addition to "full" format
 * Bugfixes:
   - After reasoning, keep all equivalent classes as parents of individuals (as they may have methods)
   - Fix IndividualPropertyAtom when creating SWRL rule
