@@ -542,8 +542,8 @@ class ParserGenerator(object):
 
     table = LRTable.from_grammar(g)
 
-    if table.sr_conflicts: print("%d shift/reduce conflict%s" % (len(table.sr_conflicts), "s" if len(table.sr_conflicts) > 1 else ""))
-    if table.rr_conflicts: print("%d reduce/reduce conflict%s" % (len(table.rr_conflicts), "s" if len(table.rr_conflicts) > 1 else ""))
+    #if table.sr_conflicts: print("%d shift/reduce conflict%s" % (len(table.sr_conflicts), "s" if len(table.sr_conflicts) > 1 else ""))
+    #if table.rr_conflicts: print("%d reduce/reduce conflict%s" % (len(table.rr_conflicts), "s" if len(table.rr_conflicts) > 1 else ""))
     return LRParser(table, self.error_handler)
 
 

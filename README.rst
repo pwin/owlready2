@@ -416,6 +416,13 @@ version 2 - 0.19
   - Fix removing inverse property (i.e. Prop.inverse = None)
   - Fix datetime parsing for date with time zone or milliseconds
   
+version 2 - 0.20
+****************
+
+* Bugfixes:
+  - Fix performance bug on UMLS mapping in PyMedTermino
+
+    
 Links
 -----
 

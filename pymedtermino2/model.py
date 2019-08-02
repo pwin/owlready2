@@ -191,7 +191,7 @@ def _chain_mapper(mapper1, mapper2):
 def _create_from_cui_mapper(dest):
   def _from_cui_mapper(c, dest_storid = dest.storid):
     for (i,) in PYM.world.graph.execute(
-"""SELECT to3.o FROM objs to1, objs to2, objs to3
+"""SELECT to3.o FROM objs to1 INDEXED BY index_objs_sp, objs to2 INDEXED BY index_objs_sp, objs to3 INDEXED BY index_objs_sp
 WHERE to1.s=? AND to1.p=?
 AND to2.s=to1.o AND to2.p=? AND to2.o=?
 AND to3.s=to1.o AND to3.p=?
@@ -206,7 +206,7 @@ AND to3.s=to1.o AND to3.p=?
   
 def _to_cui_mapper(c):
   for (i,) in PYM.world.graph.execute(
-"""SELECT tu2.o FROM objs t, objs tu1, objs tu2
+"""SELECT tu2.o FROM objs t INDEXED BY index_objs_sp, objs tu1 INDEXED BY index_objs_sp, objs tu2 INDEXED BY index_objs_sp
 WHERE t.s=? AND t.p=?
 AND tu1.s=t.o AND tu1.p=? AND tu1.o=?
 AND tu2.s=t.o AND tu2.p=?
@@ -222,11 +222,11 @@ def _create_cui_mapper(source, dest):
     found = False
 
     for (i,) in PYM.world.graph.execute(
-"""SELECT DISTINCT tm2.o FROM objs t, objs tm1, objs tm2, objs tt
+"""SELECT DISTINCT tm2.o FROM objs t INDEXED BY index_objs_sp, objs tm1 INDEXED BY index_objs_sp, objs tm2 INDEXED BY index_objs_sp, objs tt INDEXED BY index_objs_sp
 WHERE t.s=? AND t.p=?
 AND tm1.s=t.o AND tm1.p=? AND tm1.o=?
 AND tm2.s=t.o AND tm2.p=?
-AND tt.s=tm2.o AND tt.p=? AND unlikely(tt.o=?)
+AND tt.s=tm2.o AND tt.p=? AND tt.o=?
 """, (
   c.storid, rdfs_subclassof,
   owl_onproperty, PYM.mapped_to.storid,
@@ -238,7 +238,7 @@ AND tt.s=tm2.o AND tt.p=? AND unlikely(tt.o=?)
     if found: return
 
     cuis = [i for (i,) in PYM.world.graph.execute(
-"""SELECT tu2.o FROM objs t, objs tu1, objs tu2
+"""SELECT tu2.o FROM objs t INDEXED BY index_objs_sp, objs tu1 INDEXED BY index_objs_sp, objs tu2 INDEXED BY index_objs_sp
 WHERE t.s=? AND t.p=?
 AND tu1.s=t.o AND tu1.p=? AND tu1.o=?
 AND tu2.s=t.o AND tu2.p=?
@@ -250,7 +250,7 @@ AND tu2.s=t.o AND tu2.p=?
     if cuis:
       already = set()
       for (i,) in PYM.world.graph.execute(
-"""SELECT to3.o FROM objs to1, objs to2, objs to3
+"""SELECT to3.o FROM objs to1 INDEXED BY index_objs_sp, objs to2 INDEXED BY index_objs_sp, objs to3 INDEXED BY index_objs_sp
 WHERE to1.s IN (%s) AND to1.p=?
 AND to2.s=to1.o AND to2.p=? AND to2.o=?
 AND to3.s=to1.o AND to3.p=?

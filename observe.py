@@ -17,7 +17,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-__all__ = ["start_observing", "stop_observing", "observe", "unobserve", "isobserved", "send_event", "scan_collapsed_changes"]
+__all__ = ["start_observing", "stop_observing", "observe", "unobserve", "isobserved", "send_event", "scan_collapsed_changes",
+           "InstancesOfClass"]
 
 import weakref
 
@@ -148,7 +149,7 @@ def scan_collapsed_changes():
 
 def observe(o, listener, collapsed = False, world = None):
   if isinstance(o, ObjectPack):
-    for o2 in o.objects: observe(o2, listener)
+    for o2 in o._objects: observe(o2, listener)
     return
   
   print("OBSERVE", sum(len(obs.collapsed_listeners) for obs in (world or o.namespace.world)._observations.values()), o, listener)
@@ -163,7 +164,7 @@ def observe(o, listener, collapsed = False, world = None):
     
 def isobserved(o, listener = None, world = None):
   if isinstance(o, ObjectPack):
-    for o2 in o.objects:
+    for o2 in o._objects:
       if isobserved(o2, listener): return True
     return False
   
@@ -177,7 +178,7 @@ def isobserved(o, listener = None, world = None):
 
 def send_event(o, pred, world = None):
   if isinstance(o, ObjectPack):
-    for o2 in o.objects: send_event(o2, pred)
+    for o2 in o._objects: send_event(o2, pred)
     return
   
   if world is None:
@@ -189,7 +190,7 @@ def send_event(o, pred, world = None):
   
 def unobserve(o, listener = None, world = None):
   if isinstance(o, ObjectPack):
-    for o2 in o.objects: unobserve(o2, listener)
+    for o2 in o._objects: unobserve(o2, listener)
     return
   
   print("UNOBSERVE", sum(len(obs.collapsed_listeners) for obs in (world or o.namespace.world)._observations.values()), o, listener)
@@ -236,8 +237,22 @@ class StoridList(object):
   def __repr__(self):
     return """<StoridList: %s>""" % list(self)
   
-  
+
+class _EquivalentTo(list):
+  def indirect(self): return []
+
+
+from owlready2.util import FirstList
 class InstancesOfClass(StoridList):
+  iri = "XXX iri"
+  #label = FirstList(["XXX label"])
+  #is_a = []
+  #equivalent_to = _EquivalentTo()
+  #@staticmethod
+  #def _get_class_possible_relations(): return []
+  #def get_icon_filename(self): return ""
+  #def get_details(self): return ""
+  
   def __init__(self, Class, onto = None, order_by = "", lang = "", use_observe = False):
     self._Class = Class
     self._lang  = lang
@@ -269,7 +284,7 @@ class InstancesOfClass(StoridList):
       else:
         self._storids = [x[0] for x in self.namespace.graph.execute("""SELECT s FROM objs WHERE p = ? AND o IN (%s) ORDER BY (select q2.o FROM quads q2 WHERE q2.s = objs.s AND q2.p = ?)""" % self._Class_storids, (rdf_type, self._order_by))]
     else:
-      self._storids = [x[0] for x in self.namespace.graph.execute("""SELECT s FROM objs WHERE p = ? AND o IN (%s)""" % self._Class_storids, (rdf_type)).fetchall()]
+      self._storids = [x[0] for x in self.namespace.graph.execute("""SELECT s FROM objs WHERE p = ? AND o IN (%s)""" % self._Class_storids, (rdf_type,)).fetchall()]
       
   def _get_old_value(self):
     if self._storids is None: self._update()
