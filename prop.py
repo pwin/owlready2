@@ -873,9 +873,12 @@ class PropertyChain(object):
 
 
 
-def destroy_entity(e):
-  if   hasattr(e, "__destroy__"): e.__destroy__()
-
+def destroy_entity(e, undoable = False):
+  if undoable: undoer_objs = []; undoer_datas = []; undoer_bnodes = []; undoer_relations = []
+  else:        undoer_objs = undoer_datas = None; undoer_bnodes = None; undoer_relations = None
+    
+  if   hasattr(e, "__destroy__"): e.__destroy__(undoer_objs, undoer_datas)
+  
   elif isinstance(e, PropertyClass):
     modified_entities = set()
     if   e._owl_type == owl_object_property:
@@ -905,6 +908,8 @@ def destroy_entity(e):
   def destroyer(bnode):
     if bnode == e.storid: return
     
+    if undoer_bnodes: undoer_bnodes.append(bnode)
+    
     class_construct = e.namespace.ontology._bnodes.pop(bnode, None)
     if class_construct:
       for subclass in class_construct.subclasses(True):
@@ -912,15 +917,20 @@ def destroy_entity(e):
           subclass.is_a.remove(class_construct)
           
   def relation_updater(destroyed_storids, storid, relations):
+    if undoer_relations is not None: undoer_relations.append((destroyed_storids, storid, relations))
+    update_relation(destroyed_storids, storid, relations)
+    
+  def update_relation(destroyed_storids, storid, relations):
     o = e.namespace.world._entities.get(storid)
     if o:
       for r in relations:
-        if  (r == rdf_type) or (r == rdfs_subpropertyof):
-          o.is_a.reinit([i for i in o.is_a if not i.storid in destroyed_storids])
-        elif r == rdfs_subclassof:
-          o.is_a.reinit([i for i in o.is_a if not i.storid in destroyed_storids])
-          for Subclass in o.descendants(True, True): _FUNCTIONAL_FOR_CACHE.pop(Subclass, None)
-          
+        if  (r == rdf_type) or (r == rdfs_subpropertyof) or (r == rdfs_subclassof):
+          #o.is_a.reinit([i for i in o.is_a if not i.storid in destroyed_storids])
+          parents = [e.namespace.world._to_python(i) for i in e.namespace.world._get_obj_triples_sp_o(storid, r)]
+          o.is_a.reinit([i for i in parents if not i is None])
+          if r == rdfs_subclassof:
+            for Subclass in o.descendants(True, True): _FUNCTIONAL_FOR_CACHE.pop(Subclass, None)
+            
         elif (r == owl_equivalentproperty) or (r == owl_equivalentindividual):
           if o._equivalent_to._indirect:
             for o2 in o.equivalent_to._indirect: o2._equivalent_to._indirect = None
@@ -938,11 +948,38 @@ def destroy_entity(e):
           
         else:
           r = e.namespace.world._entities.get(r)
+          if r:
+            try: del o.__dict__[r.python_name]
+            except: pass
           
-  e.namespace.world.graph.destroy_entity(e.storid, destroyer, relation_updater)
+  e.namespace.world.graph.destroy_entity(e.storid, destroyer, relation_updater, undoer_objs, undoer_datas)
   
   e.namespace.world._entities.pop(e.storid, None)
 
+  e.namespace.ontology._entity_destroyed(e)
+
+  if undoable:
+    def undestroy():
+      c_2_onto = e.namespace.world.graph.c_2_onto
+      for c,s,p,o in undoer_objs:
+        c_2_onto[c]._add_obj_triple_spo(s,p,o)
+      for c,s,p,o,d in undoer_datas:
+        c_2_onto[c]._add_data_triple_spo(s,p,o,d)
+      #e.namespace.world.graph.db.executemany("INSERT INTO objs VALUES (?,?,?,?)",    undoer_objs)
+      #e.namespace.world.graph.db.executemany("INSERT INTO datas VALUES (?,?,?,?,?)", undoer_datas)
+      e.namespace.world._entities[e.storid] = e
+      
+      for bnode in undoer_bnodes:
+        class_construct = e.namespace.world._parse_bnode(bnode)
+        for subclass in class_construct.subclasses(True):
+          if   isinstance(subclass, EntityClass) or isinstance(subclass, Thing):
+            subclass.is_a._append(class_construct)
+
+      for destroyed_storids, storid, relations in undoer_relations:  
+        update_relation(destroyed_storids, storid, relations)
+        
+    return undestroy
+  
 
 class bottomObjectProperty(ObjectProperty): pass
 class bottomDataProperty(DataProperty): pass

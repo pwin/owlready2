@@ -419,6 +419,8 @@ version 2 - 0.19
 version 2 - 0.20
 ****************
 
+* Add support for undoable destroy_entity()
+* Small database optimizations
 * Bugfixes:
   - Fix performance bug on UMLS mapping in PyMedTermino
 

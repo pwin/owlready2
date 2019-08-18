@@ -663,6 +663,8 @@ class Ontology(Namespace, _GraphManager):
     for entity in list(self.world._entities.values()):
       if entity.namespace.ontology is self: del self.world._entities[entity.storid]
     self.world.graph.release_write_lock()
+
+  def _entity_destroyed(self, entity): pass
     
   def get_imported_ontologies(self): return self._imported_ontologies
   def set_imported_ontologies(self, l):

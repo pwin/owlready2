@@ -24,6 +24,7 @@ import weakref
 
 from owlready2.base import rdf_type, rdfs_subclassof, owl_equivalentclass, owl_equivalentproperty, owl_equivalentindividual
 from owlready2.namespace import Ontology
+from owlready2 import Thing, ThingClass
 
 class ObservedOntology(Ontology):
   def _get_pred_value_obj(self, subject, predicate):
@@ -39,26 +40,40 @@ class ObservedOntology(Ontology):
     def f(subject, predicate, object):
       observation = self.world._observations.get(subject)
       
-      if (predicate == rdf_type) and _INSTANCES_OF_CLASS:
-        Class = self.world._get_by_storid(object)
-        l_2_old_instances = {}
-        if not Class is None: # Else it is Thing
-          for parent in Class.ancestors():
-            for l in _INSTANCES_OF_CLASS.get(parent.storid, ()):
-              l_2_old_instances[l] = l._get_old_value()
+      #if (predicate == rdf_type) and _INSTANCES_OF_CLASS:
+      #  Class = self.world._get_by_storid(object)
+      #  l_2_old_instances = {}
+      #  if not Class is None: # Else it is Thing
+      #    for parent in Class.ancestors():
+      #      for l in _INSTANCES_OF_CLASS.get(parent.storid, ()):
+      #        l_2_old_instances[l] = l._get_old_value()
               
       if observation:
         #old = self._get_pred_value_obj(subject, predicate)
         triple_method(subject, predicate, object)
         #new = self._get_pred_value_obj(subject, predicate)
-        observation.call(predicate) #, new, old)
+        observation.call(predicate)
+        
       else:
         triple_method(subject, predicate, object)
         
-      if (predicate == rdf_type) and _INSTANCES_OF_CLASS and (not Class is None):
-        for l, old_instances in l_2_old_instances.items():
-          l._changed(old_instances)
+      observation = self.world._observations.get(object)
+      if observation:
+        Prop = self.world._entities.get(predicate)
+        if Prop and Prop.inverse:
+          observation.call(Prop._inverse_storid)
           
+      #if (predicate == rdf_type) and _INSTANCES_OF_CLASS and (not Class is None):
+      #  for l, old_instances in l_2_old_instances.items():
+      #    l._changed()
+          
+      if (predicate == rdf_type) and _INSTANCES_OF_CLASS:
+        Class = self.world._get_by_storid(object)
+        if not Class is None: # Else it is Thing
+          for parent in Class.ancestors():
+            for l in _INSTANCES_OF_CLASS.get(parent.storid, ()):
+              l._changed()
+              
     return f
   
   def _gen_triple_method_data(self, triple_method):
@@ -75,6 +90,15 @@ class ObservedOntology(Ontology):
         
     return f
   
+  def _entity_destroyed(self, entity):
+    if _INSTANCES_OF_CLASS and isinstance(entity, Thing):
+      Classes   = [Class for Class in entity.is_a if isinstance(Class, ThingClass)]
+      Ancestors = { Ancestor for Class in Classes for Ancestor in Class.ancestors() }
+      for Ancestor in Ancestors:
+        for l in _INSTANCES_OF_CLASS.get(Ancestor.storid, ()):
+          l._changed()
+
+    
   
 def start_observing(onto):
   if not hasattr(onto.world, "_observations"): onto.world._observations = {}
@@ -136,6 +160,8 @@ class Observation(object):
     
 
 class ObjectPack(object):
+  storid = 0 # Fake storid
+  
   def __init__(self, objects):
     self._objects = objects
 
@@ -149,10 +175,10 @@ def scan_collapsed_changes():
 
 def observe(o, listener, collapsed = False, world = None):
   if isinstance(o, ObjectPack):
-    for o2 in o._objects: observe(o2, listener)
+    for o2 in o._objects: observe(o2, listener, collapsed, world)
     return
   
-  print("OBSERVE", sum(len(obs.collapsed_listeners) for obs in (world or o.namespace.world)._observations.values()), o, listener)
+  #print("OBSERVE", sum(len(obs.collapsed_listeners) for obs in (world or o.namespace.world)._observations.values()), o, listener)
   if world is None:
     world = o.namespace.world
     o = o.storid
@@ -165,7 +191,7 @@ def observe(o, listener, collapsed = False, world = None):
 def isobserved(o, listener = None, world = None):
   if isinstance(o, ObjectPack):
     for o2 in o._objects:
-      if isobserved(o2, listener): return True
+      if isobserved(o2, listener, world): return True
     return False
   
   if world is None:
@@ -190,10 +216,10 @@ def send_event(o, pred, world = None):
   
 def unobserve(o, listener = None, world = None):
   if isinstance(o, ObjectPack):
-    for o2 in o._objects: unobserve(o2, listener)
+    for o2 in o._objects: unobserve(o2, listener, world)
     return
   
-  print("UNOBSERVE", sum(len(obs.collapsed_listeners) for obs in (world or o.namespace.world)._observations.values()), o, listener)
+  #print("UNOBSERVE", sum(len(obs.collapsed_listeners) for obs in (world or o.namespace.world)._observations.values()), o, listener)
   if world is None:
     world = o.namespace.world
     o = o.storid
@@ -238,26 +264,16 @@ class StoridList(object):
     return """<StoridList: %s>""" % list(self)
   
 
-class _EquivalentTo(list):
-  def indirect(self): return []
-
 
 from owlready2.util import FirstList
 class InstancesOfClass(StoridList):
-  iri = "XXX iri"
-  #label = FirstList(["XXX label"])
-  #is_a = []
-  #equivalent_to = _EquivalentTo()
-  #@staticmethod
-  #def _get_class_possible_relations(): return []
-  #def get_icon_filename(self): return ""
-  #def get_details(self): return ""
+  storid = 0 # Fake storid
   
   def __init__(self, Class, onto = None, order_by = "", lang = "", use_observe = False):
-    self._Class = Class
-    self._lang  = lang
+    self._Class         = Class
+    self._lang          = lang
+    self._use_observe   = use_observe
     self._Class_storids = ",".join((["'%s'" % child.storid for child in Class.descendants()]))
-    self.storid = "InstancesOfClass(%s)" % Class.storid # Fake storid
     
     if use_observe:
       ws = _INSTANCES_OF_CLASS.get(Class.storid)
@@ -286,24 +302,26 @@ class InstancesOfClass(StoridList):
     else:
       self._storids = [x[0] for x in self.namespace.graph.execute("""SELECT s FROM objs WHERE p = ? AND o IN (%s)""" % self._Class_storids, (rdf_type,)).fetchall()]
       
+  def _get_storids(self):
+    if self._storids is None: self._update()
+    return self._storids
+    
   def _get_old_value(self):
     if self._storids is None: self._update()
     return StoridList(self.namespace, self._storids)
   
-  def _changed(self, old):
+  def _changed(self):
     observation = self.namespace.world._observations.get(self.storid)
+    self._storids = None
     if observation:
-      self._storids = None
-      observation.call("Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)", self, old)
-    else:
-      self._storids = None
+      observation.call("Inverse(http://www.w3.org/1999/02/22-rdf-syntax-ns#type)")
       
   def add(self, o):
     if not self.Class in o.is_a: o.is_a.append(self.Class)
-    self._changed()
+    #if not self._use_observe: self._changed()
   append = add
   
   def remove(self, o):
     destroy_entity(o)
-    self._changed()
+    #self._changed()
     

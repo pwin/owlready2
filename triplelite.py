@@ -71,15 +71,17 @@ class Graph(BaseMainGraph):
       
     if sqlite_tmp_dir: os.environ["SQLITE_TMPDIR"] = sqlite_tmp_dir
     
-    self.db = sqlite3.connect(filename, check_same_thread = False)
+    if exclusive:
+      self.db = sqlite3.connect(filename, isolation_level = "EXCLUSIVE", check_same_thread = False)
+      self.db.execute("""PRAGMA locking_mode = EXCLUSIVE""")
+    else:
+      self.db = sqlite3.connect(filename, check_same_thread = False)
+      self.db.execute("""PRAGMA locking_mode = NORMAL""")
     
     if sqlite_tmp_dir:
       try: self.db.execute("""PRAGMA temp_store_directory = '%s'""" % sqlite_tmp_dir)
       except: pass # Deprecated PRAGMA
       
-    if exclusive: self.db.execute("""PRAGMA locking_mode = EXCLUSIVE""")
-    else:         self.db.execute("""PRAGMA locking_mode = NORMAL""")
-    
     if profiling:
       import time
       from collections import Counter
@@ -546,7 +548,7 @@ class Graph(BaseMainGraph):
         else:         cur = self.execute("SELECT s,p,o FROM objs WHERE s=? AND o=?", (s, o,))
       else:
         if o is None: cur = self.execute("SELECT s,p,o FROM objs WHERE s=? AND p=?", (s, p,))
-        else:         cur = self.execute("SELECT s,p,o FROM objs WHERE s=? AND p=? AND o=?", (s, p, o,))
+        else:         cur = self.execute("SELECT s,p,o FROM objs INDEXED BY index_objs_sp WHERE s=? AND p=? AND o=?", (s, p, o,))
     return cur.fetchall()
   
   def _get_data_triples_spod_spod(self, s, p, o, d):
@@ -570,16 +572,16 @@ class Graph(BaseMainGraph):
         if o is None: cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=?", (s,))
         else:
           if d is None:
-            cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=? AND o=?", (s, o,))
+            cur = self.execute("SELECT s,p,o,d FROM datas INDEXED BY index_datas_sp WHERE s=? AND o=?", (s, o,))
           else:
-            cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=? AND o=? AND d=?", (s, o, d,))
+            cur = self.execute("SELECT s,p,o,d FROM datas INDEXED BY index_datas_sp WHERE s=? AND o=? AND d=?", (s, o, d,))
       else:
         if o is None: cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=? AND p=?", (s, p,))
         else:
           if d is None:
-            cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=? AND p=? AND o=?", (s, p, o))
+            cur = self.execute("SELECT s,p,o,d FROM datas INDEXED BY index_datas_sp WHERE s=? AND p=? AND o=?", (s, p, o))
           else:
-            cur = self.execute("SELECT s,p,o,d FROM datas WHERE s=? AND p=? AND o=? AND d=?", (s, p, o, d,))
+            cur = self.execute("SELECT s,p,o,d FROM datas INDEXED BY index_datas_sp WHERE s=? AND p=? AND o=? AND d=?", (s, p, o, d,))
     return cur.fetchall()
     
   def _get_triples_spod_spod(self, s, p, o, d):
@@ -627,10 +629,10 @@ class Graph(BaseMainGraph):
       else:
         if p is None:
           if o is None: cur = self.execute("SELECT c,s,p,o FROM objs WHERE s=?", (s,))
-          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE s=? AND o=?", (s, o,))
+          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE INDEXED BY index_objs_sp s=? AND o=?", (s, o,))
         else:
           if o is None: cur = self.execute("SELECT c,s,p,o FROM objs WHERE s=? AND p=?", (s, p,))
-          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE s=? AND p=? AND o=?", (s, p, o,))
+          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE INDEXED BY index_objs_sp s=? AND p=? AND o=?", (s, p, o,))
     else:
       if s is None:
         if p is None:
@@ -642,10 +644,10 @@ class Graph(BaseMainGraph):
       else:
         if p is None:
           if o is None: cur = self.execute("SELECT c,s,p,o FROM objs WHERE c=? AND s=?", (c, s,))
-          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE c=? AND s=? AND o=?", (c, s, o,))
+          else:         cur = self.execute("SELECT c,s,p,o FROM objs INDEXED BY index_objs_sp WHERE c=? AND s=? AND o=?", (c, s, o,))
         else:
-          if o is None: cur = self.execute("SELECT c,s,p,o FROM objs WHERE c=? AND s=? AND p=?", (c, s, p,))
-          else:         cur = self.execute("SELECT c,s,p,o FROM objs WHERE c=? AND s=? AND p=? AND o=?", (c, s, p, o,))
+          if o is None: cur = self.execute("SELECT c,s,p,o FROM objs INDEXED BY index_objs_sp WHERE c=? AND s=? AND p=?", (c, s, p,))
+          else:         cur = self.execute("SELECT c,s,p,o FROM objs INDEXED BY index_objs_sp WHERE c=? AND s=? AND p=? AND o=?", (c, s, p, o,))
     return cur.fetchall()
   
   
@@ -712,10 +714,10 @@ class Graph(BaseMainGraph):
     else:
       if p is None:
         if o is None: cur = self.execute("SELECT s FROM objs WHERE s=? LIMIT 1", (s,))
-        else:         cur = self.execute("SELECT s FROM objs WHERE s=? AND o=? LIMIT 1", (s, o))
+        else:         cur = self.execute("SELECT s FROM objs INDEXED BY index_objs_sp WHERE s=? AND o=? LIMIT 1", (s, o))
       else:
         if o is None: cur = self.execute("SELECT s FROM objs WHERE s=? AND p=? LIMIT 1", (s, p))
-        else:         cur = self.execute("SELECT s FROM objs WHERE s=? AND p=? AND o=? LIMIT 1", (s, p, o))
+        else:         cur = self.execute("SELECT s FROM objs INDEXED BY index_objs_sp WHERE s=? AND p=? AND o=? LIMIT 1", (s, p, o))
     return not cur.fetchone() is None
   
   def _has_data_triple_spod(self, s = None, p = None, o = None, d = None):
@@ -731,12 +733,12 @@ class Graph(BaseMainGraph):
     else:
       if p is None:
         if o is None:   cur = self.execute("SELECT s FROM datas WHERE s=? LIMIT 1", (s,))
-        elif d is None: cur = self.execute("SELECT s FROM datas WHERE s=? AND o=? LIMIT 1", (s, o))
-        else:           cur = self.execute("SELECT s FROM datas WHERE s=? AND o=? AND d=? LIMIT 1", (s, o, d))
+        elif d is None: cur = self.execute("SELECT s FROM datas INDEXED BY index_datas_sp WHERE s=? AND o=? LIMIT 1", (s, o))
+        else:           cur = self.execute("SELECT s FROM datas INDEXED BY index_datas_sp WHERE s=? AND o=? AND d=? LIMIT 1", (s, o, d))
       else:
         if o is None:   cur = self.execute("SELECT s FROM datas WHERE s=? AND p=? LIMIT 1", (s, p))
-        elif d is None: cur = self.execute("SELECT s FROM datas WHERE s=? AND p=? AND o=? LIMIT 1", (s, p, o))
-        else:           cur = self.execute("SELECT s FROM datas WHERE s=? AND p=? AND o=? AND d=? LIMIT 1", (s, p, o, d))
+        elif d is None: cur = self.execute("SELECT s FROM datas INDEXED BY index_datas_sp WHERE s=? AND p=? AND o=? LIMIT 1", (s, p, o))
+        else:           cur = self.execute("SELECT s FROM datas INDEXED BY index_datas_sp WHERE s=? AND p=? AND o=? AND d=? LIMIT 1", (s, p, o, d))
     return not cur.fetchone() is None
   
   def _del_obj_triple_raw_spo(self, s, p, o):
@@ -750,10 +752,10 @@ class Graph(BaseMainGraph):
     else:
       if p is None:
         if o is None: self.execute("DELETE FROM objs WHERE s=?", (s,))
-        else:         self.execute("DELETE FROM objs WHERE s=? AND o=?", (s, o,))
+        else:         self.execute("DELETE FROM objs INDEXED BY index_objs_sp WHERE s=? AND o=?", (s, o,))
       else:
         if o is None: self.execute("DELETE FROM objs WHERE s=? AND p=?", (s, p,))
-        else:         self.execute("DELETE FROM objs WHERE s=? AND p=? AND o=?", (s, p, o,))
+        else:         self.execute("DELETE FROM objs INDEXED BY index_objs_sp WHERE s=? AND p=? AND o=?", (s, p, o,))
         
   def _del_data_triple_raw_spod(self, s, p, o, d):
     if s is None:
@@ -768,12 +770,12 @@ class Graph(BaseMainGraph):
     else:
       if p is None:
         if o is None:   self.execute("DELETE FROM datas WHERE s=?", (s,))
-        elif d is None: self.execute("DELETE FROM datas WHERE s=? AND o=?", (s, o,))
-        else:           self.execute("DELETE FROM datas WHERE s=? AND o=? AND d=?", (s, o, d,))
+        elif d is None: self.execute("DELETE FROM datas INDEXED BY index_datas_sp WHERE s=? AND o=?", (s, o,))
+        else:           self.execute("DELETE FROM datas INDEXED BY index_datas_sp WHERE s=? AND o=? AND d=?", (s, o, d,))
       else:
         if o is None:   self.execute("DELETE FROM datas WHERE s=? AND p=?", (s, p,))
-        elif d is None: self.execute("DELETE FROM datas WHERE s=? AND p=? AND o=?", (s, p, o,))
-        else:           self.execute("DELETE FROM datas WHERE s=? AND p=? AND o=? AND d=?", (s, p, o, d,))
+        elif d is None: self.execute("DELETE FROM datas INDEXED BY index_datas_sp WHERE s=? AND p=? AND o=?", (s, p, o,))
+        else:           self.execute("DELETE FROM datas INDEXED BY index_datas_sp WHERE s=? AND p=? AND o=? AND d=?", (s, p, o, d,))
         
   def _punned_entities(self):
     from owlready2.base import rdf_type, owl_class, owl_named_individual
@@ -794,21 +796,21 @@ class Graph(BaseMainGraph):
 #SELECT DISTINCT x FROM transit""", (s,)).fetchall(): yield x
     
     
-  def _get_obj_triples_transitive_sp(self, s, p):
-    for (x,) in self.execute("""
-WITH RECURSIVE transit(x)
-AS (      SELECT o FROM objs WHERE s=? AND p=?
-UNION ALL SELECT objs.o FROM objs, transit WHERE objs.s=transit.x AND objs.p=?)
-SELECT DISTINCT x FROM transit""", (s, p, p)).fetchall(): yield x
+#   def _get_obj_triples_transitive_sp(self, s, p):
+#     for (x,) in self.execute("""
+# WITH RECURSIVE transit(x)
+# AS (      SELECT o FROM objs WHERE s=? AND p=?
+# UNION ALL SELECT objs.o FROM objs, transit WHERE objs.s=transit.x AND objs.p=?)
+# SELECT DISTINCT x FROM transit""", (s, p, p)).fetchall(): yield x
 
 
     
-  def _get_obj_triples_transitive_po(self, p, o):
-    for (x,) in self.execute("""
-WITH RECURSIVE transit(x)
-AS (      SELECT s FROM objs WHERE p=? AND o=?
-UNION ALL SELECT objs.s FROM objs, transit WHERE objs.p=? AND objs.o=transit.x)
-SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
+#   def _get_obj_triples_transitive_po(self, p, o):
+#     for (x,) in self.execute("""
+# WITH RECURSIVE transit(x)
+# AS (      SELECT s FROM objs WHERE p=? AND o=?
+# UNION ALL SELECT objs.s FROM objs, transit WHERE objs.p=? AND objs.o=transit.x)
+# SELECT DISTINCT x FROM transit""", (p, o, p)).fetchall(): yield x
 
 
 
@@ -896,7 +898,7 @@ SELECT x FROM transit""", (p, o, p)).fetchall(): yield x
     if list_user: list_user = list_user[0]
     return list_user, root, previouss, nexts, length
   
-  def destroy_entity(self, storid, destroyer, relation_updater):
+  def destroy_entity(self, storid, destroyer, relation_updater, undoer_objs = None, undoer_datas = None):
     destroyed_storids   = { storid }
     modified_relations  = defaultdict(set)
     self._destroy_collect_storids(destroyed_storids, modified_relations, storid)
@@ -910,6 +912,9 @@ SELECT x FROM transit""", (p, o, p)).fetchall(): yield x
       destroyer(storid)
       
     for storid in destroyed_storids:
+      if undoer_objs is not None:
+        undoer_objs .extend(self.execute("SELECT c,s,p,o FROM objs WHERE s=? OR o=?", (storid, storid)))
+        undoer_datas.extend(self.execute("SELECT c,s,p,o,d FROM datas WHERE s=?", (storid,)))
       self.execute("DELETE FROM objs  WHERE s=? OR o=?", (storid, storid))
       self.execute("DELETE FROM datas WHERE s=?", (storid,))
       
@@ -1149,7 +1154,7 @@ class SubGraph(BaseSubGraph):
     self.execute("UPDATE ontologies SET last_update=? WHERE c=?", (t, self.c))
   
   def destroy(self):
-    self.execute("DELETE FROM objs WHERE c=?",      (self.c,))
+    self.execute("DELETE FROM objs WHERE c=?",       (self.c,))
     self.execute("DELETE FROM datas WHERE c=?",      (self.c,))
     self.execute("DELETE FROM ontologies WHERE c=?", (self.c,))
     
@@ -1173,10 +1178,10 @@ class SubGraph(BaseSubGraph):
     else:
       if p is None:
         if o is None: self.execute("DELETE FROM objs WHERE c=? AND s=?", (self.c, s,))
-        else:         self.execute("DELETE FROM objs WHERE c=? AND s=? AND o=?", (self.c, s, o,))
+        else:         self.execute("DELETE FROM objs INDEXED BY index_objs_sp WHERE c=? AND s=? AND o=?", (self.c, s, o))
       else:
         if o is None: self.execute("DELETE FROM objs WHERE c=? AND s=? AND p=?", (self.c, s, p,))
-        else:         self.execute("DELETE FROM objs WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
+        else:         self.execute("DELETE FROM objs INDEXED BY index_objs_sp WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
         
   def _set_data_triple_raw_spod(self, s, p, o, d):
     if (s is None) or (p is None) or (o is None) or (d is None): raise ValueError
@@ -1200,12 +1205,12 @@ class SubGraph(BaseSubGraph):
     else:
       if p is None:
         if o is None:   self.execute("DELETE FROM datas WHERE c=? AND s=?", (self.c, s,))
-        elif d is None: self.execute("DELETE FROM datas WHERE c=? AND s=? AND o=?", (self.c, s, o,))
-        else:           self.execute("DELETE FROM datas WHERE c=? AND s=? AND o=? AND d=?", (self.c, s, o, d,))
+        elif d is None: self.execute("DELETE FROM datas INDEXED BY index_datas_sp WHERE c=? AND s=? AND o=?", (self.c, s, o,))
+        else:           self.execute("DELETE FROM datas INDEXED BY index_datas_sp WHERE c=? AND s=? AND o=? AND d=?", (self.c, s, o, d,))
       else:
         if o is None:   self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=?", (self.c, s, p,))
-        elif d is None: self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
-        else:           self.execute("DELETE FROM datas WHERE c=? AND s=? AND p=? AND o=? AND d=?", (self.c, s, p, o, d,))
+        elif d is None: self.execute("DELETE FROM datas INDEXED BY index_datas_sp WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
+        else:           self.execute("DELETE FROM datas INDEXED BY index_datas_sp WHERE c=? AND s=? AND p=? AND o=? AND d=?", (self.c, s, p, o, d,))
         
   def _has_obj_triple_spo(self, s = None, p = None, o = None):
     if s is None:
@@ -1218,10 +1223,10 @@ class SubGraph(BaseSubGraph):
     else:
       if p is None:
         if o is None: cur = self.execute("SELECT s FROM objs WHERE c=? AND s=? LIMIT 1", (self.c, s,))
-        else:         cur = self.execute("SELECT s FROM objs WHERE c=? AND s=? AND o=? LIMIT 1", (self.c, s, o))
+        else:         cur = self.execute("SELECT s FROM objs INDEXED BY index_objs_sp WHERE c=? AND s=? AND o=? LIMIT 1", (self.c, s, o))
       else:
         if o is None: cur = self.execute("SELECT s FROM objs WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,))
-        else:         cur = self.execute("SELECT s FROM objs WHERE c=? AND s=? AND p=? AND o=? LIMIT 1", (self.c, s, p, o))
+        else:         cur = self.execute("SELECT s FROM objs INDEXED BY index_objs_sp WHERE c=? AND s=? AND p=? AND o=? LIMIT 1", (self.c, s, p, o))
     return not cur.fetchone() is None
        
   def _has_data_triple_spod(self, s = None, p = None, o = None, d = None):
@@ -1237,12 +1242,12 @@ class SubGraph(BaseSubGraph):
     else:
       if p is None:
         if o is None:   cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? LIMIT 1", (self.c, s,))
-        elif d is None: cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND o=? LIMIT 1", (self.c, s, o))
-        else:           cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND o=? AND d=? LIMIT 1", (self.c, s, o, d))
+        elif d is None: cur = self.execute("SELECT s FROM datas INDEXED BY index_datas_sp WHERE c=? AND s=? AND o=? LIMIT 1", (self.c, s, o))
+        else:           cur = self.execute("SELECT s FROM datas INDEXED BY index_datas_sp WHERE c=? AND s=? AND o=? AND d=? LIMIT 1", (self.c, s, o, d))
       else:
         if o is None:   cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND p=? LIMIT 1", (self.c, s, p,))
-        elif d is None: cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND p=? AND o=? LIMIT 1", (self.c, s, p, o))
-        else:           cur = self.execute("SELECT s FROM datas WHERE c=? AND s=? AND p=? AND o=? AND d=? LIMIT 1", (self.c, s, p, o, d))
+        elif d is None: cur = self.execute("SELECT s FROM datas INDEXED BY index_datas_sp WHERE c=? AND s=? AND p=? AND o=? LIMIT 1", (self.c, s, p, o))
+        else:           cur = self.execute("SELECT s FROM datas INDEXED BY index_datas_sp WHERE c=? AND s=? AND p=? AND o=? AND d=? LIMIT 1", (self.c, s, p, o, d))
     return not cur.fetchone() is None
     
         
@@ -1257,10 +1262,10 @@ class SubGraph(BaseSubGraph):
     else:
       if p is None:
         if o is None: cur = self.execute("SELECT s,p,o FROM objs WHERE c=? AND s=?", (self.c, s,))
-        else:         cur = self.execute("SELECT s,p,o FROM objs WHERE c=? AND s=? AND o=?", (self.c, s, o,))
+        else:         cur = self.execute("SELECT s,p,o FROM objs INDEXED BY index_objs_sp WHERE c=? AND s=? AND o=?", (self.c, s, o,))
       else:
         if o is None: cur = self.execute("SELECT s,p,o FROM objs WHERE c=? AND s=? AND p=?", (self.c, s, p,))
-        else:         cur = self.execute("SELECT s,p,o FROM objs WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
+        else:         cur = self.execute("SELECT s,p,o FROM objs INDEXED BY index_objs_sp WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o,))
     return cur.fetchall()
 
   def _get_data_triples_spod_spod(self, s, p, o, d = ""):
@@ -1284,16 +1289,16 @@ class SubGraph(BaseSubGraph):
         if o is None: cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=?", (self.c, s,))
         else:
           if d is None:
-            cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=? AND o=?", (self.c, s, o,))
+            cur = self.execute("SELECT s,p,o,d FROM datas INDEXED BY index_datas_sp WHERE c=? AND s=? AND o=?", (self.c, s, o,))
           else:
-            cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=? AND o=? AND d=?", (self.c, s, o, d,))
+            cur = self.execute("SELECT s,p,o,d FROM datas WINDEXED BY index_datas_sp HERE c=? AND s=? AND o=? AND d=?", (self.c, s, o, d,))
       else:
         if o is None: cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=? AND p=?", (self.c, s, p,))
         else:
           if d is None:
-            cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o))
+            cur = self.execute("SELECT s,p,o,d FROM datas INDEXED BY index_datas_sp WHERE c=? AND s=? AND p=? AND o=?", (self.c, s, p, o))
           else:
-            cur = self.execute("SELECT s,p,o,d FROM datas WHERE c=? AND s=? AND p=? AND o=? AND d=?", (self.c, s, p, o, d,))
+            cur = self.execute("SELECT s,p,o,d FROM datas INDEXED BY index_datas_sp WHERE c=? AND s=? AND p=? AND o=? AND d=?", (self.c, s, p, o, d,))
     return cur.fetchall()
 
   def _get_triples_spod_spod(self, s, p, o, d = ""):
@@ -1343,16 +1348,16 @@ class SubGraph(BaseSubGraph):
     return self.execute("SELECT o,d FROM quads WHERE c=? AND s=? AND p=?", (self.c, s, p)).fetchall()
     
   def _get_data_triples_sp_od(self, s, p):
-    return self.execute("SELECT o,d FROM datas WHERE c=? AND s=? AND p=?", (self.c, s, p,)).fetchall()
+    return self.execute("SELECT o,d FROM datas WHERE c=? AND s=? AND p=?", (self.c, s, p)).fetchall()
 
   def _get_data_triples_s_pod(self, s):
-    return self.execute("SELECT p,o,d FROM datas WHERE c=? AND s=?", (self.c, s,)).fetchall()
+    return self.execute("SELECT p,o,d FROM datas WHERE c=? AND s=?", (self.c, s)).fetchall()
     
   def _get_triples_s_pod(self, s):
-    return self.execute("SELECT p,o,d FROM quads WHERE c=? AND s=?", (self.c, s,)).fetchall()
-    
+    return self.execute("SELECT p,o,d FROM quads WHERE c=? AND s=?", (self.c, s)).fetchall()
+   
   def _get_obj_triples_po_s(self, p, o):
-    for (x,) in self.execute("SELECT s FROM objs WHERE c=? AND p=? AND o=?", (self.c, p, o,)).fetchall(): yield x
+    for (x,) in self.execute("SELECT s FROM objs WHERE c=? AND p=? AND o=?", (self.c, p, o)).fetchall(): yield x
     
   def _get_obj_triples_spi_o(self, s, p, i):
     for (x,) in self.execute("SELECT o FROM objs WHERE c=? AND s=? AND p=? UNION SELECT s FROM objs WHERE c=? AND p=? AND o=?", (self.c, s, p, self.c, i, s)).fetchall(): yield x

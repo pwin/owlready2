@@ -5726,10 +5726,18 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       class C(Thing): pass
 
     c = C()
+
+    assert len(w.graph) == 5
     
-    destroy_entity(C)
+    undestroy = destroy_entity(C, undoable = True)
     
     assert c.is_a  == [Thing]
+    assert len(w.graph) == 2
+    
+    undestroy()
+    
+    assert len(w.graph) == 5
+    assert c.is_a  == [C]
     
   def test_destroy_8(self):
     w = self.new_world()
@@ -5868,6 +5876,26 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       
     destroy_entity(p)
     
+  def test_destroy_17(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      class p(Thing >> Thing): pass
+      c1 = C()
+      c2 = C()
+      c1.p = [c2]
+
+    undestroy = destroy_entity(c2, undoable = True)
+    assert c1.p == []
+    assert o.c2 is None
+    
+    undestroy()
+    assert o.c2 is not None
+    assert o.c2 is c2
+    assert c1.p == [c2]
+    
 
   def test_observe_1(self):
     import owlready2.observe
@@ -5887,7 +5915,6 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     def listener(o, p):
       nonlocal listened
       listened += "%s %s\n" % (w._unabbreviate(o), w._unabbreviate(p))
-      
     owlready2.observe.start_observing(onto)
     owlready2.observe.observe(c, listener)
     
@@ -5933,7 +5960,6 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     def listener(o, ps):
       for p in ps:
         listened.add("%s %s" % (w._unabbreviate(o), w._unabbreviate(p)))
-        
     owlready2.observe.start_observing(onto)
     owlready2.observe.observe(c.storid, listener, True, w)
     
@@ -5975,7 +6001,6 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     def listener(o, ps):
       for p in ps:
         listened.add("%s %s" % (w._unabbreviate(o), w._unabbreviate(p)))
-        
     owlready2.observe.start_observing(onto)
     owlready2.observe.observe(c, listener, True)
     
@@ -6109,6 +6134,30 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     
     l = owlready2.observe.InstancesOfClass(C, order_by = "label", lang = "en", use_observe = True)
     assert list(l) == [c1, c2, c3]
+    
+  def test_observe_8(self):
+    import owlready2.observe
+    
+    w = self.new_world()
+    onto = w.get_ontology("http://test.org/t.owl")
+    
+    with onto:
+      class C(Thing): pass
+      class p(Thing >> Thing): pass
+      class i(Thing >> Thing): inverse = p
+      c1 = C()
+      c2 = C()
+      
+    listened = "\n"
+    def listener(o, p):
+      nonlocal listened
+      listened += "%s %s\n" % (w._unabbreviate(o), w._unabbreviate(p))
+    owlready2.observe.start_observing(onto)
+    owlready2.observe.observe(c2, listener)
+    
+    c1.p.append(c2)
+
+    assert listened == """\nhttp://test.org/t.owl#c2 http://test.org/t.owl#i\n"""
     
     
   def test_fts_1(self):

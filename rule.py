@@ -150,7 +150,7 @@ class Imp(Thing):
       self.body, self.head = ls
     return self
 
-  def __destroy__(self):
+  def __destroy__(self, objs, datas):
     for atom in self.head + self.body:
       atom.__destroy__()
     for bn in (self.namespace.world._get_obj_triple_sp_o(self.storid, swrl_body), self.namespace.world._get_obj_triple_sp_o(self.storid, swrl_head)):
