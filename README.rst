@@ -421,6 +421,9 @@ version 2 - 0.20
 
 * Add support for undoable destroy_entity()
 * Small database optimizations
+* No longer treat properties associated with exactly-1 or max-1 restriction as functional properties,
+  returning single values instead of a list (you can restore the previous behaviour as follows:
+  import owlready2.prop; owlready2.prop.RESTRICTIONS_AS_FUNCTIONAL_PROPERTIES = True)
 * Bugfixes:
   - Fix performance bug on UMLS mapping in PyMedTermino
 

@@ -325,7 +325,7 @@ class EntityClass(type):
         
       for x, in world.graph.db.execute(
     """SELECT q1.s FROM objs q1 WHERE q1.s > 0 and q1.p = ? AND q1.o = ?
-EXCEPT SELECT q2.s FROM objs q2 WHERE q2.p = ? and q2.p != ?""",
+EXCEPT SELECT q2.s FROM objs q2 WHERE q2.p = ? and q2.o != ?""",
           (rdf_type, owl_class, rdfs_subclassof, owl_thing)):
         if only_loaded:
           subclass = world._entities.get(x)

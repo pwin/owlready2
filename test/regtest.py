@@ -1597,6 +1597,27 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_not_triple(prop.storid, rdf_domain, C1.storid)
     
   def test_prop_11(self):
+    owlready2.prop.RESTRICTIONS_AS_FUNCTIONAL_PROPERTIES = True
+    try:
+      n = self.new_ontology()
+      with n:
+        class D (Thing): pass
+        class R (Thing): pass
+        class prop(ObjectProperty):
+          domain = [D]
+          range  = [R]
+        class D2(Thing):
+          is_a = [prop.max(1, R)]
+        
+      d  = D()
+      d2 = D2()
+      
+      assert d .prop == []
+      assert d2.prop == None
+    finally:
+      owlready2.prop.RESTRICTIONS_AS_FUNCTIONAL_PROPERTIES = False
+    
+  def test_prop_11_2(self):
     n = self.new_ontology()
     with n:
       class D (Thing): pass
@@ -1611,7 +1632,7 @@ class Test(BaseTest, unittest.TestCase):
     d2 = D2()
 
     assert d .prop == []
-    assert d2.prop == None
+    assert d2.prop == []
     
   def test_prop_12(self):
     n = self.new_ontology()
@@ -1744,7 +1765,8 @@ class Test(BaseTest, unittest.TestCase):
       
       C.is_a.append(p.exactly(1))
       
-    assert p.is_functional_for(C)
+    assert not p.is_functional_for(C)
+    assert p.is_functional_for(C, True)
     
   def test_prop_21(self):
     n = self.new_ontology()
@@ -1755,8 +1777,10 @@ class Test(BaseTest, unittest.TestCase):
       
       C.is_a.append(p.exactly(1, C))
       
-    assert p.is_functional_for(C)
-    assert p.is_functional_for(C2)
+    assert not p.is_functional_for(C)
+    assert not p.is_functional_for(C2)
+    assert p.is_functional_for(C, True)
+    assert p.is_functional_for(C2, True)
     
   def test_prop_22(self):
     n = self.new_ontology()
@@ -1767,39 +1791,43 @@ class Test(BaseTest, unittest.TestCase):
       
       C.is_a.append(p.max(1, C2))
       
-    assert not p.is_functional_for(C)
-    assert not p.is_functional_for(C2)
+    assert not p.is_functional_for(C, True)
+    assert not p.is_functional_for(C2, True)
     
   def test_prop_23(self):
-    n = self.new_ontology()
-    with n:
-      class C(Thing): pass
-      class C2(C): pass
-      class p(C >> C): pass
+    owlready2.prop.RESTRICTIONS_AS_FUNCTIONAL_PROPERTIES = True
+    try:
+      n = self.new_ontology()
+      with n:
+        class C(Thing): pass
+        class C2(C): pass
+        class p(C >> C): pass
       
-    assert not p.is_functional_for(C)
-    assert not p.is_functional_for(C2)
-    assert C().p == []
-    
-    C.is_a.append(p.max(1, C))
-    
-    assert p.is_functional_for(C)
-    assert p.is_functional_for(C2)
-    assert C().p == None
-    
-    del C.is_a[-1]
-    
-    assert not p.is_functional_for(C)
-    assert not p.is_functional_for(C2)
-    assert C().p == []
-    
-    C2.is_a.append(p.max(1, C))
-    
-    assert not p.is_functional_for(C)
-    assert p.is_functional_for(C2)
-    assert C ().p == []
-    assert C2().p == None
-    
+      assert not p.is_functional_for(C, True)
+      assert not p.is_functional_for(C2, True)
+      assert C().p == []
+      
+      C.is_a.append(p.max(1, C))
+      
+      assert p.is_functional_for(C, True)
+      assert p.is_functional_for(C2, True)
+      assert C().p == None
+      
+      del C.is_a[-1]
+      
+      assert not p.is_functional_for(C, True)
+      assert not p.is_functional_for(C2, True)
+      assert C().p == []
+      
+      C2.is_a.append(p.max(1, C))
+      
+      assert not p.is_functional_for(C, True)
+      assert p.is_functional_for(C2, True)
+      assert C ().p == []
+      assert C2().p == None
+    finally:
+      owlready2.prop.RESTRICTIONS_AS_FUNCTIONAL_PROPERTIES = False
+      
   def test_prop_24(self):
     n = self.new_ontology()
     with n:

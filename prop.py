@@ -360,12 +360,16 @@ class PropertyClass(EntityClass):
   
 _FUNCTIONAL_FOR_CACHE = weakref.WeakKeyDictionary()
 
+RESTRICTIONS_AS_FUNCTIONAL_PROPERTIES = False
+
 class Property(metaclass = PropertyClass):
   namespace = rdf
   _inverse_storid = 0
   
   @classmethod
-  def is_functional_for(Prop, Class):
+  def is_functional_for(Prop, Class, force_restriction = False):
+    if not(RESTRICTIONS_AS_FUNCTIONAL_PROPERTIES or force_restriction): return False
+    
     cache = _FUNCTIONAL_FOR_CACHE.get(Class)
     if cache is None:
       cache = _FUNCTIONAL_FOR_CACHE[Class] = {}
