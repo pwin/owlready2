@@ -335,6 +335,7 @@ class Restriction(ClassConstruct):
   def __setattr__(self, attr, v):
     super().__setattr__(attr, v)
     if ((attr == "property") or (attr == "type") or (attr == "cardinality") or (attr == "value")) and self.ontology:
+      _loaded_attr_values = self.type, self.cardinality, self.property, self.value # Needed to ensure that the attribute values are available later in _create_triples()
       self._destroy_triples(self.ontology)
       if (attr == "value") and isinstance(v, ClassConstruct) and (not v.ontology): v._set_ontology(self.ontology)
       self._create_triples (self.ontology)
