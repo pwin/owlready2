@@ -75,12 +75,12 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     return s,p,o,d
   
   def _owlready_2_rdflib(self, s,p,o,d = None):
-    if   s < 0: s = BNode(s)
-    else:                   s = URIRef(self.triplelite._unabbreviate(s))
+    if   s < 0: s = BNode(-s)
+    else:       s = URIRef(self.triplelite._unabbreviate(s))
     p = URIRef(self.triplelite._unabbreviate(p))
     if d is None:
-      if o < 0: o = BNode(o)
-      else:                 o = URIRef(self.triplelite._unabbreviate(o))
+      if o < 0: o = BNode(-o)
+      else:     o = URIRef(self.triplelite._unabbreviate(o))
     else:
       if   isinstance(d, str) and d.startswith("@"): o = Literal(o, lang = d[1:])
       elif (d == "") or (d == 0):                    o = Literal(o)

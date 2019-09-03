@@ -427,6 +427,13 @@ version 2 - 0.20
 * Bugfixes:
   - Fix performance bug on UMLS mapping in PyMedTermino
 
+version 2 - 0.21
+****************
+
+* Bugfixes:
+  - Fix bug on blank node in RDFlib/SPARQL support
+
+
     
 Links
 -----

@@ -2691,6 +2691,24 @@ class Test(BaseTest, unittest.TestCase):
     
     assert Not(n.has_topping.some(n.Meat)) in n.VegetarianPizza.is_a
     
+  def test_construct_restriction_7(self):
+    w = self.new_world()
+    o = w.get_ontology("http://test.org/onto.owl")
+    
+    with o:
+      class p(Thing >> Thing): pass
+      class C(Thing): pass
+      class D(Thing):
+        is_a = [p.some(C)]
+        
+    assert D.is_a[1].value is C
+    
+    D.is_a[1].type        = MIN
+    D.is_a[1].cardinality = 2
+    
+    assert D.is_a[1].value is C
+    
+    
   def test_and_or_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     
@@ -5423,6 +5441,33 @@ multiple lines with " and ’ and \ and & and < and > and é."""
       } WHERE {}""")
       
     assert p2.has_topping == []
+    
+  def test_rdflib_11(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/onto.owl")
+    with onto:
+      class C(Thing): pass
+      class p(Thing >> Thing): pass
+      c1 = C()
+      c2 = C(p = [c1])
+      comment[c2, p, c1] = ["XYZ"]
+      
+    graph = world.as_rdflib_graph()
+    
+    graph.bind("owl", "http://www.w3.org/2002/07/owl#")
+    graph.bind("rdfs", "http://www.w3.org/2000/01/rdf-schema#")
+    graph.bind("onto", onto.base_iri)
+    
+    query = """
+SELECT ?label WHERE {
+?annotation owl:annotatedSource onto:c2 .
+?annotation owl:annotatedTarget onto:c1 .
+?annotation rdfs:comment ?label .
+}"""
+    
+    result = list(graph.query(query))
+    assert len(result) == 1
+    assert str(result[0][0]) == "XYZ"
     
     
   def test_refactor_1(self):
