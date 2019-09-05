@@ -432,6 +432,7 @@ version 2 - 0.21
 
 * Bugfixes:
   - Fix bug on blank node in RDFlib/SPARQL support
+  - Fix bug on blank node deletion in RDFlib/SPARQL support
   - Fix data loss in Restriction modification
 
     

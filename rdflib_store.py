@@ -94,7 +94,7 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
       triplelite = context.triplelite
     else:
       l = owlready2.namespace.CURRENT_NAMESPACES.get()
-      if not l: raise ValueError("Cannot add triples to a graph ouside a 'with' block. Please start a 'with' block to indicate in which ontology the new triple is added.")
+      if not l: raise ValueError("Cannot add triples to a graph outside a 'with' block. Please start a 'with' block to indicate in which ontology the new triple is added.")
       triplelite = l[-1].ontology.graph
       
     sub = None
@@ -139,8 +139,14 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     s,p,o,d = self._rdflib_2_owlready(xxx_todo_changeme)
     
     sub = None
-    if   (s > 0) and (s in self.world._entities):        sub = self.world._entities[s]
-    elif (s < 0) and (s in triplelite.ontology._bnodes): sub = triplelite.ontology._bnodes[s]
+    if   (s > 0) and (s in self.world._entities):
+      sub = self.world._entities[s]
+    elif  s < 0:
+      for ontology in self.world.ontologies.values():
+        if s in ontology._bnodes:
+          sub = ontology._bnodes[s]
+          break
+        
     if not sub is None:
       prop = self.world._entities.get(p)
       if   prop:

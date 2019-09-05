@@ -5469,6 +5469,38 @@ SELECT ?label WHERE {
     assert len(result) == 1
     assert str(result[0][0]) == "XYZ"
     
+  def test_rdflib_12(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/onto.owl")
+    with onto:
+      class C(Thing): pass
+      class p(Thing >> Thing): pass
+      c1 = C()
+      c2 = C(p = [c1])
+      comment[c2, p, c1] = ["XYZ"]
+      
+    graph = world.as_rdflib_graph()
+    
+    graph.bind("owl", "http://www.w3.org/2002/07/owl#")
+    graph.bind("rdfs", "http://www.w3.org/2000/01/rdf-schema#")
+    graph.bind("onto", onto.base_iri)
+    
+    query = """
+DELETE {
+    ?annotation ?p ?o .
+}
+WHERE {
+    ?annotation owl:annotatedSource onto:c2 .
+    ?annotation owl:annotatedProperty onto:p .
+    ?annotation owl:annotatedTarget onto:c1 .
+    ?annotation ?p ?o .  
+}"""
+
+    l = comment[c2, p, c1]
+    graph.update(query)
+    
+    assert comment[c2, p, c1] == []
+    
     
   def test_refactor_1(self):
     world = self.new_world()
