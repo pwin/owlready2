@@ -1500,14 +1500,16 @@ class _SearchList(FirstList, _SearchMixin, _LazyListMixin):
       i = "%s_%s" % (self.id, n)
       if n == 1:
         self.target = i
-        if   d is None:    self.tables.append("objs q%s" % i)
-        elif d == "quads": self.tables.append("quads q%s" % i)
+        if   d == "quads": self.tables.append("quads q%s" % i)
+        elif d is None:    self.tables.append("objs q%s" % i)
         else:              self.tables.append("datas q%s" % i)
       else:
-        if   d is None:    self.tables.append("objs q%s INDEXED BY index_objs_sp" % i)
-        elif d == "quads": self.tables.append("quads q%s" % i)
-        else:              self.tables.append("datas q%s INDEXED BY index_datas_sp" % i)
-        
+        if   d == "quads": self.tables.append("quads q%s" % i)
+        else:
+          
+          if d is None:    self.tables.append("objs q%s INDEXED BY index_objs_sp" % i)
+          else:            self.tables.append("datas q%s INDEXED BY index_datas_sp" % i)
+          
       if not c is None:
         self.conditions  .append("q%s.c = ?" % i)
         self.params      .append(c)
@@ -1526,7 +1528,11 @@ class _SearchList(FirstList, _SearchMixin, _LazyListMixin):
           
       elif k == " is_a":
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
-        if isinstance(v, (_SearchMixin, _PopulatedSearchList)):
+        if   isinstance(v, (_UnionSearchList, _PopulatedUnionSearchList)):
+          for search in v.searches: self.transits.extend(search.transits)
+          self.alternatives.append(v.explode(lambda target: [
+            ["q%s.s = q%s.s" % (i, self.target), "(q%s.p = %s OR q%s.p = %s)" % (i, rdf_type, i, rdfs_subclassof), "q%s.o = q%s.s" % (i, target)] ]))
+        elif isinstance(v, (_SearchMixin, _PopulatedSearchList)):
           self.conditions.append("(q%s.p = %s OR q%s.p = %s) AND q%s.o = q%s.s" % (i, rdf_type, i, rdfs_subclassof, i, v.target))
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
@@ -1541,22 +1547,13 @@ UNION ALL SELECT objs.s FROM objs, %s WHERE objs.o=%s.x AND objs.p IN (%s, %s))
           self.tables.append(transit_name)
           self.conditions.append("q%s.s = %s.x" % (i, transit_name))
           
-          
-#           select_descendant1 = """WITH RECURSIVE transit(x)
-# AS (      SELECT s FROM objs WHERE o=? AND p=%s
-# UNION ALL SELECT objs.s FROM objs, transit WHERE objs.o=transit.x AND objs.p=%s)
-# SELECT x FROM transit""" % (rdfs_subclassof, rdfs_subclassof)
-#           self.params.append(v)
-#           select_descendant2 = """WITH RECURSIVE transit(x)
-# AS (      SELECT ?
-# UNION ALL SELECT objs.s FROM objs, transit WHERE objs.o=transit.x AND objs.p=%s)
-# SELECT x FROM transit""" % (rdfs_subclassof)
-#           self.params.append(v)
-#           self.conditions.append("((q%s.p = %s AND q%s.o IN (%s)) OR (q%s.s IN (%s)))" % (i, rdf_type, i, select_descendant2, i, select_descendant1))
-          
       elif k == " type":
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
-        if isinstance(v, (_SearchMixin, _PopulatedSearchList)):
+        if   isinstance(v, (_UnionSearchList, _PopulatedUnionSearchList)):
+          for search in v.searches: self.transits.extend(search.transits)
+          self.alternatives.append(v.explode(lambda target: [
+            ["q%s.s = q%s.s" % (i, self.target), "q%s.p = %s" % (i, rdf_type), "q%s.o = q%s.s" % (i, target)] ]))
+        elif isinstance(v, (_SearchMixin, _PopulatedSearchList)):
           self.conditions.append("q%s.p = %s AND q%s.o = q%s.s" % (i, rdf_type, i, v.target))
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
@@ -1569,16 +1566,14 @@ UNION ALL SELECT objs.s FROM objs, %s WHERE objs.o=%s.x AND objs.p=%s)
 """ % (transit_name, v, transit_name, transit_name, rdfs_subclassof))
           self.tables.append(transit_name)
           self.conditions.append("q%s.p = %s AND q%s.o = %s.x" % (i, rdf_type, i, transit_name))
-#          select_descendant = """WITH RECURSIVE transit(x)
-#AS (  SELECT ?
-#UNION ALL SELECT objs.s FROM objs, transit WHERE objs.o=transit.x AND objs.p=%s)
-#SELECT x FROM transit""" % (rdfs_subclassof)
-#          self.params.append(v)
-#          self.conditions.append("q%s.p = %s AND q%s.o IN (%s)" % (i, rdf_type, i, select_descendant))
           
       elif k == " subclass_of":
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
-        if isinstance(v, (_SearchMixin, _PopulatedSearchList)):
+        if   isinstance(v, (_UnionSearchList, _PopulatedUnionSearchList)):
+          for search in v.searches: self.transits.extend(search.transits)
+          self.alternatives.append(v.explode(lambda target: [
+            ["q%s.s = q%s.s" % (i, self.target), "q%s.p = %s" % (i, rdfs_subclassof), "q%s.o = q%s.s" % (i, target)] ]))
+        elif isinstance(v, (_SearchMixin, _PopulatedSearchList)):
           self.conditions.append("q%s.p = %s AND q%s.o = q%s.s" % (i, rdfs_subclassof, i, v.target))
           self.nested_searchs.append(v)
           self.nested_searchs.extend(v.nested_searchs)
@@ -1591,13 +1586,7 @@ UNION ALL SELECT objs.s FROM objs, %s WHERE objs.o=%s.x AND objs.p=%s)
 """ % (transit_name, v, transit_name, transit_name, rdfs_subclassof))
           self.tables.append(transit_name)
           self.conditions.append("q%s.s = %s.x" % (i, transit_name))
-#          select_descendant = """WITH RECURSIVE transit(x)
-#AS (      SELECT s FROM objs WHERE o=? AND p=%s
-#UNION ALL SELECT objs.s FROM objs, transit WHERE objs.o=transit.x AND objs.p=%s)
-#SELECT DISTINCT x FROM transit""" % (rdfs_subclassof, rdfs_subclassof)
-#          self.params.append(v)
-#          self.conditions.append("q%s.s IN (%s)" % (i, select_descendant))
-
+          
       elif isinstance(k, tuple): # Prop with inverse
         if n == 1: # Does not work if it is the FIRST => add a dumb first.
           n += 1
@@ -1608,35 +1597,10 @@ UNION ALL SELECT objs.s FROM objs, %s WHERE objs.o=%s.x AND objs.p=%s)
             self.params      .append(c)
             
         if   isinstance(v, (_UnionSearchList, _PopulatedUnionSearchList)):
-          alternatives = []
-          for search in v.searches:
-            if search.excepts: raise NotImplementedError("Nested search with union and exception are not supported.")
-            self.transits.extend(search.transits)
-            if search.alternatives:
-              for combination in all_combinations(search.alternatives):
-                combination_tabless, combination_conditions, combination_paramss = zip(*combination)
-                alternatives.append((search.tables + [t for ts in combination_tabless for t in ts],
-                                     " AND ".join(search.conditions + combination_conditions + ["q%s.s = q%s.s" % (i, self.target),
-                                                                                                "q%s.p = %s" % (i, k[0]),
-                                                                                                "q%s.o = q%s.s" % (i, search.target)]),
-                                     search.params + [p for ps in combination_paramss for p in ps]))
-                alternatives.append((search.tables + [t for ts in combination_tabless for t in ts],
-                                     " AND ".join(search.conditions + combination_conditions + ["q%s.o = q%s.s" % (i, self.target),
-                                                                                                "q%s.p = %s" % (i, k[0]),
-                                                                                                "q%s.s = q%s.s" % (i, search.target)]),
-                                     search.params + [p for ps in combination_paramss for p in ps]))
-            else:
-              alternatives.append((search.tables,
-                                   " AND ".join(search.conditions + ["q%s.s = q%s.s" % (i, self.target),
-                                                                     "q%s.p = %s" % (i, k[0]),
-                                                                     "q%s.o = q%s.s" % (i, search.target)]),
-                                   search.params))
-              alternatives.append((search.tables,
-                                   " AND ".join(search.conditions + ["q%s.o = q%s.s" % (i, self.target),
-                                                                     "q%s.p = %s" % (i, k[0]),
-                                                                     "q%s.s = q%s.s" % (i, search.target)]),
-                                   search.params))
-          self.alternatives.append(tuple(alternatives))
+          for search in v.searches: self.transits.extend(search.transits)
+          self.alternatives.append(v.explode(lambda target: [
+            ["q%s.s = q%s.s" % (i, self.target), "q%s.p = %s" % (i, k[0]), "q%s.o = q%s.s" % (i, target)],
+            ["q%s.o = q%s.s" % (i, self.target), "q%s.p = %s" % (i, k[0]), "q%s.s = q%s.s" % (i, target)] ]))
         else:
           if   isinstance(v, (_SearchMixin, _PopulatedSearchList)): # First, to avoid comparing v with "*", which would require to populate it!
             cond1 = "q%s.s = q%s.s AND q%s.p = ? AND q%s.o = q%s.s" % (i, self.target, i, i, v.target)
@@ -1655,8 +1619,12 @@ UNION ALL SELECT objs.s FROM objs, %s WHERE objs.o=%s.x AND objs.p=%s)
             cond2 = "q%s.o = q%s.s AND q%s.p = ? AND q%s.s = ?" % (i, self.target, i, i)
             params1 = [k[0], v]
             params2 = [k[1], v]
-          self.alternatives.append((([], cond1, params1), ([], cond2, params2)))
-        
+            
+          current_table = self.tables.pop()
+          if current_table.endswith(" INDEXED BY index_objs_sp"): current_table2 = "%sop" % current_table[:-2]
+          else:                                                   current_table2 = current_table
+          self.alternatives.append((([current_table], cond1, params1), ([current_table2], cond2, params2)))
+          
       else: # Prop without inverse
         if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
         if isinstance(v, FTS):
@@ -1796,8 +1764,7 @@ class _UnionSearchList(FirstList, _SearchMixin, _LazyListMixin):
   def __init__(self, world, searches):
     self.world    = world
     self.searches = searches
-    
-    
+
   def sql_components(self, last_request = True):
     transits_sqls_params = [s.sql_components(False) for s in self.searches]
     if last_request:
@@ -1827,3 +1794,23 @@ class _UnionSearchList(FirstList, _SearchMixin, _LazyListMixin):
     except:
       print("  req       =\n%s" % sql)
       print("  params    = ", params)
+
+
+  def explode(self, gen):
+    alternatives = []
+    for search in self.searches:
+      if search.excepts: raise NotImplementedError("Nested search with both union and exception are not supported.")
+      if search.alternatives:
+        for combination in all_combinations(search.alternatives):
+          combination_tabless, combination_conditions, combination_paramss = zip(*combination)
+          for alternative_conditions in gen(search.target):
+            alternatives.append((search.tables + [t for ts in combination_tabless for t in ts],
+                                 " AND ".join(search.conditions + combination_conditions + alternative_conditions),
+                                 search.params + [p for ps in combination_paramss for p in ps]))
+            
+      else:
+        for alternative_conditions in gen(search.target):
+          alternatives.append((search.tables, " AND ".join(search.conditions + alternative_conditions), search.params))
+        
+    return tuple(alternatives)
+    

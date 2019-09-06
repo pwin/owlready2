@@ -5109,6 +5109,39 @@ multiple lines with " and ’ and \ and & and < and > and é."""
     l = world.search(has_topping = world.search(type = Or([n.Cheese, n.Tomato])))
     assert set(l) == { n.ma_pizza }
     
+  def test_search_18(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/test.owl")
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      class p(Thing >> Thing): pass
+      class i(Thing >> Thing): inverse = p
+      
+      c1 = C()
+      c2 = C(p = [D()])
+      d2 = D()
+      d4 = D(p = [D()])
+      c3 = C()
+      d5 = D(i = [c3])
+      
+    r = onto.search(type = C, p = "*")
+    assert r == [c2, c3]
+    
+    r = onto.search(type = onto.search(iri = "*C"), p = "*")
+    assert r == [c2, c3]
+    
+    r = onto.search(iri = "*C") | onto.search(iri = "*D")
+    assert r == [C, D]
+    
+    r = onto.search(type = onto.search(iri = "*C") | onto.search(iri = "*D"))
+    assert len(r) == 8
+    
+    r = onto.search(type = onto.search(iri = "*C") | onto.search(iri = "*D"), p = "*")
+    assert r == [c2, c3, d4]
+    
+    r = onto.search(is_a = onto.search(iri = "*C") | onto.search(iri = "*D"), p = "*")
+    assert r == [c2, c3, d4]
     
     
   def test_rdflib_1(self):
