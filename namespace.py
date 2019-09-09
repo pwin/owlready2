@@ -157,27 +157,65 @@ class _GraphManager(object):
   
   def _get_annotation_axioms(self, source, property, target, target_d):
     if target_d is None:
-      for bnode in self._get_obj_triples_po_s(rdf_type, owl_axiom):
-        for p, o in self._get_obj_triples_s_po(bnode):
-          if   p == owl_annotatedsource: # SIC! If on a single if, elif are not appropriate.
-            if o != source: break
-          elif p == owl_annotatedproperty:
-            if o != property: break
-          elif p == owl_annotatedtarget:
-            if o != target: break
-        else:
-          yield bnode
+#       r = self.graph.execute("""
+# SELECT q1.s
+# FROM objs q1, objs q2 INDEXED BY index_objs_sp, objs q3 INDEXED BY index_objs_sp, objs q4 INDEXED BY index_objs_sp
+# WHERE q1.p=6 AND q1.o=?
+#   AND q2.s=q1.s AND q2.p=? AND q2.o=?
+#   AND q3.s=q1.s AND q3.p=? AND q3.o=?
+#   AND q4.s=q1.s AND q4.p=? AND q4.o=?""",
+#                          (owl_axiom,
+#                           owl_annotatedsource, source,
+#                           owl_annotatedproperty, property,
+#                           owl_annotatedtarget, target))
+#       for l in r.fetchall(): yield l[0]
+      r = self.graph.execute("""
+SELECT q1.s
+FROM objs q1, objs q2 INDEXED BY index_objs_sp, objs q3 INDEXED BY index_objs_sp, objs q4 INDEXED BY index_objs_sp
+WHERE q1.p=? AND q1.o=?
+  AND q2.s=q1.s AND q2.p=6 AND q2.o=?
+  AND q3.s=q1.s AND q3.p=? AND q3.o=?
+  AND q4.s=q1.s AND q4.p=? AND q4.o=?""",
+                         (owl_annotatedsource, source,
+                          owl_axiom,
+                          owl_annotatedproperty, property,
+                          owl_annotatedtarget, target))
+      for l in r.fetchall(): yield l[0]
+    
+      # for bnode in self._get_obj_triples_po_s(rdf_type, owl_axiom):
+      #   for p, o in self._get_obj_triples_s_po(bnode):
+      #     if   p == owl_annotatedsource: # SIC! If on a single if, elif are not appropriate.
+      #       if o != source: break
+      #     elif p == owl_annotatedproperty:
+      #       if o != property: break
+      #     elif p == owl_annotatedtarget:
+      #       if o != target: break
+      #   else:
+      #     yield bnode
     else:
-      for bnode in self._get_obj_triples_po_s(rdf_type, owl_axiom):
-        for p, o, d in self._get_triples_s_pod(bnode):
-          if   p == owl_annotatedsource: # SIC! If on a single if, elif are not appropriate.
-            if o != source: break
-          elif p == owl_annotatedproperty:
-            if o != property: break
-          elif p == owl_annotatedtarget:
-            if o != target: break
-        else:
-          yield bnode
+      r = self.graph.execute("""
+SELECT q1.s
+FROM objs q1, objs q2 INDEXED BY index_objs_sp, objs q3 INDEXED BY index_objs_sp, datas q4 INDEXED BY index_datas_sp
+WHERE q1.p=? AND q1.o=?
+  AND q2.s=q1.s AND q2.p=6 AND q2.o=?
+  AND q3.s=q1.s AND q3.p=? AND q3.o=?
+  AND q4.s=q1.s AND q4.p=? AND q4.o=?""",
+                         (owl_annotatedsource, source,
+                          owl_axiom,
+                          owl_annotatedproperty, property,
+                          owl_annotatedtarget, target))
+      for l in r.fetchall(): yield l[0]
+      
+      # for bnode in self._get_obj_triples_po_s(rdf_type, owl_axiom):
+      #   for p, o, d in self._get_triples_s_pod(bnode):
+      #     if   p == owl_annotatedsource: # SIC! If on a single if, elif are not appropriate.
+      #       if o != source: break
+      #     elif p == owl_annotatedproperty:
+      #       if o != property: break
+      #     elif p == owl_annotatedtarget:
+      #       if o != target: break
+      #   else:
+      #     yield bnode
           
   def _del_obj_triple_spo(self, s = None, p = None, o = None):
     #onto = CURRENT_NAMESPACES.get() or self
@@ -306,8 +344,9 @@ class _GraphManager(object):
         if   k == "iri":
           prop_vals.append((" iri", v, None))
         elif (k == "is_a") or (k == "subclass_of") or (k == "type"):
-          if isinstance(v, (_SearchMixin, Or)): v2 = v
-          else:                                 v2 = v.storid
+          if   isinstance(v, (_SearchMixin, Or)): v2 = v
+          elif isinstance(v, int):                v2 = v
+          else:                                   v2 = v.storid
           prop_vals.append((" %s" % k, v2, None))
         else:
           d = None

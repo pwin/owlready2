@@ -430,6 +430,7 @@ version 2 - 0.20
 version 2 - 0.21
 ****************
 
+* Much faster mangement of annotations on relations
 * Bugfixes:
   - Fix bug on blank node in RDFlib/SPARQL support
   - Fix bug on blank node deletion in RDFlib/SPARQL support
