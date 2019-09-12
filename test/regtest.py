@@ -2780,6 +2780,23 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_triple(C.storid, rdfs_subclassof, oneof.storid)
     self.assert_triple(oneof.storid, owl_oneof, oneof._list_bnode)
     assert n._parse_list(oneof._list_bnode) == [c1, c2, c3]
+
+  def test_one_of_2(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class p(DataProperty):
+        range = [OneOf([1, "abc", locstr("texte", "fr")])]
+
+    filename = self.new_tmp_file()
+    o.save(filename)
+
+    w = self.new_world()
+    o = w.get_ontology(filename).load()
+    
+    assert o.p.range[0] == OneOf([1, "abc", locstr("texte", "fr")])
+    
     
   def test_method_1(self):
     n = self.new_ontology()

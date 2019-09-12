@@ -366,12 +366,18 @@ def _save(f, format, graph):
       }
     
     def parse_list(bn):
+      has_literal = False
+      r = []
       while bn and (bn != rdf_nil):
         inner_lists_used.add(id(bn_2_inner_list[bn]))
-        first = graph._get_obj_triple_sp_o(bn, rdf_first)
-        if first != rdf_nil: yield first
+        #first = graph._get_obj_triple_sp_o(bn, rdf_first)
+        first, d = graph._get_triple_sp_od(bn, rdf_first)
+        if not ((d is None) and (first == rdf_nil)):
+          if not d is None: has_literal = True
+          r.append((first, d))
         bn = graph._get_obj_triple_sp_o(bn, rdf_rest)
-        
+      return has_literal, r
+    
     def purge():
       nonlocal s_lines, current_s, type
       
@@ -440,15 +446,39 @@ def _save(f, format, graph):
         
       elif o < 0:
           if p in tags_with_list:
-            s_lines.append("""  <%s rdf:parseType="Collection">""" % p)
-            for i in parse_list(o):
-              if i < 0:
-                l = bn_2_inner_list[i]
-                inner_lists_used.add(id(l))
-                s_lines.append(l)
-              elif isinstance(i, int):
-                i = _unabbreviate(i)
-                s_lines.append("""    <rdf:Description rdf:about="%s"/>""" % i)
+            list_has_literal, list_elements = parse_list(o)
+            if list_has_literal:
+              s_lines.append("""  <%s>""" % p)
+              
+              def do_i(l, i):
+                s_lines.append("""    <rdf:Description>""")
+                o, d = l[i]
+                if d is None:
+                  s_lines.append("""  <rdf:first><rdf:Description rdf:about="%s"/></rdf:first>""" % o)
+                else:
+                  if   isinstance(d, str) and d.startswith("@"): s_lines.append("""  <rdf:first xml:lang="%s">%s</rdf:first>""" % (d[1:], o))
+                  elif d:                                        s_lines.append("""  <rdf:first rdf:datatype="%s">%s</rdf:first>""" % (_unabbreviate(d), o))
+                  else:                                          s_lines.append("""  <rdf:first>%s</rdf:first>""" % o)
+                if i < len(l) - 1:
+                  s_lines.append("""    <rdf:rest>""")
+                  do_i(l, i + 1)
+                  s_lines.append("""    </rdf:rest>""")
+                else:
+                  s_lines.append("""    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>""")
+                s_lines.append("""    </rdf:Description>""")
+              if list_elements: do_i(list_elements, 0)
+              
+            else:
+              s_lines.append("""  <%s rdf:parseType="Collection">""" % p)
+              for i, d in list_elements:
+                if i < 0:
+                  l = bn_2_inner_list[i]
+                  inner_lists_used.add(id(l))
+                  s_lines.append(l)
+                elif isinstance(i, int):
+                  i = _unabbreviate(i)
+                  s_lines.append("""    <rdf:Description rdf:about="%s"/>""" % i)
+                  
           else:
             l = bn_2_inner_list[o]
             inner_lists_used.add(id(l))
