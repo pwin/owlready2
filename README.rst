@@ -437,6 +437,7 @@ version 2 - 0.21
   - Fix data loss in Restriction modification
   - Fix 'no query solution' error in search()
   - Fix literal support in RDF lists, causing "TypeError: '<' not supported between instances of 'NoneType' and 'int'" when saving ontologies
+  - Fix DifferentFrom SWRL builtin
     
 Links
 -----

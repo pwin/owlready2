@@ -129,7 +129,7 @@ class Imp(Thing):
           atom = atom.value
           if atom in _BUILTINS:           atom = BuiltinAtom(builtin = atom)
           elif atom == "SameAs":          atom = SameIndividualAtom()
-          elif atom == "DifferentFrom":   atom = DifferentIndividualAtom()
+          elif atom == "DifferentFrom":   atom = DifferentIndividualsAtom()
           elif atom in _NAME_2_DATARANGE: atom = DataRangeAtom(datarange = _NAME_2_DATARANGE[atom])
           else:
             entity = _find_entity(atom, namespaces)
@@ -231,7 +231,7 @@ class SameIndividualAtom(_FixedArguments, Thing):
   def __str__(self):
     return "SameAs(%s)" % (", ".join(str(i) for i in self.arguments))
 
-class DifferentIndividualAtom(_FixedArguments, Thing):
+class DifferentIndividualsAtom(_FixedArguments, Thing):
   namespace = swrl
   
   def __str__(self):

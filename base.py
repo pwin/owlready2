@@ -250,7 +250,7 @@ swrl_argument1               = _universal_abbrev("http://www.w3.org/2003/11/swrl
 swrl_argument2               = _universal_abbrev("http://www.w3.org/2003/11/swrl#argument2")
 swrl_arguments               = _universal_abbrev("http://www.w3.org/2003/11/swrl#arguments")
 swrl_equivalentindividual    = _universal_abbrev("http://www.w3.org/2003/11/swrl#SameIndividualAtom")
-swrl_differentfrom           = _universal_abbrev("http://www.w3.org/2003/11/swrl#DifferentIndividualAtom")
+swrl_differentfrom           = _universal_abbrev("http://www.w3.org/2003/11/swrl#DifferentIndividualsAtom")
 
 owl_bottomobjectproperty     = _universal_abbrev("http://www.w3.org/2002/07/owl#bottomObjectProperty")
 owl_bottomdataproperty       = _universal_abbrev("http://www.w3.org/2002/07/owl#bottomDataProperty")

@@ -371,7 +371,7 @@ class Graph(BaseMainGraph):
           (owlready2.base.swrl_argument2,            "http://www.w3.org/2003/11/swrl#argument2"),
           (owlready2.base.swrl_arguments,            "http://www.w3.org/2003/11/swrl#arguments"),
           (owlready2.base.swrl_equivalentindividual, "http://www.w3.org/2003/11/swrl#SameIndividualAtom"),
-          (owlready2.base.swrl_differentfrom,        "http://www.w3.org/2003/11/swrl#DifferentIndividualAtom"),
+          (owlready2.base.swrl_differentfrom,        "http://www.w3.org/2003/11/swrl#DifferentIndividualsAtom"),
         ])
         self.execute("""UPDATE store SET version=8""")
         self.db.commit()
