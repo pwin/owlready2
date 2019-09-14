@@ -54,8 +54,15 @@ Version IRI: </xsl:text> <xsl:value-of select="rdf:RDF/owl:Ontology/owl:versionI
 <xsl:text>&#xA;"""&#xA;&#xA;
 from owlready2 import *
 
+default_world.set_backend(filename = "./onto.file.sqlite3")
+
+owlready2.JAVA_EXE = r"C:\Java\bin\java.exe"
+inferencer = False
+
 onto = get_ontology("</xsl:text>
-        <xsl:value-of select="/*/namespace::*[name()='']"/><xsl:text>")&#xA;&#xA;</xsl:text>        
+        <xsl:value-of select="/*/namespace::*[name()='']"/><xsl:text>")&#xA;&#xA;
+class Class(Thing):&#xA;
+    namespace = onto.get_namespace("http://www.w3.org/2002/07/owl#")&#xA;&#xA;</xsl:text>        
         
 <xsl:for-each select="//owl:Class[@rdf:about]">
     <xsl:variable name="class"><xsl:value-of select="foo:getClass(@rdf:about)"/></xsl:variable>
@@ -198,7 +205,19 @@ onto = get_ontology("</xsl:text>
     <xsl:if test="rdfs:comment[@xml:lang='en']">
         <xsl:text>&#xA;    comment = """</xsl:text><xsl:value-of select="rdfs:comment[@xml:lang='en']" /><xsl:text>"""</xsl:text>
     </xsl:if>
+    <xsl:variable name="timestamp" select="translate(string(current-dateTime()),':','_')"></xsl:variable>    
     <xsl:text>
+default_world.save()
+
+
+onto.save(file = r".\</xsl:text><xsl:value-of select="$timestamp"/><xsl:text>_ontology.owlready2.rdf", format = "rdfxml")
+onto.save(file = r".\</xsl:text><xsl:value-of select="$timestamp"/><xsl:text>_ontology.owlready2.n3", format = "ntriples")
+
+Query = '''SELECT * WHERE {?a ?b ?c.} limit 10'''
+results = default_world.as_rdflib_graph().query_owlready(Query)
+results = list(results) 
+print(results)
+
 
 </xsl:text>
 </xsl:for-each>
