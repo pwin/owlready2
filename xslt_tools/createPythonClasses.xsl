@@ -171,7 +171,7 @@ onto = get_ontology("</xsl:text>
     <xsl:variable name="class"><xsl:value-of select="foo:getClass(@rdf:about)"/></xsl:variable>
     <xsl:variable name="namespace"><xsl:value-of select="foo:getURL(@rdf:about)"/></xsl:variable>
     <xsl:variable name="thing">AnnotationProperty</xsl:variable>
-    <xsl:text>&#xA;def Class </xsl:text>
+    <xsl:text>&#xA;class </xsl:text>
     <xsl:value-of select="$class" />
     <xsl:text>(</xsl:text>
     <xsl:choose>
