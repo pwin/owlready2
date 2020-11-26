@@ -10,7 +10,8 @@ Owlready2
    :alt: download stats
 
 
-         
+# The source of this fork is at https://bitbucket.org/jibalamy/owlready2/src/master/
+
 Owlready2 is a module for ontology-oriented programming in Python 3, including an optimized RDF quadstore.
 
 Owlready2 can:
