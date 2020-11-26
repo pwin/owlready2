@@ -57,6 +57,7 @@ public class PelletRealize extends PelletCmdApp {
 		options.add( getIgnoreImportsOption() );
 		options.add( getInputFormatOption() );
 		options.add( getInferPropValuesOption() );
+		options.add( getInferDataPropValuesOption() );
 
 		return options;
 	}
@@ -86,19 +87,33 @@ public class PelletRealize extends PelletCmdApp {
     // Jiba
 
     if ( options.getOption( "infer-prop-values" ).getValue() != null ) {
-      
-		for( ATermAppl ind : kb.getIndividuals() ) {
-      for( Role role : kb.getRBox().getRoles() ) {
-        if( role.isAnon() ) continue;
-        if( role.isObjectRole() ) {
- 					ATermAppl name = role.getName();
-					List<ATermAppl> values = kb.getObjectPropertyValues( name, ind );
-					for( ATermAppl value : values ) {
-            System.out.println("PROPINST: " + ind + " " + name + " " + value);
+      for( ATermAppl ind : kb.getIndividuals() ) {
+        for( Role role : kb.getRBox().getRoles() ) {
+          if( role.isAnon() ) continue;
+          if( role.isObjectRole() ) {
+            ATermAppl name = role.getName();
+            List<ATermAppl> values = kb.getObjectPropertyValues( name, ind );
+            for( ATermAppl value : values ) {
+              System.out.println("PROPINST: " + ind + " " + name + " " + value);
+            }
           }
         }
       }
     }
+
+    if ( options.getOption( "infer-data-prop-values" ).getValue() != null ) {
+      for( ATermAppl ind : kb.getIndividuals() ) {
+        for( Role role : kb.getRBox().getRoles() ) {
+          if( role.isAnon() ) continue;
+          if( role.isDatatypeRole() ) {
+            ATermAppl name = role.getName();
+            List<ATermAppl> values = kb.getDataPropertyValues( name, ind );
+            for( ATermAppl value : values ) {
+              System.out.println("DATAPROPVAL: " + ind + " " + name + " " + value);
+            }
+          }
+        }
+      }
     }
     
 	}

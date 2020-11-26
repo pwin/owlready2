@@ -114,7 +114,7 @@ _universal_abbrev("http://www.w3.org/2000/01/rdf-schema#label")
 _universal_abbrev("http://www.w3.org/2002/07/owl#FunctionalProperty")
 _universal_abbrev("http://www.w3.org/2002/07/owl#InverseFunctionalProperty")
 
-SPECIAL_ATTRS      = { "namespace",  "name", "_name", "iri", "_iri", "storid", "is_a", "equivalent_to", "_equivalent_to", "disjoint_with", "_disjoint_with", "defined_class", "__class__", "__qualname__", "__module__", "__doc__", "__bases__" }
+SPECIAL_ATTRS      = { "namespace",  "name", "_name", "iri", "_iri", "storid", "is_a", "equivalent_to", "_equivalent_to", "disjoint_with", "_disjoint_with", "defined_class", "_disjoint_unions", "__class__", "__qualname__", "__module__", "__doc__", "__bases__" }
 SPECIAL_PROP_ATTRS = { "namespace",  "name", "_name", "python_name", "_python_name", "_domain", "_property_chain", "_inverse_property", "inverse_property", "inverse", "_range", "iri", "_iri", "storid", "is_a", "equivalent_to", "_equivalent_to", "disjoint_with", "_disjoint_with", "__class__", "__qualname__", "__module__", "__doc__", "__bases__" }
 
 
@@ -183,6 +183,21 @@ def set_datatype_iri(datatype, iri):
   _universal_datatype_2_abbrev         [datatype] =  _universal_iri_2_abbrev[iri]
   _universal_datatype_2_abbrev_unparser[datatype] = (_universal_iri_2_abbrev[iri], unparser)
 
+  
+def declare_datatype(datatype, iri, parser, unparser):
+  storid = _universal_abbrev(iri)
+  from owlready2 import WORLDS
+  for world in WORLDS:
+    world.graph.execute("INSERT INTO resources VALUES (?,?)", (storid, iri))
+    if world.graph._abbreviate_d:
+      world.graph._abbreviate_d  [iri]    = storid
+      world.graph._unabbreviate_d[storid] = iri
+      
+  _universal_datatype_2_abbrev         [datatype] =  storid
+  _universal_datatype_2_abbrev_unparser[datatype] = (storid, unparser)
+  _universal_abbrev_2_datatype         [storid]   =  datatype
+  _universal_abbrev_2_datatype_parser  [storid]   = (datatype, parser)
+  return storid
 
 owl_alldisjointproperties = _universal_abbrev("http://www.w3.org/2002/07/owl#AllDisjointProperties")
 owl_equivalentproperty    = _universal_abbrev("http://www.w3.org/2002/07/owl#equivalentProperty")
@@ -254,6 +269,13 @@ swrl_differentfrom           = _universal_abbrev("http://www.w3.org/2003/11/swrl
 
 owl_bottomobjectproperty     = _universal_abbrev("http://www.w3.org/2002/07/owl#bottomObjectProperty")
 owl_bottomdataproperty       = _universal_abbrev("http://www.w3.org/2002/07/owl#bottomDataProperty")
+
+owl_disjointunion            = _universal_abbrev("http://www.w3.org/2002/07/owl#disjointUnionOf")
+
+#owlready_direct_is_a         = _universal_abbrev("http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#direct_is_a")
+#owlready_is_a_construct         = _universal_abbrev("http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#is_a_construct")
+#owlready_context_is_a        = _universal_abbrev("http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#context_is_a")
+owlready_concrete            = _universal_abbrev("http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#concrete")
 
 issubclass_python = issubclass
 

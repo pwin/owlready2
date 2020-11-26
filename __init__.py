@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-VERSION = "0.20"
+VERSION = "0.25"
 
 JAVA_EXE = "java"
 
@@ -61,7 +61,7 @@ owlready2.namespace.Inverse                 = Inverse
 owlready2.namespace.IndividualValueList     = IndividualValueList
 owlready2.entity.Thing              = Thing
 owlready2.entity.Nothing            = Nothing
-owlready2.entity.ClassConstruct     = ClassConstruct
+owlready2.entity.Construct          = Construct
 owlready2.entity.And                = And
 owlready2.entity.Or                 = Or
 owlready2.entity.Not                = Not
@@ -82,20 +82,20 @@ owlready2.entity._inherited_properties_value_restrictions = owlready2.prop._inhe
 owlready2.disjoint.Or = Or
 owlready2.prop.Restriction             = Restriction
 owlready2.prop.ConstrainedDatatype     = ConstrainedDatatype
-owlready2.prop.ClassConstruct          = ClassConstruct
+owlready2.prop.Construct               = Construct
 owlready2.prop.AnnotationProperty      = AnnotationProperty
 owlready2.prop.Thing                   = Thing
-#owlready2.prop.ValueList               = ValueList
+owlready2.prop.PropertyChain           = PropertyChain
 owlready2.prop._check_superclasses     = True
 
 owlready2.prop.ThingClass              = ThingClass
 owlready2.prop.And                     = And
 owlready2.prop.Or                      = Or
 owlready2.prop.OneOf                   = OneOf
-owlready2.annotation.ClassConstruct    = ClassConstruct
+owlready2.annotation.Construct         = Construct
 
 owlready2.individual._keep_most_specific = _keep_most_specific
-owlready2.individual.ClassConstruct      = ClassConstruct
+owlready2.individual.Construct           = Construct
 owlready2.individual.TransitiveProperty  = TransitiveProperty
 owlready2.individual.SymmetricProperty   = SymmetricProperty
 owlready2.individual.ReflexiveProperty   = ReflexiveProperty
@@ -104,6 +104,9 @@ owlready2.individual.AnnotationPropertyClass   = AnnotationPropertyClass
 owlready2.class_construct.Thing       = Thing
 owlready2.class_construct.ThingClass  = ThingClass
 owlready2.class_construct.EntityClass = EntityClass
+
+#owlready2.reasoning.Construct = Construct
+
 del owlready2
 
 from owlready2.rule            import *

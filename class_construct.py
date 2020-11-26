@@ -24,17 +24,26 @@ from owlready2.namespace import *
 from owlready2.base import _universal_iri_2_abbrev, _universal_abbrev_2_datatype, _universal_datatype_2_abbrev
 _non_negative_integer = _universal_iri_2_abbrev["http://www.w3.org/2001/XMLSchema#nonNegativeInteger"]
 
-class ClassConstruct(object):
-  def __and__(a, b): return And([a, b])
-  def __or__ (a, b): return Or ([a, b])
-  def __invert__(a): return Not(a)
-  
+def _deepcopy_construct(x):
+  if isinstance(x, Construct): return x.__deepcopy__()
+  return x
+
+class Construct(object):
   def __init__(self, ontology = None, bnode = None):
     self.ontology = ontology
     self.storid   = bnode
     
     if ontology and not LOADING: self._create_triples(ontology)
     
+  def _set_ontology_copy_if_needed(self, ontology, l):
+    try:   self._set_ontology(ontology)
+    except OwlReadySharedBlankNodeError:
+      new = self.__deepcopy__()
+      new._set_ontology(ontology)
+      l.__setitem__(l.index(self), new)
+      return new
+    return self
+  
   def _set_ontology(self, ontology):
     if not LOADING:
       if   self.ontology and not ontology:
@@ -43,7 +52,7 @@ class ClassConstruct(object):
         if self.storid is None: self.storid = ontology.world.new_blank_node()
         self._create_triples(ontology)
       elif ontology and self.ontology:
-        raise OwlReadySharedBlankNodeError("A ClassConstruct cannot be shared by two ontologies, because it correspond to a RDF blank node. Please create a dupplicate.")
+        raise OwlReadySharedBlankNodeError("A Construct cannot be shared by two ontologies, because it correspond to a RDF blank node. Please create a dupplicate.")
     self.ontology = self.namespace = ontology
     if self.ontology: self.ontology._bnodes[self.storid] = self
     
@@ -53,8 +62,13 @@ class ClassConstruct(object):
     ontology._del_obj_triple_spo(self.storid, None, None)
     ontology._del_data_triple_spod(self.storid, None, None, None)
     
-  def _create_triples (self, ontology):
-    pass
+  def _create_triples (self, ontology): pass
+  
+
+class ClassConstruct(Construct):
+  def __and__(a, b): return And([a, b])
+  def __or__ (a, b): return Or ([a, b])
+  def __invert__(a): return Not(a)
   
   def subclasses(self, only_loaded = False, include_equivalent = True):
     if only_loaded:
@@ -78,14 +92,17 @@ class ClassConstruct(object):
   def ancestors(Class, include_self = True, include_constructs = False):
     if include_self and include_constructs: return { Class }
     return set()
-  
 
+  
 class Not(ClassConstruct):
   is_a = ()
   def __init__(self, Class, ontology = None, bnode = None):
     super().__init__(ontology, bnode)
     if not Class is None: self.__dict__["Class"] = Class
     
+  def __deepcopy__(self):
+    return Not(_deepcopy_construct(self.Class))
+  
   def __eq__(self, other):
     return isinstance(other, Not) and (self.Class == other.Class)
   
@@ -100,11 +117,11 @@ class Not(ClassConstruct):
     return super().__getattribute__(attr)
   
   def destroy(self):
-    if isinstance(self.Class, ClassConstruct): self.Class.destroy()
+    if isinstance(self.Class, Construct): self.Class.destroy()
     ClassConstruct.destory(self)
     
   def _set_ontology(self, ontology):
-    if isinstance(self.Class, ClassConstruct): self.Class._set_ontology(ontology)
+    if isinstance(self.Class, Construct): self.Class._set_ontology(ontology)
     super()._set_ontology(ontology)
     
   def __setattr__(self, attr, value):
@@ -137,6 +154,9 @@ class Inverse(ClassConstruct):
     super().__init__(ontology, bnode)
     self.__dict__["property"] = Property
     
+  def __deepcopy__(self):
+    return Inverse(_deepcopy_construct(self.property))
+  
   def __repr__(self): return "Inverse(%s)" % (self.property)
   
   def __setattr__(self, attr, value):
@@ -166,6 +186,9 @@ class LogicalClassConstruct(ClassConstruct):
       self.Classes = CallbackList(Classes, self, LogicalClassConstruct._callback)
     ClassConstruct.__init__(self, ontology, bnode)
     
+  def __deepcopy__(self):
+    return self.__class__([_deepcopy_construct(c) for c in self.Classes])
+  
   def __eq__(self, other):
     return isinstance(other, self.__class__) and (set(self.Classes) == set(other.Classes))
   
@@ -174,15 +197,16 @@ class LogicalClassConstruct(ClassConstruct):
   def __rshift__(Domain, Range):
     import owlready2.prop
     owlready2.prop._next_domain_range = (Domain, Range)
-    if isinstance(Range, ThingClass) or isinstance(Range, ClassConstruct):
+    if isinstance(Range, ThingClass) or isinstance(Range, Construct):
       return owlready2.prop.ObjectProperty
     else:
       return owlready2.prop.DataProperty
     
   def _set_ontology(self, ontology):
-    if ontology and (self._list_bnode is None): self._list_bnode = ontology.world.new_blank_node()
+    if ontology and (self._list_bnode is None):
+      self._list_bnode = ontology.world.new_blank_node()
     for Class in self.Classes:
-      if isinstance(Class, ClassConstruct): Class._set_ontology(ontology)
+      if isinstance(Class, Construct): Class._set_ontology(ontology)
     super()._set_ontology(ontology)
       
   def __getattr__(self, attr):
@@ -199,7 +223,7 @@ class LogicalClassConstruct(ClassConstruct):
     if self.ontology:
       self._destroy_triples(self.ontology)
       for i in self.Classes:
-        if isinstance(i, ClassConstruct) and (i.ontology is None): i._set_ontology(self.ontology)
+        if isinstance(i, Construct) and (i.ontology is None): i._set_ontology(self.ontology)
       self._create_triples (self.ontology)
       
   def _destroy_triples(self, ontology):
@@ -227,7 +251,7 @@ class LogicalClassConstruct(ClassConstruct):
 class Or(LogicalClassConstruct):
   _owl_op = owl_unionof
   _char   = " | "
-  is_a = ()
+  is_a    = ()
   
   def __or__ (self, b):
     return Or([*self.Classes, b])
@@ -236,7 +260,7 @@ class Or(LogicalClassConstruct):
     for Class in self.Classes:
       if Class._satisfied_by(x): return True
     return False
-  
+    
 class And(LogicalClassConstruct):
   _owl_op = owl_intersectionof
   _char   = " & "
@@ -251,7 +275,7 @@ class And(LogicalClassConstruct):
   
   def get_is_a(self): return self.Classes
   is_a = property(get_is_a)
-  
+
   
 _qualified_2_non_qualified = {
   EXACTLY : owl_cardinality,
@@ -275,10 +299,14 @@ class Restriction(ClassConstruct):
     self.__dict__["type"]        = type
     self.__dict__["cardinality"] = cardinality
     if (not value is None) or (not bnode):
+      if value is None: value = Thing
       self.__dict__["value"]     = value
       
     super().__init__(ontology, bnode)
 
+  def __deepcopy__(self):
+    return Restriction(_deepcopy_construct(self.property), _deepcopy_construct(self.type), self.cardinality, _deepcopy_construct(self.value))
+  
   def __eq__(self, other):
     return isinstance(other, Restriction) and (self.type == other.type) and (self.property is other.property) and (self.value == other.value) and (self.cardinality == other.cardinality)
   
@@ -291,8 +319,8 @@ class Restriction(ClassConstruct):
       return """%s.%s(%s, %s)""" % (self.property, _restriction_type_2_label[self.type], self.cardinality, repr(self.value))
     
   def _set_ontology(self, ontology):
-    if isinstance(self.property, ClassConstruct): self.property._set_ontology(ontology)
-    if isinstance(self.value,    ClassConstruct): self.value   ._set_ontology(ontology)
+    if isinstance(self.property, Construct): self.property._set_ontology(ontology)
+    if isinstance(self.value,    Construct): self.value   ._set_ontology(ontology)
     super()._set_ontology(ontology)
     
   def _create_triples(self, ontology):
@@ -305,7 +333,7 @@ class Restriction(ClassConstruct):
         if d is None: ontology._add_obj_triple_spo  (self.storid, self.type, o)
         else:         ontology._add_data_triple_spod(self.storid, self.type, o, d)
     else:
-      if self.value is None:
+      if (self.value is None) or (self.value is Thing):
         if not self.cardinality is None: ontology._add_data_triple_spod(self.storid, _qualified_2_non_qualified[self.type], self.cardinality, _non_negative_integer)
       else:
         if not self.cardinality is None: ontology._add_data_triple_spod(self.storid, self.type, self.cardinality, _non_negative_integer)
@@ -326,7 +354,7 @@ class Restriction(ClassConstruct):
       else:
         v = self.ontology._get_obj_triple_sp_o(self.storid, owl_onclass) or self.ontology._get_obj_triple_sp_o(self.storid, owl_ondatarange)
         if v is None:
-          v = self.__dict__["value"] = None
+          v = self.__dict__["value"] = Thing
         else:
           v = self.__dict__["value"] = self.ontology.world._to_python(v, default_to_none = True)
       return v
@@ -337,7 +365,7 @@ class Restriction(ClassConstruct):
     if ((attr == "property") or (attr == "type") or (attr == "cardinality") or (attr == "value")) and self.ontology:
       _loaded_attr_values = self.type, self.cardinality, self.property, self.value # Needed to ensure that the attribute values are available later in _create_triples()
       self._destroy_triples(self.ontology)
-      if (attr == "value") and isinstance(v, ClassConstruct) and (not v.ontology): v._set_ontology(self.ontology)
+      if (attr == "value") and isinstance(v, Construct) and (not v.ontology): v._set_ontology(self.ontology)
       self._create_triples (self.ontology)
     
       
@@ -382,6 +410,9 @@ class OneOf(ClassConstruct):
       self.instances = CallbackList(instances, self, OneOf._callback)
     ClassConstruct.__init__(self, ontology, bnode)
     
+  def __deepcopy__(self):
+    return OneOf(self.instances)
+  
   def __eq__(self, other):
     return isinstance(other, OneOf) and (set(self.instances) == set(other.instances))
   
@@ -420,6 +451,47 @@ class OneOf(ClassConstruct):
   
   def __repr__(self): return "OneOf([%s])" % ", ".join(repr(x) for x in self.instances) 
 
+
+
+class PropertyChain(Construct):
+  def __init__(self, Properties, ontology = None):
+    if isinstance(Properties, int):
+      Construct.__init__(self, ontology, Properties)
+    else:
+      self.properties = CallbackList(Properties, self, PropertyChain._callback)
+      Construct.__init__(self, ontology, None)
+      
+  def _set_ontology(self, ontology):
+    super()._set_ontology(ontology)
+    for Prop in self.properties:
+      if hasattr(Prop, "_set_ontology"): Prop._set_ontology(ontology)
+      
+  def __getattr__(self, attr):
+    if attr == "properties":
+      self.properties = CallbackList(self.ontology._parse_list(self.storid), self, PropertyChain._callback)
+      return self.properties
+    return super().__getattribute__(attr)
+  
+  def _invalidate_list(self):
+    try: del self.properties
+    except: pass
+    
+  def _callback(self, old):
+    if self.ontology:
+      self._destroy_triples(self.ontology)
+      self._create_triples (self.ontology)
+      
+  def _destroy_triples(self, ontology):
+    ontology._del_list(self.storid)
+    
+  def _create_triples(self, ontology):
+    ontology._set_list(self.storid, self.properties)
+    
+  def __repr__(self):
+    return "PropertyChain([%s])" % (", ".join(repr(x) for x in self.properties))
+  
+
+
   
 _PY_FACETS   = {}
 _RDFS_FACETS = {}
@@ -457,6 +529,10 @@ class ConstrainedDatatype(ClassConstruct):
         if not k in _PY_FACETS: raise ValueError("No facet '%s'!" % k)
         self.__dict__[k] = v
         
+  def __deepcopy__(self):
+    facets = { k : v for (k, v) in self.__dict__.items() if k in _PY_FACETS }
+    return ConstrainedDatatype(_deepcopy_construct(self.base_datatype), **facets)
+  
   def __setattr__(self, attr, value):
     self.__dict__[attr] = value
     if (not LOADING) and self.ontology and ((attr in _PY_FACETS) or (attr == "base_datatype")):

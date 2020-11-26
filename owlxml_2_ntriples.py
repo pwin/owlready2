@@ -237,6 +237,8 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
     
     elif (tag == "http://www.w3.org/2002/07/owl#FacetRestriction"): objs.append(attrs["facet"])
     
+    elif (tag == "http://www.w3.org/2002/07/owl#DisjointUnion"): objs.append("(")
+    
     elif (tag == "http://www.w3.org/2002/07/owl#Ontology"):
       ontology_iri = attrs["ontologyIRI"]
       if ontology_iri.endswith("/"): ontology_iri = ontology_iri[:-1]
@@ -451,10 +453,18 @@ def parse(f, on_prepare_obj = None, on_prepare_data = None, new_blank = None, de
       on_prepare_obj(bn, "http://www.w3.org/2002/07/owl#inverseOf", prop)
       
       objs[-2:] = [bn]
-    
+      
     elif (tag == "http://www.w3.org/2002/07/owl#SameIndividual"):
       on_prepare_obj(objs[-2], "http://www.w3.org/2002/07/owl#sameAs", objs[-1])
       del objs[-2:]
+      
+    elif (tag == "http://www.w3.org/2002/07/owl#DisjointUnion"):
+      start    = _rindex(objs)
+      list_obj = objs[start + 1 : ]
+      list_iri = new_list(list_obj[1:])
+      on_prepare_obj(list_obj[0], "http://www.w3.org/2002/07/owl#disjointUnionOf", list_iri)
+      del objs[start :]
+      
       
   def characters(content):
     nonlocal current_content

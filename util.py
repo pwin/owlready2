@@ -112,9 +112,10 @@ class CallbackListWithLanguage(CallbackList):
   def __getattr__(self, attr):
     if len(attr) != 2: raise AttributeError("'%s' is not a language code (must be 2-char string)!" % attr)
     return LanguageSublist(self, attr)
+  get_lang = __getattr__
   
   def __setattr__(self, attr, values):
-    if attr.startswith("_"):
+    if attr.startswith("_") or (len(attr) > 2):
       super.__setattr__(self, attr, values)
     else:
       if len(attr) != 2: raise AttributeError("'%s' is not a language code (must be 2-char string)!" % attr)
@@ -133,106 +134,90 @@ class _LazyListMixin(list):
   def __init__(self):
     super().__init__()
   
-  def _populate(self): raise NotImplementedError
+  def _get_content(self): raise NotImplementedError
+  
+  def populate(self):
+    list.__init__(self, self._get_content())
+    self.__class__ = self._PopulatedClass
   
   def __repr__(self):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return repr(self)
   
   def __str__(self):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return str(self)
     
   def __iter__(self):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return iter(self)
   
   def __len__(self):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return len(self)
   
   def __eq__(self, o):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return self == o
     
   def __ne__(self, o):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return self != o
     
   def __getitem__(self, i):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return self[i]
     
   def __delitem__(self, i):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     del self[i]
     
   def __setitem__(self, i, x):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     self[i] = x
     
   def __iadd__(self, x):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     self += x
     
   def __imul__(self, x):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     self *= x
     
   def pop(self, index):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return self.pop(index)
     
   def count(self, e):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return self.count(e)
     
   def index(self, e):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return self.index(e)
     
   def reverse(self):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return self.reverse()
   
   def sort(self, key = None, reverse = False):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return self.sort(key = key, reverse = reverse)
     
   def append(self, e):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return self.append(e)
     
   def insert(self, index, e):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return self.insert(index, e)
     
   def extend(self, l):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return self.extend(l)
     
   def remove(self, e):
-    list.__init__(self, self._populate())
-    self.__class__ = self._PopulatedClass
+    self.populate()
     return self.remove(e)
     
   def clear(self):

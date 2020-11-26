@@ -15,4 +15,4 @@ In case of trouble, please write to the forum or contact Jean-Baptiste Lamy <jea
   93017 BOBIGNY
   FRANCE
 
-Owlready on BitBucket (development repository): https://bitbucket.org/jibalamy/owlready
+Owlready on BitBucket (Git development repository): https://bitbucket.org/jibalamy/owlready

@@ -90,6 +90,7 @@ def parse_ntriples(object f, list objs, list datas, object insert_objs, object i
   
   while line:
     if (not line.startswith("#")) and (not line.startswith("\n")):
+      if not line.endswith("\n"): line = "%s\n" % line
       s,p,o = splitter.split(line[:-3], 2)
       
       if   s.startswith("<"): s2 = _abbreviate(s[1:-1])
@@ -608,6 +609,8 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
     
     elif (tag == "http://www.w3.org/2002/07/owl#FacetRestriction"): stack.append(_abbreviate(attrs["facet"]))
     
+    elif (tag == "http://www.w3.org/2002/07/owl#DisjointUnion"): stack.append("(")
+    
     elif (tag == "http://www.w3.org/2002/07/owl#Ontology"):
       ontology_iri_str = attrs["ontologyIRI"]
       if ontology_iri_str.endswith("/"): ontology_iri = _abbreviate(ontology_iri_str[:-1])
@@ -835,6 +838,13 @@ def parse_owlxml(object f, list objs, list datas, object insert_objs, object ins
     elif (tag == "http://www.w3.org/2002/07/owl#SameIndividual"):
       objs.append((stack[-2], _abbreviate("http://www.w3.org/2002/07/owl#sameAs"), stack[-1]))
       del stack[-2:]
+      
+    elif (tag == "http://www.w3.org/2002/07/owl#DisjointUnion"):
+      start    = _rindex(stack)
+      list_obj = stack[start + 1 : ]
+      list_iri = new_list(list_obj[1:], objs, _abbreviate, new_blank)
+      objs.append((list_obj[0], _abbreviate("http://www.w3.org/2002/07/owl#disjointUnionOf"), list_iri))
+      del stack[start:]
       
     if len(objs ) > 800000: insert_objs()
     if len(datas) > 800000: insert_datas()

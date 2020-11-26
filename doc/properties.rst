@@ -45,6 +45,23 @@ TransitiveProperty, SymmetricProperty, AsymmetricProperty, ReflexiveProperty, Ir
 They should be used in addition to ObjectProperty or DataProperty (or the 'domain >> range' syntax).
 
 
+Getting domain and range
+------------------------
+
+The .domain and .range attributes of a Property can be used to query its domain and range.
+They returns a list.
+
+::
+
+   >>> has_for_ingredient.domain
+   [Drug]
+   
+   >>> has_for_ingredient.range
+   [Ingredient]
+
+
+
+
 Creating a relation
 -------------------
 

@@ -20,6 +20,9 @@ include ./README.rst
 
 exclude .hg
 exclude .hg/*
+exclude .git
+exclude .git/*
+exclude .gitignore
 
 exclude doc/examples/contraindications.py
 

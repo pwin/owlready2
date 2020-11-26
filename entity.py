@@ -36,7 +36,7 @@ class _EquivalentToList(CallbackList):
     self._indirect = list(set( n.ontology._to_python(o, main_type = self._obj.__class__)
                                for o in n.world._get_obj_triples_transitive_sym(self._obj.storid, self._obj._owl_equivalent)
                                if o != self._obj.storid ))
-  
+    
   def indirect(self):
     if self._indirect is None: self._build_indirect()
     return self._indirect
@@ -46,7 +46,20 @@ class _EquivalentToList(CallbackList):
     if self._indirect is None: self._build_indirect()
     yield from self._indirect
     
+
+class _DisjointUnionList(CallbackList):
+  __slots__ = ["_bn"]
+  def __init__(self, l, obj, bn):
+    CallbackList.__init__(self, l, obj, self.callback)
+    self._bn  = bn
+    self._obj = obj
     
+  def callback(self, obj, old):
+    obj.namespace.ontology._del_list(self._bn)
+    obj.namespace.ontology._set_list(self._bn, self)
+    
+  
+
 class EntityClass(type):
   namespace = owlready
   
@@ -77,7 +90,7 @@ class EntityClass(type):
   
   @staticmethod
   def _find_base_classes(is_a):
-    bases = tuple(Class for Class in is_a if not isinstance(Class, ClassConstruct))
+    bases = tuple(Class for Class in is_a if not isinstance(Class, Construct))
     if len(bases) > 1:
       # Must use sorted() and not sort(), because bases is accessed during the sort
       return tuple(sorted(bases, key = lambda Class: sum(issubclass_python(Other, Class) for Other in bases)))
@@ -109,17 +122,16 @@ class EntityClass(type):
     if LOADING:
       Class = namespace.world._entities.get (storid)
     else:
-      #for base in _is_a:
-      #  if isinstance(base, ClassConstruct): base._set_ontology(namespace.ontology)
       Class = namespace.world._get_by_storid(storid)
-      
+        
     equivalent_to = obj_dict.pop("equivalent_to", None)
     
     if Class is None:
       if not LOADING:
         for base in _is_a:
-          if isinstance(base, ClassConstruct): base._set_ontology(namespace.ontology)
-          
+          if isinstance(base, Construct):
+            base = base._set_ontology_copy_if_needed(namespace.ontology, _is_a)
+              
       _is_a = CallbackList(_is_a, None, MetaClass._class_is_a_changed)
       obj_dict.update(
         _name          = name,
@@ -128,7 +140,7 @@ class EntityClass(type):
         is_a           = _is_a,
         _equivalent_to = None,
       )
-
+      
       Class = namespace.world._entities[storid] = _is_a._obj = type.__new__(MetaClass, name, superclasses, obj_dict)
       _cache_entity(Class)
       
@@ -191,18 +203,22 @@ class EntityClass(type):
     old = frozenset(old)
     
     for x in old - new:
-      Class.namespace.ontology._del_obj_triple_spo(Class.storid, Class._owl_equivalent, x    .storid)
-      if isinstance(x, ClassConstruct): x._set_ontology(None)
+      Class.namespace.ontology._del_obj_triple_spo(Class.storid, Class._owl_equivalent, x.storid)
+      if isinstance(x, Construct): x._set_ontology(None)
       else: # Invalidate it
         if not x.equivalent_to._indirect is None:
-          for x2 in x.equivalent_to._indirect: x2._equivalent_to._indirect = None
+          for x2 in x.equivalent_to._indirect:
+            if not isinstance(x2, Construct): x2._equivalent_to._indirect = None
           x._equivalent_to._indirect = None
       
     for x in new - old:
-      if isinstance(x, ClassConstruct): x._set_ontology(Class.namespace.ontology)
+      if isinstance(x, Construct):
+        x = x._set_ontology_copy_if_needed(Class.namespace.ontology, Class._equivalent_to)
+          
       else: # Invalidate it
         if not x.equivalent_to._indirect is None:
-          for x2 in x.equivalent_to._indirect: x2._equivalent_to._indirect = None
+          for x2 in x.equivalent_to._indirect:
+            if not isinstance(x2, Construct): x2._equivalent_to._indirect = None
           x._equivalent_to._indirect = None
       Class.namespace.ontology._add_obj_triple_spo(Class.storid, Class._owl_equivalent, x.storid)
       
@@ -213,6 +229,8 @@ class EntityClass(type):
       old = Class.is_a
       type.__setattr__(Class, "is_a", CallbackList(value, Class, Class.__class__._class_is_a_changed))
       Class._class_is_a_changed(old)
+      return
+      
     type.__setattr__(Class, attr, value)
     
   def _class_is_a_changed(Class, old):
@@ -223,7 +241,7 @@ class EntityClass(type):
     old = frozenset(old)
     for base in old - new:
       if not LOADING: Class._del_is_a_triple(base)
-      if isinstance(base, ClassConstruct): base._set_ontology(None)
+      if isinstance(base, Construct): base._set_ontology(None)
       
     bases = Class._find_base_classes(Class.is_a)
     if bases:
@@ -240,7 +258,8 @@ class EntityClass(type):
         list.insert(Class.is_a, 0, DataProperty)
         
     for base in new - old:
-      if isinstance(base, ClassConstruct): base._set_ontology(Class.namespace.ontology)
+      if isinstance(base, Construct):
+        base = base._set_ontology_copy_if_needed(Class.namespace.ontology, Class.is_a)
       if not LOADING: Class._add_is_a_triple(base)
       
   def disjoints(Class):
@@ -257,7 +276,7 @@ class EntityClass(type):
     for c, s, p, o in Class.namespace.world._get_obj_triples_cspo_cspo(None, None, Class._owl_disjointwith, Class.storid):
       with LOADING: a = AllDisjoint((s, p, o), Class.namespace.world.graph.context_2_user_context(c), None)
       yield a
-    
+      
   def ancestors(Class, include_self = True, include_constructs = False):
     s = set()
     Class._fill_ancestors(s, include_self, include_constructs)
@@ -427,10 +446,41 @@ class ThingClass(EntityClass):
       else:
         yield Prop
         
+  def get_disjoint_unions(Class):
+    if not "_disjoint_unions" in Class.__dict__:
+      l = []
+      for o in Class.namespace.world._get_obj_triples_sp_o(Class.storid, owl_disjointunion):
+        xs = [Class.namespace.world._get_by_storid(storid) for storid, dropit in Class.namespace.world._parse_list_as_rdf(o)]
+        du = _DisjointUnionList(xs, Class, o)
+        l.append(du)
+      Class._disjoint_unions = CallbackList(l, Class, Class.__class__._disjoint_union_changed)
+    return Class._disjoint_unions
+  def set_disjoint_unions(Class, dus): Class.disjoint_unions.reinit(dus)
+  def _disjoint_union_changed(Class, old):
+    new = Class._disjoint_unions
+    for removed in old:
+      if not removed in new:
+        Class.namespace.ontology._del_list(removed._bn)
+        Class.namespace.ontology._del_obj_triple_spo(Class.storid, owl_disjointunion, removed._bn)
+    new2 = []
+    for added in new:
+      if not added in old:
+        if not isinstance(new, _DisjointUnionList):
+          bn = Class.namespace.world.new_blank_node()
+          Class.namespace.ontology._set_list(bn, added)
+          added = _DisjointUnionList(added, Class, bn)
+        Class.namespace.ontology._add_obj_triple_spo(Class.storid, owl_disjointunion, added._bn)
+      new2.append(added)  
+    new._set(new2)
+  disjoint_unions = property(get_disjoint_unions, set_disjoint_unions)
+  
+      
   def instances(Class, world = None):
     if Class.namespace.world is owl_world:
       import owlready2
-      return (world or owlready2.default_world).world.search(type = Class)
+      world = (world or owlready2.default_world).world
+      if Class is Thing: return world.individuals()
+      return world.search(type = Class)
     return Class.namespace.world.search(type = Class)
   
   def direct_instances(Class, world = None):
@@ -475,7 +525,7 @@ class ThingClass(EntityClass):
   def __rshift__(Domain, Range):
     import owlready2.prop
     owlready2.prop._NEXT_DOMAIN_RANGE.set((Domain, Range))
-    if isinstance(Range, ThingClass) or isinstance(Range, ClassConstruct):
+    if isinstance(Range, ThingClass) or isinstance(Range, Construct):
       return owlready2.prop.ObjectProperty
     else:
       return owlready2.prop.DataProperty
@@ -525,8 +575,9 @@ class ThingClass(EntityClass):
     if attr in SPECIAL_ATTRS:
       super().__setattr__(attr, value)
       return
-    
-    Prop = Class.namespace.world._props.get(attr)
+
+    if Class.namespace.world is owl_world: Prop = CURRENT_NAMESPACES.get()[-1].world._props.get(attr)
+    else:                                  Prop = Class.namespace.world._props.get(attr)
     if Prop is None: raise AttributeError("'%s' property is not defined." % attr)
     
     if   value is None:               value = []
@@ -601,7 +652,7 @@ class ThingClass(EntityClass):
           else: r2 = None
         else: r2 = None
         
-        only_classes   = [v for v in new if isinstance(v, EntityClass) or isinstance(v, ClassConstruct)]
+        only_classes   = [v for v in new if isinstance(v, EntityClass) or isinstance(v, Construct)]
         only_instances = [v for v in new if not v in only_classes]
         
         if only_instances: only_classes.append(OneOf(only_instances))
@@ -638,7 +689,7 @@ class ThingClass(EntityClass):
                       break
                     
         for v in new - old:
-          if isinstance(v, EntityClass) or isinstance(v, ClassConstruct):
+          if isinstance(v, EntityClass) or isinstance(v, Construct):
             Class.is_a.append(Prop.some(v))
           else:
             Class.is_a.append(Prop.value(v))
@@ -650,7 +701,7 @@ class ThingClass(EntityClass):
           if (r.type == ONLY): break
         else: r = None
         
-        only_classes   = [v for v in new if isinstance(v, EntityClass) or isinstance(v, ClassConstruct)]
+        only_classes   = [v for v in new if isinstance(v, EntityClass) or isinstance(v, Construct)]
         only_instances = [v for v in new if not v in only_classes]
         
         if only_instances: only_classes.append(OneOf(only_instances))

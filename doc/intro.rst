@@ -64,7 +64,7 @@ Owlready2 automatically updates the RDF quadstore.
 
 ::
 
-   >> test_pizza.has_topping.append(onto.MeatTopping())
+  >>> test_pizza.has_topping.append(onto.MeatTopping())
    
 Perform reasoning, and classify instances and classes:
 

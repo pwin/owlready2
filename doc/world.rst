@@ -119,3 +119,10 @@ The results can be automatically converted to Python and Owlready using the .que
    }"""))
 
 
+Owlready blank nodes can be created with the graph.BNode() method:
+
+::
+
+   >>> bn = graph.BNode()
+   >>> with onto:
+   ...     graph.add((bn, rdflib.URIRef("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), rdflib.URIRef("http://www.w3.org/2002/07/owl#Class"))) 

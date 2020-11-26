@@ -28,9 +28,9 @@ swrl = owl_world.get_ontology("http://www.w3.org/2003/11/swrl#")
 class Variable(Thing):
   namespace = swrl
   
-  def __repr__(self): return str(self)
-  def __str__(self): return "?%s" % self.name
-    
+  def __str__(self): return repr(self)
+  def __repr__(self): return "?%s" % self.name
+  
   def __init__(self, name = None, namespace = None, **kargs):
     if LOADING:
       super().__init__(name, namespace, **kargs)
@@ -74,9 +74,9 @@ _NAME_2_DATARANGE = { v : k for k, v in _DATARANGES.items() }
 class Imp(Thing):
   namespace = swrl
   
-  def __repr__(self): return str(self)
-  def __str__(self):
-    return "%s -> %s" % (", ".join(str(i) for i in self.body), ", ".join(str(i) for i in self.head))
+  def __str__(self): return repr(self)
+  def __repr__(self):
+    return "%s -> %s" % (", ".join(_repr_swrl(i) for i in self.body), ", ".join(_repr_swrl(i) for i in self.head))
   
   def __init__(self, name = 0, namespace = None, **kargs): # Use a blanck node by default
     super().__init__(name, namespace, **kargs)
@@ -128,8 +128,8 @@ class Imp(Thing):
           atom, args = atom
           atom = atom.value
           if atom in _BUILTINS:           atom = BuiltinAtom(builtin = atom)
-          elif atom == "SameAs":          atom = SameIndividualAtom()
-          elif atom == "DifferentFrom":   atom = DifferentIndividualsAtom()
+          elif atom.casefold() == "SameAs".casefold():          atom = SameIndividualAtom()
+          elif atom.casefold() == "DifferentFrom".casefold():   atom = DifferentIndividualsAtom()
           elif atom in _NAME_2_DATARANGE: atom = DataRangeAtom(datarange = _NAME_2_DATARANGE[atom])
           else:
             entity = _find_entity(atom, namespaces)
@@ -151,12 +151,17 @@ class Imp(Thing):
     return self
 
   def __destroy__(self, objs, datas):
+    vars = set()
     for atom in self.head + self.body:
+      for arg in atom.arguments:
+        if isinstance(arg, Variable): vars.add(arg)
       atom.__destroy__()
     for bn in (self.namespace.world._get_obj_triple_sp_o(self.storid, swrl_body), self.namespace.world._get_obj_triple_sp_o(self.storid, swrl_head)):
       if not bn is None:
         self.namespace.ontology._del_list(bn)
-        
+    for var in vars:
+      if not self.namespace.world._has_obj_triple_spo(o = var.storid):
+        destroy_entity(var)
         
 def _find_entity(name, namespaces):
   if ":" in name:
@@ -173,7 +178,7 @@ class _FixedArguments(object):
   def __init__(self, name = 0, namespace = None, **kargs): # Use a blanck node by default
     super().__init__(name, namespace, **kargs)
     
-  def __repr__(self): return str(self)
+  def __str__(self): return repr(self)
   
   def __getattr__(self, attr):
     if   attr == "arguments":
@@ -195,16 +200,16 @@ class _FixedArguments(object):
 class ClassAtom(_FixedArguments, Thing):
   namespace = swrl
   
-  def __str__(self):
-    return "%s(%s)" % (self.class_predicate.name, ", ".join(str(i) for i in self.arguments))
+  def __repr__(self):
+    return "%s(%s)" % (self.class_predicate.name, ", ".join(_repr_swrl(i) for i in self.arguments))
     
   
 class DataRangeAtom(_FixedArguments, Thing):
   namespace = swrl
   
-  def __str__(self):
+  def __repr__(self):
     datarange = _DATARANGES[self.datarange]
-    return "%s(%s)" % (datarange, ", ".join(str(i) for i in self.arguments))
+    return "%s(%s)" % (datarange, ", ".join(_repr_swrl(i) for i in self.arguments))
   
   def __getattr__(self, attr):
     if attr == "datarange":
@@ -228,14 +233,14 @@ class DataRangeAtom(_FixedArguments, Thing):
 class SameIndividualAtom(_FixedArguments, Thing):
   namespace = swrl
   
-  def __str__(self):
-    return "SameAs(%s)" % (", ".join(str(i) for i in self.arguments))
+  def __repr__(self):
+    return "SameAs(%s)" % (", ".join(_repr_swrl(i) for i in self.arguments))
 
 class DifferentIndividualsAtom(_FixedArguments, Thing):
   namespace = swrl
   
-  def __str__(self):
-    return "DifferentFrom(%s)" % (", ".join(str(i) for i in self.arguments))
+  def __repr__(self):
+    return "DifferentFrom(%s)" % (", ".join(_repr_swrl(i) for i in self.arguments))
   
 class DatavaluedPropertyAtom(_FixedArguments, Thing):
   namespace = swrl
@@ -243,8 +248,8 @@ class DatavaluedPropertyAtom(_FixedArguments, Thing):
   def __init__(self, name = 0, namespace = None, **kargs): # Use a blanck node by default
     super().__init__(name, namespace, **kargs)
     
-  def __str__(self):
-    return "%s(%s)" % (self.property_predicate.name, ", ".join(str(i) for i in self.arguments))
+  def __repr__(self):
+    return "%s(%s)" % (self.property_predicate.name, ", ".join(_repr_swrl(i) for i in self.arguments))
   
 class IndividualPropertyAtom(_FixedArguments, Thing):
   namespace = swrl
@@ -252,8 +257,8 @@ class IndividualPropertyAtom(_FixedArguments, Thing):
   def __init__(self, name = 0, namespace = None, **kargs): # Use a blanck node by default
     super().__init__(name, namespace, **kargs)
     
-  def __str__(self):
-    return "%s(%s)" % (self.property_predicate.name, ", ".join(str(i) for i in self.arguments))
+  def __repr__(self):
+    return "%s(%s)" % (self.property_predicate.name, ", ".join(_repr_swrl(i) for i in self.arguments))
 
 
 _BUILTINS = { "equal", "notEqual", "lessThan", "lessThanOrEqual", "greaterThan", "greaterThanOrEqual",
@@ -281,12 +286,12 @@ class BuiltinAtom(Thing):
   def __init__(self, name = 0, namespace = None, **kargs): # Use a blanck node by default
     super().__init__(name, namespace, **kargs)
     
-  def __repr__(self): return str(self)
-  def __str__(self):
+  def __str__(self): return repr(self)
+  def __repr__(self):
     b = self.builtin
     if isinstance(b, str): b = b[b.rfind("#") + 1:]
     else:                  b = b.name
-    return "%s(%s)" % (b, ", ".join(str(i) for i in self.arguments))
+    return "%s(%s)" % (b, ", ".join(_repr_swrl(i) for i in self.arguments))
   
   def __getattr__(self, attr):
     if   attr == "arguments":
@@ -363,6 +368,13 @@ class ArgumentValueList(CallbackList):
           self._obj.namespace.ontology._set_data_triple_spod(self._obj.storid, swrl_argument, *self._obj.namespace.world._to_rdf(self[i]))
           
 
+def _repr_swrl(x):
+  if isinstance(x, bool):
+    if x: return "true"
+    return "false"
+  return repr(x)
+
+          
 _RULE_PARSER = None
 def _create_rule_parser():
   global _RULE_PARSER
@@ -415,10 +427,13 @@ def _create_rule_parser():
   def f(p): p[0].value = float(p[0].value); return p[0]
   @pg.production("arg : BOOL")
   def f(p): p[0].value = p[0].value == "true"; return p[0]
-  @pg.production("arg : STR")
   @pg.production("arg : VAR")
   @pg.production("arg : NAME")
   def f(p): return p[0]
+  @pg.production("arg : STR")
+  def f(p):
+    p[0].value = p[0].value[1:-1]
+    return p[0]
   
   parser = pg.build()
   

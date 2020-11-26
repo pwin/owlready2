@@ -173,3 +173,34 @@ as follows:
    ...       print("Drug is inconsistent!")
 
    
+
+Querying inferred classification
+--------------------------------
+
+The .get_parents_of(), .get_instances_of() and .get_children_of() methods of an ontology can be used to query the
+hierarchical relations, limited to those defined in the given ontology. This is commonly used after reasoning,
+to obtain the inferred hierarchical relations.
+
+ * .get_parents_of(entity) accepts any entity (Class, property or individual), and returns
+   the superclasses (for a class), the superproperties (for a property), or the classes (for an individual).
+   (NB for obtaining all parents, independently of the ontology they are asserted in, use entity.is_a).
+ * .get_instances_of(Class) returns the individuals that are asserted as belonging to the given Class in the ontology.
+   (NB for obtaining all instances, independently of the ontology they are asserted in, use Class.instances()).
+ * .get_children_of(entity) returns the subclasses (or subproperties) that are asserted for the given Class
+   or property in the ontology.
+   (NB for obtaining all children, independently of the ontology they are asserted in, use entity.subclasses()).
+
+Here is an example:
+
+::
+
+   >>> inferences = get_ontology("http://test.org/onto_inferences.owl")
+   >>> with inferences:
+   ...     sync_reasoner()
+   
+   >>> inferences.get_parents_of(drug1)
+   [onto.SingleActivePrincipleDrug]
+   
+   >>> drug1.is_a
+   [onto.has_for_active_principle.only(OneOf([onto.acetaminophen])), onto.SingleActivePrincipleDrug]
+   
