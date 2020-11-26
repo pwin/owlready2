@@ -32,9 +32,11 @@ Table of content
 
 .. toctree::
    intro.rst
+   install.rst
    onto.rst
    class.rst
    properties.rst
+   datatype.rst
    restriction.rst
    disjoint.rst
    mixing_python_owl.rst

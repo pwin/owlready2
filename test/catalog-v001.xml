@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<catalog prefer="public" xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+    <group id="Folder Repository, directory=, recursive=true, Auto-Update=true, version=2" prefer="public" xml:base="">
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="file:///home/jiba/tmp/onto2.owl" uri="onto2.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://purl.obolibrary.org/obo/go.owl" uri="test_propchain_owlxml.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://purl.obolibrary.org/obo/go.owl" uri="test_propchain.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://purl.obolibrary.org/obo/obi.owl" uri="test_multiple_base_prop.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://purl.obolibrary.org/obo/uberon.owl" uri="test_annotated_axiom2.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://purl.obolibrary.org/obo/uberon.owl" uri="test_annotated_axiom1.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://purl.obolibrary.org/obo/uberon.owl" uri="test_annotated_axiom3.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://test.org/test_ontoslash/" uri="test_ontoslash_owlxml.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://test.org/test_ontoslash/" uri="test_ontoslash.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://test.org/test_ontoslash2" uri="test_ontoslash2_owlxml.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://test.org/test_ontoslash2" uri="test_ontoslash2.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://test.org/test_ontoslash3" uri="test_ontoslash3_owlxml.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://test.org/test_ontoslash3" uri="test_ontoslash3.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://test.org/test_ontoslash3/imported.owl" uri="test_ontoslash3_imported_owlxml.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://test.org/test_ontoslash3/imported.owl" uri="test_ontoslash3_imported.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://test.org/test_owlxml_2.owl" uri="test_owlxml_2.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://test.org/test_undeclared_entity.owl" uri="test_undeclared_entity.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.lesfleursdunormal.fr/static/_downloads/crepes_et_galettes.owl" uri="crepes_et_galettes.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.lesfleursdunormal.fr/static/_downloads/pizza_onto.owl" uri="pizza_onto.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://www.semanticweb.org/jiba/ontologies/2017/0/test" uri="test_ntriples.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://www.semanticweb.org/jiba/ontologies/2017/0/test" uri="test.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.semanticweb.org/jiba/ontologies/2017/0/test_rdfxmml_bug" uri="test_rdfxml_bug.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.semanticweb.org/jiba/ontologies/2017/2/test_mixed.owl" uri="test_mixed.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl" uri="test_reasoning.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.semanticweb.org/jiba/ontologies/2017/3/test_datatype.owl" uri="test_datatype.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.semanticweb.org/jiba/ontologies/2017/3/test_inverse.owl" uri="test_inverse.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.semanticweb.org/jiba/ontologies/2017/3/test_owlxml.owl" uri="test_owlxml.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.semanticweb.org/jiba/ontologies/2017/3/test_owlxml_bug.owl" uri="test_owlxml_bug.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://www.semanticweb.org/jiba/ontologies/2018/10/test_datatype_one_of.owl" uri="test_datatype_one_of_owlxml.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="duplicate:http://www.semanticweb.org/jiba/ontologies/2018/10/test_datatype_one_of.owl" uri="test_datatype_one_of.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.semanticweb.org/jiba/ontologies/2019/1/test_rule.owl" uri="test_rule.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.test.org/XMLBASE" uri="test_ns.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.test.org/test_annot_literal.owl" uri="test_annot_literal.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.test.org/test_annot_on_bn.owl" uri="test_annot_on_bn.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.test.org/test_annot_on_bn2.owl" uri="test_annot_on_bn2.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.test.org/test_breakline.owl" uri="test_breakline.owl"/>
+        <uri id="Automatically generated entry, Timestamp=1552048175658" name="http://www.test.org/testurl/" uri="test_url.owl"/>
+    </group>
+</catalog>

@@ -52,25 +52,34 @@ from owlready2.prop      import _CLASS_PROPS
 #         return bnode
 
 class _AnnotList(CallbackListWithLanguage):
-  __slots__ = ["_property", "_target", "_target_d", "_annot"]
-  def __init__(self, l, source, property, target, target_d, annot):
+  __slots__ = ["namespace", "_property", "_target", "_target_d", "_annot", "_od_2_bnode"]
+  def __init__(self, l, source, property, target, target_d, annot, namespace, od_2_bnode):
     list.__init__(self, l)
-    self._obj      = source
-    self._property = property
-    self._target   = target
-    self._target_d = target_d
-    self._annot    = annot
+    self.namespace   = namespace
+    self._obj        = source
+    self._property   = property
+    self._target     = target
+    self._target_d   = target_d
+    self._annot      = annot
+    self._od_2_bnode = od_2_bnode
     
   def _callback(self, obj, old):
     old = set(old)
     new = set(self)
     
+    if isinstance(obj, _AnnotList): # Annotate an annotation
+      storid = obj._od_2_bnode[self._target, self._target_d]
+    else:
+      storid = obj.storid
+    
     # Add before, in order to avoid destroying the axiom and then recreating, if all annotations are modified
     for added in new - old:
-      x = obj.namespace.ontology._add_annotation_axiom(obj.storid, self._property, self._target, self._target_d, self._annot, *obj.namespace.ontology._to_rdf(added))
+      o, d = obj.namespace.ontology._to_rdf(added)
+      bnode = obj.namespace.ontology._add_annotation_axiom(storid, self._property, self._target, self._target_d, self._annot, o, d)
+      self._od_2_bnode[o, d] = bnode
       
     for removed in old - new:
-      obj.namespace.ontology._del_annotation_axiom    (obj.storid, self._property, self._target, self._target_d, self._annot, *obj.namespace.ontology._to_rdf(removed))
+      obj.namespace.ontology._del_annotation_axiom(storid, self._property, self._target, self._target_d, self._annot, *obj.namespace.ontology._to_rdf(removed))
     
     
 class AnnotationPropertyClass(PropertyClass):
@@ -80,34 +89,43 @@ class AnnotationPropertyClass(PropertyClass):
   def __getitem__(Annot, entity):
     if isinstance(entity, tuple):
       source, property, target = entity
-      if hasattr(source,   "storid"):
-        world = source.namespace.world # if Annot is in owl_world (e.g. comment), use the world of the source
+      
+      if   hasattr(source, "storid"):
+        namespace = source.namespace # if Annot is in owl_world (e.g. comment), use the namespace of the source
+      elif isinstance(source, _AnnotList):
+        namespace = source._obj.namespace
+      else:
+        namespace = Annot.namespace
+        
+      if hasattr(property, "storid"): property = property.storid
+      target, target_d = namespace.world._to_rdf(target)
+      
+      if   hasattr(source, "storid"):
         source_orig = source
         source      = source.storid
-      else:
-        world = self.namespace.world
-      if hasattr(property, "storid"): property = property.storid
-      target, target_d = world._to_rdf(target)
+      elif isinstance(source, _AnnotList):
+        source_orig = source
+        source      = source._od_2_bnode[target, target_d]
+        
       l = []
-      for bnode in world._get_annotation_axioms(source, property, target, target_d):
-        for o, d in world._get_triples_sp_od(bnode, Annot.storid):
-          l.append(world._to_python(o, d))
+      
+      od_2_bnode = {}
+      for bnode in namespace.world._get_annotation_axioms(source, property, target, target_d):
+        for o, d in namespace.world._get_triples_sp_od(bnode, Annot.storid):
+          l.append(namespace.world._to_python(o, d))
+          od_2_bnode[o, d] = bnode
           
-      return _AnnotList(l, source_orig, property, target, target_d, Annot.storid)
+      return _AnnotList(l, source_orig, property, target, target_d, Annot.storid, namespace, od_2_bnode)
     
     else:
-      if Annot is entity.namespace.world._props.get(Annot._python_name) and not isinstance(entity, ClassConstruct): # use cached value
+      if Annot is entity.namespace.world._props.get(Annot._python_name) and not isinstance(entity, Construct): # use cached value
         r = getattr(entity, Annot._python_name)
         if isinstance(r, list): return r # May not be a list if hacked (e.g. Concept.terminology)
       return Annot._get_values_for_individual(entity)
-      
+    
   def __setitem__(Annot, index, values):
     if not isinstance(values, list): values = [values]
-    
-    if isinstance(index, tuple):
-      Annot[index].reinit(values)
-    else:
-      return setattr(index, Annot.python_name, values)
+    Annot[index].reinit(values)
     
   def __call__(Prop, type, c, *args):
     raise ValueError("Cannot create a property value restriction on an annotation property!")

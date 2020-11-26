@@ -106,6 +106,7 @@ class Thing(metaclass = ThingClass):
       
     #_cache_entity(entity)
     #return object.__new__(Class)
+    #print(namespace, kargs)
     return _cache_entity(object.__new__(Class))
   
   def __init__(self, name = None, namespace = None, **kargs):
@@ -152,7 +153,7 @@ class Thing(metaclass = ThingClass):
     
     for base in old - new:
       if not LOADING: self.namespace.ontology._del_obj_triple_spo(self.storid, rdf_type, base.storid)
-      if isinstance(base, ClassConstruct): base._set_ontology(None)
+      if isinstance(base, Construct): base._set_ontology(None)
     bases = ThingClass._find_base_classes(self.is_a)
     if len(bases) == 1:
       self.__class__ = bases[0]
@@ -163,7 +164,7 @@ class Thing(metaclass = ThingClass):
       list.insert(self.is_a, 0, Thing)
       
     for base in new - old:
-      if isinstance(base, ClassConstruct): base._set_ontology(self.namespace.ontology)
+      if isinstance(base, Construct): base = base._set_ontology_copy_if_needed(self.namespace.ontology, self.is_a)
       if not LOADING: self.namespace.ontology._add_obj_triple_spo(self.storid, rdf_type, base.storid)
       
   #def __attrs__(self): # Not Python standard, but used by EditObj
@@ -187,7 +188,7 @@ class Thing(metaclass = ThingClass):
     
     for x in old - new:
       self.namespace.ontology._del_obj_triple_spo(self.storid, owl_equivalentindividual, x.storid)
-      if isinstance(x, ClassConstruct): x._set_ontology(None)
+      if isinstance(x, Construct): x._set_ontology(None)
       else: # Invalidate it
         if x.equivalent_to._indirect:
           for x2 in x.equivalent_to._indirect: x2._equivalent_to._indirect = None
@@ -195,7 +196,7 @@ class Thing(metaclass = ThingClass):
           
     for x in new - old:
       self.namespace.ontology._add_obj_triple_spo(self.storid, owl_equivalentindividual, x.storid)
-      if isinstance(x, ClassConstruct): x._set_ontology(self.namespace.ontology)
+      if isinstance(x, Construct): x = x._set_ontology_copy_if_needed(self.namespace.ontology, self._equivalent_to)
       else: # Invalidate it
         if x.equivalent_to._indirect:
           for x2 in x.equivalent_to._indirect: x2._equivalent_to._indirect = None

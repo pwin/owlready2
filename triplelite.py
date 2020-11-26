@@ -898,7 +898,18 @@ SELECT x FROM transit""", (p, o, p)).fetchall(): yield x
     if list_user: list_user = list_user[0]
     return list_user, root, previouss, nexts, length
   
+  def restore_iri(self, storid, iri):
+    self.execute("INSERT INTO resources VALUES (?,?)", (storid, iri))
+    if self._abbreviate_d:
+      self._unabbreviate_d[storid] = iri
+      self._abbreviate_d  [iri]    = storid
+      
   def destroy_entity(self, storid, destroyer, relation_updater, undoer_objs = None, undoer_datas = None):
+    self.execute("DELETE FROM resources WHERE storid=?", (storid,))
+    if self._abbreviate_d and (storid > 0):
+      del self._abbreviate_d  [self._unabbreviate_d[storid]]
+      del self._unabbreviate_d[storid]
+      
     destroyed_storids   = { storid }
     modified_relations  = defaultdict(set)
     self._destroy_collect_storids(destroyed_storids, modified_relations, storid)
@@ -1441,19 +1452,36 @@ class _SearchMixin(list):
     if transits: sql = "WITH RECURSIVE %s %s" % (", ".join(transits), sql)
     return sql, params
     
+  # def _do_search(self):
+  #   sql, params = self.sql_request()
+  #   return (self.world._get_by_storid(o) for (o,) in self.world.graph.execute(sql, params).fetchall())
+  # _get_content = _do_search
   def _do_search(self):
-    sql, params = self.sql_request()
-    return (self.world._get_by_storid(o) for (o,) in self.world.graph.execute(sql, params).fetchall())
-  _populate = _do_search
+    if self.has_bm25():
+      sql, params = self.sql_request()
+      o_2_bm25 = {}
+      for (o, bm25) in self.world.graph.execute(sql, params).fetchall():
+        if o in o_2_bm25:
+          o_2_bm25[o] = min(bm25, o_2_bm25[o])
+        else:
+          o_2_bm25[o] = bm25
+      os_bm25s = sorted(o_2_bm25.items(), key = lambda x: x[1])
+      return ((self.world._get_by_storid(o), bm25) for (o, bm25) in os_bm25s)
+    else:
+      sql, params = self.sql_request()
+      return (self.world._get_by_storid(o) for (o,) in self.world.graph.execute(sql, params).fetchall())
+  _get_content = _do_search  
 
+  def _do_search_rdf(self):
+    sql, params = self.sql_request()
+    return self.world.graph.execute(sql, params).fetchall()
+  
   def first(self):
     sql, params = self.sql_request()
     o = self.world.graph.execute(sql, params).fetchone()
     if o: return self.world._get_by_storid(o[0])
-    
-  def _do_search_rdf(self):
-    sql, params = self.sql_request()
-    return self.world.graph.execute(sql, params).fetchall()
+
+  def has_bm25(self): return False
   
   def __len__(self):
     sql, params = self.sql_request()
@@ -1462,14 +1490,17 @@ class _SearchMixin(list):
         
       
 class _PopulatedSearchList(FirstList):
-  __slots__ = ["world", "prop_vals", "_c", "id", "transits", "tables", "conditions", "params", "alternatives", "excepts", "except_conditions", "except_params", "nested_searchs", "target"]
+  __slots__ = ["world", "prop_vals", "_c", "id", "transits", "tables", "conditions", "params", "alternatives", "excepts", "except_conditions", "except_params", "nested_searchs", "target", "bm25"]
+  def has_bm25(self): return self.bm25
 
 _NEXT_SEARCH_ID = 0
 class _SearchList(FirstList, _SearchMixin, _LazyListMixin):
-  __slots__ = ["world", "prop_vals", "_c", "id", "transits", "tables", "conditions", "params", "alternatives", "excepts", "except_conditions", "except_params", "nested_searchs", "target"]
+  __slots__ = ["world", "prop_vals", "_c", "id", "transits", "tables", "conditions", "params", "alternatives", "excepts", "except_conditions", "except_params", "nested_searchs", "target", "bm25"]
   _PopulatedClass = _PopulatedSearchList
   
-  def __init__(self, world, prop_vals, c = None, case_sensitive = True):
+  def has_bm25(self): return self.bm25
+  
+  def __init__(self, world, prop_vals, c = None, case_sensitive = True, bm25 = False):
     global _NEXT_SEARCH_ID
     
     super().__init__()
@@ -1489,6 +1520,9 @@ class _SearchList(FirstList, _SearchMixin, _LazyListMixin):
     self.except_conditions = []
     self.except_params     = []
     self.nested_searchs    = []
+
+    self.bm25 = bm25
+
     
     n = 0
     for k, v, d in prop_vals:
@@ -1587,6 +1621,26 @@ UNION ALL SELECT objs.s FROM objs, %s WHERE objs.o=%s.x AND objs.p=%s)
           self.tables.append(transit_name)
           self.conditions.append("q%s.s = %s.x" % (i, transit_name))
           
+      elif k == " subproperty_of":
+        if n > 1: self.conditions.append("q%s.s = q%s.s" % (i, self.target))
+        if   isinstance(v, (_UnionSearchList, _PopulatedUnionSearchList)):
+          for search in v.searches: self.transits.extend(search.transits)
+          self.alternatives.append(v.explode(lambda target: [
+            ["q%s.s = q%s.s" % (i, self.target), "q%s.p = %s" % (i, rdfs_subpropertyof), "q%s.o = q%s.s" % (i, target)] ]))
+        elif isinstance(v, (_SearchMixin, _PopulatedSearchList)):
+          self.conditions.append("q%s.p = %s AND q%s.o = q%s.s" % (i, rdfs_subpropertyof, i, v.target))
+          self.nested_searchs.append(v)
+          self.nested_searchs.extend(v.nested_searchs)
+        else:
+          if isinstance(v, Or): v = "), (".join(str(c.storid) for c in v.Classes)
+          transit_name = "transit_%s" % i
+          self.transits.append("""%s(x)
+AS (      VALUES (%s)
+UNION ALL SELECT objs.s FROM objs, %s WHERE objs.o=%s.x AND objs.p=%s)
+""" % (transit_name, v, transit_name, transit_name, rdfs_subpropertyof))
+          self.tables.append(transit_name)
+          self.conditions.append("q%s.s = %s.x" % (i, transit_name))
+          
       elif isinstance(k, tuple): # Prop with inverse
         if n == 1: # Does not work if it is the FIRST => add a dumb first.
           n += 1
@@ -1635,7 +1689,8 @@ UNION ALL SELECT objs.s FROM objs, %s WHERE objs.o=%s.x AND objs.p=%s)
           if v.lang != "":
             self.conditions.append("fts_%s.d = ?" % (k,))
             self.params    .append("@%s" % v.lang)
-            
+          if self.bm25: self.bm25 = "fts_%s" % k
+          
         else:
           self.conditions.append("q%s.p = ?" % i)
           self.params    .append(k)
@@ -1708,8 +1763,11 @@ UNION ALL SELECT objs.s FROM objs, %s WHERE objs.o=%s.x AND objs.p=%s)
         if search.excepts: raise ValueError("Nested searches with exclusions are not supported!")
         
     if not self.alternatives:
-      sql = "SELECT DISTINCT q%s.s FROM %s WHERE %s" % (self.target, ", "   .join(tables), " AND ".join(conditions))
-      
+      if self.bm25:
+        sql = "SELECT DISTINCT q%s.s, bm25(%s) FROM %s WHERE %s" % (self.target, self.bm25, ", "   .join(tables), " AND ".join(conditions))
+      else:
+        sql = "SELECT DISTINCT q%s.s FROM %s WHERE %s" % (self.target, ", "   .join(tables), " AND ".join(conditions))
+        
     else:
       conditions0 = conditions
       params0     = params
@@ -1737,6 +1795,11 @@ EXCEPT %s""" % ("\nUNION ALL ".join("""SELECT candidates.s FROM candidates, quad
       return _UnionSearchList(self.world, [self, *other.searches])
     return _UnionSearchList(self.world, [self, other])
   
+  def __and__(self, other):
+    if isinstance(other, _IntersectionSearchList):
+      return _IntersectionSearchList(self.world, [self, *other.searches])
+    return _IntersectionSearchList(self.world, [self, other])
+  
   def dump(self):
     sql, params = self.sql_request()
     print("search debug:")
@@ -1759,6 +1822,11 @@ class _PopulatedUnionSearchList(FirstList):
 class _UnionSearchList(FirstList, _SearchMixin, _LazyListMixin):
   __slots__ = ["world", "searches"]
   _PopulatedClass = _PopulatedUnionSearchList
+  
+  def has_bm25(self):
+    for search in self.searches:
+      if search.has_bm25(): return True
+    return False
   
   nested_searchs = []
   def __init__(self, world, searches):
@@ -1794,8 +1862,7 @@ class _UnionSearchList(FirstList, _SearchMixin, _LazyListMixin):
     except:
       print("  req       =\n%s" % sql)
       print("  params    = ", params)
-
-
+      
   def explode(self, gen):
     alternatives = []
     for search in self.searches:
@@ -1814,3 +1881,74 @@ class _UnionSearchList(FirstList, _SearchMixin, _LazyListMixin):
         
     return tuple(alternatives)
     
+
+
+class _PopulatedIntersectionSearchList(FirstList):
+  __slots__ = ["world", "searches"]
+  
+
+class _IntersectionSearchList(FirstList, _SearchMixin, _LazyListMixin):
+  __slots__ = ["world", "searches"]
+  _PopulatedClass = _PopulatedIntersectionSearchList
+  
+  def has_bm25(self):
+    for search in self.searches:
+      if search.has_bm25(): return True
+    return False
+  
+  nested_searchs = []
+  def __init__(self, world, searches):
+    self.world    = world
+    self.searches = searches
+    
+  def sql_components(self, last_request = True):
+    transits_sqls_params = [s.sql_components(False) for s in self.searches]
+    if last_request:
+      sql = "SELECT DISTINCT * FROM (\n%s\n)" % "\nINTERSECT\n".join(sql2 for (transits2, sql2, params2) in transits_sqls_params)
+    else:
+      sql = "SELECT DISTINCT * AS x FROM (\n%s\n)" % "\nINTERSECT\n".join(sql2 for (transits2, sql2, params2) in transits_sqls_params)
+      
+    params   = []
+    transits = []
+    for (transits2, sql2, params2) in transits_sqls_params:
+      params  .extend(params2)
+      transits.extend(transits2)
+      
+    return transits, sql, params
+    
+  def __and__(self, other):
+    if isinstance(other, _IntersectionSearchList):
+      return _IntersectionSearchList(self.world, self.searches + other.searches)
+    return _IntersectionSearchList(self.world, self.searches + [other])
+  
+  def dump(self):
+    sql, params = self.sql_request()
+    print("search debug:")
+    try:
+      sql_with_params = sql.replace("?", "%s") % tuple(params)
+      print("  req       =\n%s" % sql_with_params)
+    except:
+      print("  req       =\n%s" % sql)
+      print("  params    = ", params)
+      
+  def explode(self, gen): raise NotImplementedError("Nested search with intersection are not supported.")
+  
+  def _do_search(self):
+    return (self.world._get_by_storid(o) for (o,) in self._do_search_rdf())
+  _get_content = _do_search
+  
+  def _do_search_rdf(self):
+    r = set()
+    first = True
+    for search in self.searches:
+      sql, params = search.sql_request()
+      r1 = self.world.graph.execute(sql, params).fetchall()
+      if first:
+        r.update(r1)
+        first = False
+      else:
+        r.intersection_update(r1)
+    return list(r)
+  
+  def __len__(self):
+    return len(self._do_search_rdf())

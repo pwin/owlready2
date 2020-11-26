@@ -27,17 +27,8 @@ import setuptools
 
 version = open(os.path.join(HERE, "__init__.py")).read().split('VERSION = "', 1)[1].split('"', 1)[0]
 
-try:
-  import Cython.Build
-  extensions = [
-    setuptools.Extension("owlready2_optimized", ["owlready2_optimized.pyx"]),
-  ]
-  extensions = Cython.Build.cythonize(extensions, compiler_directives = { "language_level" : 3 })
-except:
-  extensions = []
-
-  
-setuptools.setup(
+def do_setup(extensions):
+  setuptools.setup(
   name         = "Owlready2",
   version      = version,
   license      = "LGPLv3+",
@@ -73,3 +64,14 @@ setuptools.setup(
   
   ext_modules = extensions,
 )
+
+try:
+  import Cython.Build
+  extensions = [
+    setuptools.Extension("owlready2_optimized", ["owlready2_optimized.pyx"]),
+  ]
+  extensions = Cython.Build.cythonize(extensions, compiler_directives = { "language_level" : 3 })
+  do_setup(extensions)
+  
+except:
+  do_setup([])

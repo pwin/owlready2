@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import importlib
+import importlib, urllib.request, urllib.parse
 
 from owlready2.base import *
 from owlready2.base import _universal_abbrev_2_iri, _universal_iri_2_abbrev, _universal_abbrev_2_datatype, _universal_datatype_2_abbrev
@@ -334,7 +334,7 @@ WHERE q1.p=? AND q1.o=?
         sub = self._get_obj_triple_po_s(rdfs_subclassof, s)
         if sub is None: yield self._parse_bnode(s)
         
-  def search(self, _use_str_as_loc_str = True, _case_sensitive = True, **kargs):
+  def search(self, _use_str_as_loc_str = True, _case_sensitive = True, _bm25 = False, **kargs):
     from owlready2.triplelite import _SearchList, _SearchMixin
     
     prop_vals = []
@@ -343,7 +343,7 @@ WHERE q1.p=? AND q1.o=?
       for v in v0:
         if   k == "iri":
           prop_vals.append((" iri", v, None))
-        elif (k == "is_a") or (k == "subclass_of") or (k == "type"):
+        elif (k == "is_a") or (k == "subclass_of") or (k == "type") or (k == "subproperty_of"):
           if   isinstance(v, (_SearchMixin, Or)): v2 = v
           elif isinstance(v, int):                v2 = v
           else:                                   v2 = v.storid
@@ -352,7 +352,7 @@ WHERE q1.p=? AND q1.o=?
           d = None
           Prop = self.world._props.get(k)
           if Prop is None:
-            k2 = _universal_iri_2_abbrev.get(k) or k
+            k2 = _universal_iri_2_abbrev.get(k) or self.world._abbreviate(k, create_if_missing = False) or k
           else:
             if Prop.inverse_property:
               k2 = (Prop.storid, Prop.inverse.storid)
@@ -375,7 +375,7 @@ WHERE q1.p=? AND q1.o=?
                 
           prop_vals.append((k2, v2, d))
           
-    return _SearchList(self.world, prop_vals, None, _case_sensitive)
+    return _SearchList(self.world, prop_vals, None, _case_sensitive, _bm25)
     
   def search_one(self, **kargs): return self.search(**kargs).first()
   
@@ -413,7 +413,7 @@ def _clear_cache():
   for i in d.keys():
     pass
 
-
+WORLDS = weakref.WeakSet()
 class World(_GraphManager):
   def __init__(self, backend = "sqlite", filename = ":memory:", dbname = "owlready2_quadstore", **kargs):
     global owl_world
@@ -431,6 +431,7 @@ class World(_GraphManager):
     if not owl_world is None:
       self._entities.update(owl_world._entities) # add OWL entities in the world
       self._props.update(owl_world._props)
+      WORLDS.add(self)
       
     if filename:
       self.set_backend(backend, filename, dbname, **kargs)
@@ -557,7 +558,7 @@ class World(_GraphManager):
             Class = self._get_by_storid(obj, None, ThingClass, main_onto)
             if isinstance(Class, EntityClass): types.append(Class)
             elif Class is None: raise ValueError("Cannot get '%s'!" % obj)
-
+            
       if main_type is None: # Try to guess it
         if   self._has_obj_triple_spo(None, rdf_type, storid) or self._has_obj_triple_spo(None, rdfs_subclassof, storid) or self._has_obj_triple_spo(storid, rdfs_subclassof, None): main_type = ThingClass
         elif self._has_obj_triple_spo(storid, None, None) or self._has_data_triple_spod(storid, None, None, None): main_type = Thing
@@ -661,9 +662,11 @@ class World(_GraphManager):
     return entity
   
   def _parse_bnode(self, bnode):
-    for ontology in self.ontologies.values():
-      if ontology._has_obj_triple_spo(bnode, None, None):
-        return ontology._parse_bnode(bnode)
+    c = self.graph.db.execute("""SELECT c FROM objs WHERE s=? LIMIT 1""", (bnode,)).fetchone()
+    if c:
+      c = c[0]
+      for onto in self.ontologies.values():
+        if onto.graph.c == c: return onto._parse_bnode(bnode)
       
      
 class Ontology(Namespace, _GraphManager):
@@ -695,6 +698,8 @@ class Ontology(Namespace, _GraphManager):
         self._add_obj_triple_spo(self.storid, rdf_type, owl_ontology)
         if self.world.graph: self.world.graph.release_write_lock()
         
+    if not self.world._rdflib_store is None: self.world._rdflib_store._add_onto(self)
+    
   def destroy(self):
     self.world.graph.acquire_write_lock()
     del self.world.ontologies[self.base_iri]
@@ -809,23 +814,39 @@ class Ontology(Namespace, _GraphManager):
     self._imported_ontologies._set(imported_ontologies)
     
     # Import Python module
+    global default_world, IRIS, get_ontology
     for module, d in self._get_data_triples_sp_od(self.storid, owlready_python_module):
       module = from_literal(module, d)
       if _LOG_LEVEL: print("* Owlready2 *     ...importing Python module %s required by ontology %s..." % (module, self.name), file = sys.stderr)
-      
-      try: importlib.__import__(module)
+
+      import owlready2
+      saved = owlready2.default_world, owlready2.IRIS, owlready2.get_ontology, owlready2.get_namespace
+      try:
+        owlready2.default_world, owlready2.IRIS, owlready2.get_ontology = self.world, self.world, self.world.get_ontology
+        importlib.__import__(module)
       except ImportError:
         print("\n* Owlready2 * ERROR: cannot import Python module %s!\n" % module, file = sys.stderr)
         print("\n\n\n", file = sys.stderr)
         raise
+      finally:
+        owlready2.default_world, owlready2.IRIS, owlready2.get_ontology, owlready2.get_namespace = saved
     return self
   
   def _load_properties(self):
+    # Update props from other ontologies, if needed
+    for prop in list(self.world._props.values()):
+      if prop.namespace.world is owl_world: continue
+      if prop._check_update(self) and _LOG_LEVEL:
+        print("* Owlready2 * Reseting property %s: new triples are now available." % prop)
+        
+    # Loads new props
     props = []
-    #for i in self.graph.execute("select * from quads").fetchall(): print(i)
     for prop_storid in itertools.chain(self._get_obj_triples_po_s(rdf_type, owl_object_property), self._get_obj_triples_po_s(rdf_type, owl_data_property), self._get_obj_triples_po_s(rdf_type, owl_annotation_property)):
       Prop = self.world._get_by_storid(prop_storid)
       python_name_d = self.world._get_data_triple_sp_od(prop_storid, owlready_python_name)
+      
+      if not isinstance(Prop, PropertyClass):
+        raise TypeError("'%s' belongs to more than one entity types (cannot be both a property and a class/an individual)!" % Prop.iri)
       
       if python_name_d is None:
         props.append(Prop.python_name)
@@ -974,10 +995,14 @@ class Ontology(Namespace, _GraphManager):
     
     with LOADING:
       restriction_property = restriction_type = restriction_cardinality = Disjoint = members = on_datatype = with_restriction = None
-      for pred, obj in self._get_obj_triples_s_po(bnode):
-        if   pred == owl_complementof:   r = Not(None, self, bnode); break # will parse the rest on demand
-        elif pred == owl_unionof:        r = Or (obj , self, bnode); break
-        elif pred == owl_intersectionof: r = And(obj , self, bnode); break
+      preds_objs = self._get_obj_triples_s_po(bnode)
+      if not preds_objs: # Probably a blank node from another ontology
+        return self.world._parse_bnode(bnode)
+      for pred, obj in preds_objs:
+        if   pred == owl_complementof:   r = Not          (None, self, bnode); break # will parse the rest on demand
+        elif pred == owl_unionof:        r = Or           (obj , self, bnode); break
+        elif pred == owl_intersectionof: r = And          (obj , self, bnode); break
+        #elif pred == owl_disjointunion:  r = DisjointUnion(obj , self, bnode); break
         
         elif pred == owl_onproperty: restriction_property = self._to_python(obj, None)
         
@@ -985,12 +1010,6 @@ class Ontology(Namespace, _GraphManager):
         elif pred == ONLY:      restriction_type = ONLY;
         elif pred == VALUE:     restriction_type = VALUE;
         elif pred == HAS_SELF:  restriction_type = HAS_SELF;
-#        elif pred == EXACTLY:   restriction_type = EXACTLY; restriction_cardinality = self._to_python(obj, XXX)
-#        elif pred == MIN:       restriction_type = MIN;     restriction_cardinality = self._to_python(obj)
-#        elif pred == MAX:       restriction_type = MAX;     restriction_cardinality = self._to_python(obj)
-#        elif pred == owl_cardinality:     restriction_type = EXACTLY; restriction_cardinality = self._to_python(obj)
-#        elif pred == owl_min_cardinality: restriction_type = MIN;     restriction_cardinality = self._to_python(obj)
-#        elif pred == owl_max_cardinality: restriction_type = MAX;     restriction_cardinality = self._to_python(obj)
         
         elif pred == owl_oneof: r = OneOf(self._parse_list(obj), self, bnode); break
         
@@ -1033,9 +1052,10 @@ class Ontology(Namespace, _GraphManager):
             #else:
             #  s = ""
             #  raise ValueError("Cannot parse blank node %s: unknown node type!")
+            
           else: # Not a blank
             r = self.world._get_by_storid(bnode, main_onto = self)
-            
+
     self._bnodes[bnode] = r
     return r
 
@@ -1079,6 +1099,24 @@ class Ontology(Namespace, _GraphManager):
         
   def __repr__(self): return """get_ontology("%s")""" % (self.base_iri)
   
+  def get_parents_of(self, entity):
+    if isinstance(entity, Thing):
+      t = self._get_obj_triples_sp_o(entity.storid, rdf_type)
+    else:
+      t = self._get_obj_triples_sp_o(entity.storid, entity._rdfs_is_a)
+    r = []
+    for o in t:
+      if o == owl_named_individual: continue
+      if o < 0: r.append(self._parse_bnode(o))
+      else:     r.append(self.world._get_by_storid(o))
+    return r
+  
+  def get_instances_of(self, Class):
+    return [self.world._get_by_storid(o) for o in self._get_obj_triples_po_s(rdf_type, Class.storid)]
+  
+  def get_children_of(self, Class):
+    return [self.world._get_by_storid(o) for o in self._get_obj_triples_po_s(Class._rdfs_is_a, Class.storid)]
+  
   
 class Metadata(object):
   def __init__(self, namespace, storid):
@@ -1107,7 +1145,7 @@ class Metadata(object):
   
 def _open_onto_file(base_iri, name, mode = "r", only_local = False):
   if base_iri.endswith("#") or base_iri.endswith("/"): base_iri = base_iri[:-1]
-  if base_iri.startswith("file://"): return open(base_iri[7:], mode)
+  if base_iri.startswith("file://"): return open(urllib.parse.unquote(base_iri[7:]), mode)
   for dir in onto_path:
     for ext in ["", ".owl", ".rdf", ".n3"]:
       filename = os.path.join(dir, "%s%s" % (name, ext))
@@ -1118,7 +1156,7 @@ def _open_onto_file(base_iri, name, mode = "r", only_local = False):
 
 def _get_onto_file(base_iri, name, mode = "r", only_local = False):
   if base_iri.endswith("#") or base_iri.endswith("/"): base_iri = base_iri[:-1]
-  if base_iri.startswith("file://"): return base_iri[7:]
+  if base_iri.startswith("file://"): return urllib.parse.unquote(base_iri[7:])
   
   for dir in onto_path:
     filename = os.path.join(dir, base_iri.rsplit("/", 1)[-1])
@@ -1130,6 +1168,15 @@ def _get_onto_file(base_iri, name, mode = "r", only_local = False):
   if (mode.startswith("w")): return os.path.join(onto_path[0], "%s.owl" % name)
   raise FileNotFoundError
 
+
+# def convert_with_owlapi(orig, format = "nt"):
+#   import tempfile
+#   fileno, filename = tempfile.mkstemp()
+#   command = [owlready2.JAVA_EXE, "-cp", owlready2.reasoning._HERMIT_CLASSPATH, "Save", orig, format, filename]
+#   print(" ".join(command))
+#   output = subprocess.check_output(command, stderr = subprocess.STDOUT)
+#   return filename
+  
 
 
 owl_world = World(filename = None)

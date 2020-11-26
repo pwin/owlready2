@@ -93,7 +93,7 @@ The 'types' Python module can be used to create classes and subclasses dynamical
 Creating equivalent classes
 ---------------------------
 
-The .equivalent_to Class attribute is a list of equivalent classes. It behaves like .is_a.
+The .equivalent_to Class attribute is a list of equivalent classes. It behaves like .is_a (programmatically).
 
 To obtain all equivalent classes, including indirect ones (due to transitivity), use .INDIRECT_equivalent_to.
 

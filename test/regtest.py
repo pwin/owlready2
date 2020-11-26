@@ -716,6 +716,39 @@ class Test(BaseTest, unittest.TestCase):
     
     assert len(o.ma_pizza.has_topping) == 2
     
+  def test_ontology_31(self):
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.test.org/o1.owl")
+    o2 = w.get_ontology("http://www.test.org/o2.owl")
+    
+    with o1:
+      class p(Thing >> Thing): pass
+      class C(Thing): pass
+      class D(C): pass
+      class E(Thing): pass
+      class F(Thing): pass
+      class G(Thing): pass
+      class H(Thing): pass
+      
+      i = D()
+      
+    with o2:
+      D.is_a.append(E)
+      D.is_a.append(F)
+      D.is_a.append(p.some(C))
+      i.is_a.append(G)
+      
+    assert o1.get_parents_of(D) == [C]
+    assert set(o2.get_parents_of(D)) == set([E, F, p.some(C)])
+    
+    assert o1.get_parents_of(i) == [D]
+    assert o2.get_parents_of(i) == [G]
+    
+    assert o1.get_children_of(E) == []
+    assert o2.get_children_of(E) == [D]
+    
+    assert o1.get_instances_of(G) == []
+    assert o2.get_instances_of(G) == [i]
     
   def test_class_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -1096,7 +1129,23 @@ class Test(BaseTest, unittest.TestCase):
     assert owlready2.reasoning._keep_most_specific([A, B, C, AC]) == {AC}
     assert owlready2.reasoning._keep_most_specific([A, B, C, AC, A2]) == {AC, A2}
     
-    
+  def test_class_27(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test")
+    with o:
+      class A(owlready2.Thing): pass
+      class B(owlready2.Thing): pass
+      class C(owlready2.Thing): pass
+      
+      A.equivalent_to = [owlready2.Not(B)]
+      C.equivalent_to = [A]
+      
+      assert set(A.         equivalent_to) == { Not(B) }
+      assert set(A.INDIRECT_equivalent_to) == { Not(B), C }
+      assert set(C.         equivalent_to) == { A }
+      assert set(C.INDIRECT_equivalent_to) == { Not(B), A }
+      
+      
   def test_individual_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     
@@ -1490,6 +1539,17 @@ class Test(BaseTest, unittest.TestCase):
     assert set(Person.ancestors()) == set([Person, Thing])
     assert set(Person.ancestors(include_constructs = True)) == set([Person, Thing, love.some(Person)])
     
+  def test_individual_24(self):
+    world = self.new_world()
+    onto  = world.get_ontology("http://test.org/onto.owl")
+    
+    with onto:
+      class C(Thing): pass
+
+    c = C()
+
+    assert list(Thing.instances(world)) == [c]
+
     
   def test_prop_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
@@ -2398,6 +2458,37 @@ class Test(BaseTest, unittest.TestCase):
 
     sync_reasoner(world, debug = 0)
     assert p.equivalent_to == [bottomObjectProperty]
+
+  def test_prop_49(self):
+    w1 = self.new_world()
+    onto1 = w1.get_ontology("http://test.org/t1.owl")
+    onto2 = w1.get_ontology("http://test.org/t2.owl")
+    
+    with onto1:
+      class p(Thing >> Thing): pass
+      class i(Thing >> Thing): pass
+      class C(Thing): pass
+      
+    o1 = BytesIO()
+    onto1.save(o1)
+    
+    with onto2:
+      p.inverse = i
+      p.range.append(C)
+      p.domain.append(C)
+      p.python_name = "my_prop"
+      
+    o2 = BytesIO()
+    onto2.save(o2)
+    
+    w2 = self.new_world()
+    onto1 = w2.get_ontology("http://test.org/t1.owl").load(fileobj = BytesIO(o1.getvalue()))
+    onto2 = w2.get_ontology("http://test.org/t2.owl").load(fileobj = BytesIO(o2.getvalue()))
+    
+    assert onto1.C in onto1.p.range
+    assert onto1.C in onto1.p.domain
+    assert onto1.p.python_name == "my_prop"
+    assert onto1.p.inverse     is  onto1.i
     
     
   def test_prop_inverse_1(self):
@@ -2499,12 +2590,55 @@ class Test(BaseTest, unittest.TestCase):
       
     assert p._inverse_storid == 0
     
+  def test_prop_inverse_9(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/onto.owl")
+
+    with o:
+      class sym_prop(ObjectProperty, SymmetricProperty): pass
+      class sub_prop(sym_prop): pass
+
+      class C(Thing): pass
+      c1 = C()
+      c2 = C()
+      c3 = C()
+
+    assert sym_prop.inverse is sym_prop
+    assert sub_prop.inverse is None
+
+    c1.sym_prop = [c2]
+    c1.sub_prop = [c3]
+
+    assert c2.sym_prop == [c1]
+    assert c2.sub_prop == []
+    assert c3.sym_prop == []
+    assert c3.sub_prop == []
     
+  def test_prop_inverse_10(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/onto.owl")
+    
+    with o:
+      class prop (ObjectProperty): pass
+      class iprop(ObjectProperty): inverse_property = prop
+      class C(Thing): pass
+
+      c1 = C()
+      c2 = C()
+      c3 = C()
+      c1.prop.append(c2)
+      c2.prop.append(c3)
+      
+      assert c2.iprop == [c1]
+      assert list( prop.get_relations()) == [(c1, c2), (c2, c3)]
+      assert list(iprop.get_relations()) == [(c2, c1), (c3, c2)]
+      
+      
   def test_construct_not_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     assert n.NonPizza.__bases__ == (Thing,)
     for p in n.NonPizza.is_a:
-      if isinstance(p, ClassConstruct):
+      if isinstance(p, Construct):
         assert p.__class__ is Not
         assert p.Class is n.Pizza
         break
@@ -2519,7 +2653,7 @@ class Test(BaseTest, unittest.TestCase):
       is_a      = [Not(C1)]
       
     for p in C2.is_a:
-      if isinstance(p, ClassConstruct): bnode = p.storid; break
+      if isinstance(p, Construct): bnode = p.storid; break
       
     self.assert_triple(bnode, rdf_type, owl_class)
     self.assert_triple(bnode, owl_complementof, C1.storid)
@@ -2533,7 +2667,7 @@ class Test(BaseTest, unittest.TestCase):
       is_a      = [Not(C1)]
       
     for p in C2.is_a:
-      if isinstance(p, ClassConstruct): bnode = p.storid; break
+      if isinstance(p, Construct): bnode = p.storid; break
       
     p.Class = C1b
     
@@ -2552,12 +2686,7 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_triple(NOT.storid, rdf_type, owl_class)
     self.assert_triple(NOT.storid, owl_complementof, C1.storid)
     self.assert_triple(C2.storid, rdfs_subclassof, NOT.storid)
-    
-    ok = 0
-    try: C3.is_a.append(NOT)
-    except OwlReadySharedBlankNodeError: ok = 1
-    assert ok
-    
+     
   def test_construct_restriction_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     assert len(n.VegetarianPizza.is_a) == 2
@@ -2768,6 +2897,26 @@ class Test(BaseTest, unittest.TestCase):
     assert repr(C1 | C2 | C3) == "test.C1 | test.C2 | test.C3"
     assert repr(C1 & C2 & C3) == "test.C1 & test.C2 & test.C3"
     
+  def test_and_or_5(self):
+    import copy
+    
+    w  = self.new_world()
+    o1 = w.get_ontology("http://www.test.org/test.owl")
+    o2 = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o1:
+      class p(Thing >> Thing): pass
+      class C1(Thing): pass
+      class C2(Thing): pass
+      class C3(Thing):
+        is_a = [p.some(C1) & C2]
+    
+    with o2:
+      class D(Thing): pass
+      for p in C3.is_a:
+        D.is_a.append(p)
+    
+      
     
   def test_one_of_1(self):
     n = self.new_ontology()
@@ -3211,7 +3360,18 @@ I took a placebo
                   frozenset([P1, P2]), frozenset([P1, P3, P4]),
                   frozenset([c, d]),   frozenset([c, e, f]) }
     
-    
+  def test_disjoint_7(self):
+    n = self.new_ontology()
+    with n:
+      class C(Thing): pass
+      class D(Thing): pass
+      class E(Thing): pass
+      class F(Thing): pass
+      class p(Thing >> Thing): pass
+      
+      AllDisjoint([C, D & E])
+      AllDisjoint([C, D | E, p.some(F)])
+      
   def test_annotation_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")
     
@@ -3592,6 +3752,27 @@ I took a placebo
 
     assert comment[C.is_a[-1]] == ["A comment on a restriction."]
     
+  def test_annotation_19(self):
+    w = self.new_world()
+    o = w.get_ontology("http://test.org/onto.owl")
+    
+    with o:
+      class p(Thing >> Thing): pass
+      class C(Thing): pass
+      
+      c1 = C()
+      c2 = C()
+      c1.p.append(c2)
+      comment[c1, p, c2].append("commentaire")
+      comment[c1, p, c2].append("commentaire 2")
+      
+      a = comment[comment[c1, p, c2], comment, "commentaire"]
+      a.append("commentaire d'un commentaire")
+      
+      b = comment[a, comment, "commentaire d'un commentaire"]
+      b.append("commentaire d'un commentaire d'un commentaire")
+
+      self.assert_triple(-3, comment.storid, *o._to_rdf("commentaire d'un commentaire d'un commentaire"), world = w)
       
   def test_import_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/2/test_mixed.owl").load()
@@ -5551,6 +5732,16 @@ WHERE {
     
     assert comment[c2, p, c1] == []
     
+  def test_rdflib_12(self):
+    world = self.new_world()
+    onto1 = world.get_ontology("http://test.org/onto1.owl")
+
+    graph = world.as_rdflib_graph()
+    assert not graph.get_context(onto1) is None
+    
+    onto2 = world.get_ontology("http://test.org/onto2.owl")
+    assert not graph.get_context(onto2) is None
+    
     
   def test_refactor_1(self):
     world = self.new_world()
@@ -5707,6 +5898,40 @@ WHERE {
       s.add((p,o))
     assert s == { (xmls_maxlength, 8) }
 
+  def test_datatype_3(self):
+    class Hex(object):
+      def __init__(self, value):
+        self.value = value
+    
+    def parser(s): return Hex(int(s, 16))
+    def unparser(x):
+      h = hex(x.value)[2:]
+      if len(h) % 2 != 0: return "0%s" % h
+      return h
+    
+    hex_storid = declare_datatype(Hex, "http://www.w3.org/2001/XMLSchema#hexBinary", parser, unparser)
+
+    world = self.new_world()
+    onto = world.get_ontology("http://www.test.org/t.owl")
+    
+    with onto:
+      class p(Thing >> Hex): pass
+      
+      class C(Thing): pass
+
+      c1 = C()
+      c1.p.append(Hex(14))
+      
+    self.assert_triple(c1.storid, p.storid, "0e", hex_storid, world)
+
+    c1 = C = None
+    import owlready2.namespace
+    owlready2.namespace._cache = [None] * 1000
+    import gc
+    gc.collect(); gc.collect(); gc.collect()
+    
+    assert onto.c1.p[0].value == 14
+    
     
   def test_inverse_1(self):
     world = self.new_world()
@@ -6051,6 +6276,19 @@ WHERE {
     assert o.c2 is c2
     assert c1.p == [c2]
     
+  def test_destroy_18(self):
+    w = self.new_world()
+    o = w.get_ontology("http://www.test.org/test.owl")
+    
+    with o:
+      class C(Thing): pass
+      c1 = C("c1")
+      
+      destroy_entity(c1, undoable = 1)
+      
+      c1 = C()
+      c1.name = "c1"
+      
 
   def test_observe_1(self):
     import owlready2.observe
@@ -6501,7 +6739,7 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
       class weight(Person >> float, FunctionalProperty): pass
       class imc   (Person >> float, FunctionalProperty): pass
       Imp().set_as_rule("""Person(?x), weight(?x, ?p), size(?x, ?t), divide(?i, ?p, ?tt), multiply(?tt, ?t, ?t) -> imc(?x, ?i)""")
-
+      
       p1 = Person(size = 2.0, weight = 100.0)
 
     sync_reasoner_pellet(world, infer_property_values = True, infer_data_property_values = True, debug = 0)
@@ -6509,6 +6747,31 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     assert p1.imc == 25.0
     
   def test_swrl_3(self):
+    world = self.new_world()
+    onto_perso = world.get_ontology("http://test.org/personne2.owl#")
+    
+    with onto_perso:
+      class Personne(Thing): pass
+      class poids (Personne >> float, FunctionalProperty): pass
+      class taille(Personne >> float, FunctionalProperty): pass
+      class imc   (Personne >> float, FunctionalProperty): pass
+      
+    with onto_perso:
+      imp = Imp()
+      imp.set_as_rule("Personne(?x), poids(?x, ?p), taille(?x, ?t),multiply(?t2, ?t, ?t), divide(?i, ?p, ?t2)-> imc(?x, ?i)")
+      
+    with onto_perso:
+      class Obèse(Personne):
+        equivalent_to = [Personne & (imc >= 30.0)]
+
+    p1 = Personne(taille = 1.7, poids = 65.0)
+    p2 = Personne(taille = 1.7, poids = 90.0)
+    
+    sync_reasoner_pellet(world, infer_property_values = True, infer_data_property_values = True, debug = 0)
+    
+    assert 22 < p1.imc < 23
+    
+  def test_swrl_4(self):
     world = self.new_world()
     onto = world.get_ontology("http://test.org/t.owl#")
     with onto:
@@ -6524,7 +6787,7 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     
     assert c2.p2 == [c1]
     
-  def test_swrl_4(self):
+  def test_swrl_5(self):
     world = self.new_world()
     onto = world.get_ontology("http://test.org/t.owl#")
     with onto:
@@ -6538,7 +6801,61 @@ http://test.org/t.owl#c1 http://www.w3.org/1999/02/22-rdf-syntax-ns#type
     
     assert c.p == [1.0]
     
+  def test_swrl_6(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/t.owl#")
+    with onto:
+      class C(Thing): pass
+      class R(Thing): pass
+      class p(C >> str): pass
+      Imp().set_as_rule("""p(?x, ?y), matches(?y, "ab.*") -> R(?x)""")
       
+      c1 = C(p = ["abcde"])
+      c2 = C(p = ["abe"])
+      c3 = C(p = ["bcde"])
+      c4 = C(p = [])
+
+    sync_reasoner_pellet(world, infer_property_values = True, infer_data_property_values = True, debug = 0)
+    
+    assert R in c1.is_a
+    assert R in c2.is_a
+    assert not R in c3.is_a
+    assert not R in c4.is_a
+
+  def test_swrl_7(self):
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/t.owl#")
+    
+    with onto:
+      class C(Thing): pass
+      class D(Thing): pass
+      
+      r1 = Imp()
+      r1.set_as_rule("""C(?x), C(?y) -> D(?x)""")
+      
+      r2 = Imp()
+      r2.set_as_rule("""C(?y) -> D(?y)""")
+      
+    assert len(list(world.variables())) == 2
+    
+    destroy_entity(r1)
+
+    assert len(list(world.variables())) == 1
+    
+    destroy_entity(r2)
+    
+    assert len(list(world.variables())) == 0
+    
+    
+  def test_dl_render_1(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/2/test_reasoning.owl").load()
+    from owlready2.dl_render import dl_render_class_str
+    assert set(dl_render_class_str(n.Cheese).split("\n")) == set("""Cheese ⊑ Topping
+Cheese ⊓ Meat ⊑ ⊥
+Cheese ⊓ Vegetable ⊑ ⊥""".split("\n"))
+
+
 class Paper(BaseTest, unittest.TestCase):
   def test_reasoning_paper_ic2017(self):
     world = self.new_world()

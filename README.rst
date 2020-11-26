@@ -10,8 +10,7 @@ Owlready2
    :alt: download stats
 
 
-# The source of this fork is at https://bitbucket.org/jibalamy/owlready2/src/master/
-
+         
 Owlready2 is a module for ontology-oriented programming in Python 3, including an optimized RDF quadstore.
 
 Owlready2 can:
@@ -431,6 +430,7 @@ version 2 - 0.20
 version 2 - 0.21
 ****************
 
+* Use Pellet 2.3.1 (same version as Protégé) instead of 2.4 (which has a bug in SWRL for many builtin predicates including equals and matches)
 * Much faster mangement of annotations on relations
 * Bugfixes:
   - Fix bug on blank node in RDFlib/SPARQL support
@@ -439,11 +439,77 @@ version 2 - 0.21
   - Fix 'no query solution' error in search()
   - Fix literal support in RDF lists, causing "TypeError: '<' not supported between instances of 'NoneType' and 'int'" when saving ontologies
   - Fix DifferentFrom SWRL builtin
+  - Fix string parsing in SWRL rules
+  - Fix string and boolean literal representation (str/repr) in SWRL rules
+  - Fix the inverse of subproperties having a symmetric superproperty
+
+version 2 - 0.22
+****************
+
+* Add support for disjoint unions (Class.disjoint_unions)
+* Add deepcopy support on class constructs, and automatically deep-copy constructs when needed (i.e. no more OwlReadySharedBlankNodeError)
+* Support the creation of blank nodes with RDFlib
+
+version 2 - 0.23
+****************
+
+* Add get_parents_of(), get_instances_of(), get_children_of() methods to ontology, for querying the hierarchical relations defined in a given ontology
+* Use Thing as default value for restrictions with number, instead of None
+* Add 'filter' parameter to save(), for filtering the entities saved (contributed by Javier de la Rosa)
+* Bugfixes:
+  - Fix value restriction with the false value 
+  - Fix blank node loading from different ontologies
+  - Fix constructs reused by several classes
+  - Fix 'Class.is_a = []' was not turning the list into an Owlready list
+  - Fix destroy_entity() - was not destroying the IRI of the entity
+  - Improve setup.py: ignore Cython if Cython installation fails
+
+version 2 - 0.24
+****************
+
+* Support intersection of searches (e.g. World.search(...) & World.search(...))
+* Add owlready2.reasoning.JAVA_MEMORY
+* Move development repository to Git
+* Bugfixes:
+  - Fix parsing of NTriples files that do not end with a new line
+  - Fix KeyError with Prop.python_name when several properties share the same name
+  - Fix get_ontology() calls in Python module imported by ontologies in a World that is not default_world
+  - Fix use of PyMedTermino2 in a World that is not default_world
+  - Fix World.as_rdflib_graph().get_context(onto) for ontology added after the creation of the RDFLIB graph
+  - Fix destroying SWRL rules
+  - Fix disjoint with non-atomic classes
+ 
+version 2 - 0.25
+****************
+
+* Allow the declaration of custom datatypes with declare_datatype()
+* Support the annotation of annotations (e.g. a comment on a comment)
+* search() now support the "subproperty_of" argument
+* search() now support the "bm25" argument (for full-text searches)
+* Bugfixes:
+  - Fix Concept.descendant_concepts() in PymedTermino2
+  - Update already loaded properties when new ontologies are loaded
+  - Now accept %xx quoted characters in file:// URL
+  - Improve error message on punned entities
+  - Property.get_relations() now considers inverse properties
+  - Fix "AttributeError: 'mappingproxy' object has no attribute 'pop'" error
+  - Fix Thing.instances()
     
+version 2 - 0.26
+****************
+
+* Module owlready2.dl_render allows rendering entities to Description Logics (contributed by Simon Bin)
+* Bugfixes:
+  - Adjustment in the comparison of strings  from SameAs and DiferrentFrom,  allowing equal comparison regardless of the case-sensitive (contributed by Thiago Feijó)
+  - Fix transitive equivalent_to relations between classes and OWL constructs
+  - Fix AnnotationProperty[entity] where entity is a predefined OWL entity (e.g. comment or Thing)
+  - Fix entity.AnnotationProperty where entity is a predefined OWL entity (e.g. comment or Thing)
+
+
 Links
 -----
 
-Owlready2 on BitBucket (development repository): https://bitbucket.org/jibalamy/owlready2
+Owlready2 on BitBucket (Git development repository): https://bitbucket.org/jibalamy/owlready2
 
 Owlready2 on PyPI (Python Package Index, stable release): https://pypi.python.org/pypi/Owlready2
 

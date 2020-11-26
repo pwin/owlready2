@@ -167,12 +167,14 @@ arguments. The supported keywords are:
 * **type**, for searching Individuals of a given Class
 * **subclass_of**, for searching subclasses of a given Class
 * **is_a**, for searching both Individuals and subclasses of a given Class
+* **subproperty_of**, for searching subproperty of a given Property
 * any object, data or annotation property name
 
 Special arguments are:
 
 * **_use_str_as_loc_str**: whether to treats plain Python strings as strings in any language (default is True)
 * **_case_sensitive**: whether to take lower/upper case into consideration (default is True)
+* **_bm25**: if True, returns a list of (entity, relevance) pairs instead of just the entities (default is False)
 
 The value associated to each keyword can be a single value or a list of several values.
 A star * can be used as a jocker in string values.
@@ -192,7 +194,7 @@ For example, for searching for all entities with an IRI ending with 'Topping':
 
 In addition, the special value "*" can be used as a wildcard for any object.
 For example, the following line searches for all individuals that are related
-to another one with the 'has_topping' relation:
+to another one with the 'has_topping' relation (NB there is none in the default pizza_onto.owl file):
 
 ::
 
@@ -216,7 +218,7 @@ Finally, search() can be nested, as in the following example:
 
 ::
 
-   >>> onto.search(is_a = onto.Pizza, has_topping = onto.search(is_a = onto.Tomato))
+   >>> onto.search(is_a = onto.Pizza, has_topping = onto.search(is_a = onto.TomatoTopping))
 
 Owlready automatically combines nested searches in a single, optimized, search.
 

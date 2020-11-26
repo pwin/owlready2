@@ -61,7 +61,7 @@ class BaseGraph(object):
   
   def parse(self, f): raise NotImplementedError
     
-  def save(self, f, format = "pretty-xml", filter=None): raise NotImplementedError
+  def save(self, f, format = "pretty-xml", filter = None): raise NotImplementedError
   
   def _abbreviate  (self, iri, create_if_missing = True): return iri
   def _unabbreviate(self, iri): return iri
@@ -144,6 +144,7 @@ class BaseSubGraph(BaseGraph):
           while line:
             current_line += 1
             if (not line.startswith("#")) and (not line.startswith("\n")):
+              if not line.endswith("\n"): line = "%s\n" % line
               s,p,o = splitter.split(line[:-3], 2)
               
               if   s.startswith("<"): s = s[1:-1]
@@ -238,13 +239,12 @@ def _guess_format(f):
   return "rdfxml"
 
 
-def _save(f, format, graph, filter=None):
+def _save(f, format, graph, filter = None):
   if   format == "ntriples":
     _unabbreviate = lru_cache(None)(graph._unabbreviate)
     
     for s,p,o,d in graph._iter_triples():
-      if filter and callable(filter) and not filter(graph, s, p, o, d):
-        continue
+      if filter and callable(filter) and not filter(graph, s, p, o, d): continue
       if   s < 0: s = "_:%s" % (-s)
       else:       s = "<%s>" % _unabbreviate(s)
       p = "<%s>" % _unabbreviate(p)
@@ -265,8 +265,7 @@ def _save(f, format, graph, filter=None):
     c_2_iri = { c : iri for c, iri in graph._iter_ontology_iri() }
     
     for c,s,p,o,d in graph._iter_triples(True):
-      if filter and callable(filter) and not filter(graph, s, p, o, d, c):
-        continue
+      if filter and callable(filter) and not filter(graph, s, p, o, d, c): continue
       if   s < 0: s = "_:%s" % (-s)
       else:       s = "<%s>" % _unabbreviate(s)
       p = "<%s>" % _unabbreviate(p)
@@ -427,8 +426,7 @@ def _save(f, format, graph, filter=None):
     s_lines   = []
     current_s = ""
     for s,p,o,d in graph._iter_triples(False, True):
-      if filter and callable(filter) and not filter(graph, s, p, o, d):
-        continue
+      if filter and callable(filter) and not filter(graph, s, p, o, d): continue
       if s != current_s:
         if current_s: purge()
         current_s = s
@@ -524,4 +522,3 @@ def _save(f, format, graph, filter=None):
     
 
     f.write(b"""\n\n</rdf:RDF>\n""")
-

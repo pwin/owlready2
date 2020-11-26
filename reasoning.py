@@ -26,6 +26,7 @@ from owlready2.namespace       import *
 from owlready2.class_construct import *
 from owlready2.individual      import *
 
+
 _HERMIT_RESULT_REGEXP = re.compile("^([A-Za-z]+)\\( ((?:<(?:[^>]+)>\s*)+) \\)$", re.MULTILINE)
 _HERMIT_PROP_REGEXP   = re.compile("^<([^>]+)> \\(known instances:\s*(.*?)(?:\s*\\|\s*)possible instances:\s*(.*?)\s*\\)", re.MULTILINE)
 
@@ -77,24 +78,26 @@ _EQUIV_RELATIONS = {"EquivalentClasses", "EquivalentObjectProperties", "Equivale
 
 _TYPES = { FunctionalProperty, InverseFunctionalProperty, TransitiveProperty, SymmetricProperty, AsymmetricProperty, ReflexiveProperty, IrreflexiveProperty }
 
+JAVA_MEMORY = 2000
+
 
 def _keep_most_specific(s, consider_equivalence = True):
   r = set()
   if consider_equivalence:
     for i in s:
-      if isinstance(i, ClassConstruct): r.add(i)
+      if isinstance(i, Construct): r.add(i)
       else:
         for j in s:
-          if (i is j) or isinstance(j, ClassConstruct): continue
+          if (i is j) or isinstance(j, Construct): continue
           if issubclass(j, i) and ((i.storid < j.storid) or (issubclass_python(j, i))): break
         else:
           r.add(i)
   else:
     for i in s:
-      if isinstance(i, ClassConstruct): r.add(i)
+      if isinstance(i, Construct): r.add(i)
       else:
         for j in s:
-          if (i is j) or isinstance(j, ClassConstruct): continue
+          if (i is j) or isinstance(j, Construct): continue
           if issubclass_python(j, i): break
         else:
           r.add(i)
@@ -121,7 +124,7 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
     else:
       world.save(tmp, format = "ntriples")
     tmp.close()
-    command = [owlready2.JAVA_EXE, "-Xmx2000M", "-cp", _HERMIT_CLASSPATH, "org.semanticweb.HermiT.cli.CommandLine", "-c", "-O", "-D", "-I", "file:///%s" % tmp.name.replace('\\','/')]
+    command = [owlready2.JAVA_EXE, "-Xmx%sM" % JAVA_MEMORY, "-cp", _HERMIT_CLASSPATH, "org.semanticweb.HermiT.cli.CommandLine", "-c", "-O", "-D", "-I", "file:///%s" % tmp.name.replace('\\','/')]
     if infer_property_values: command.append("-Y")
     if debug:
       import time
@@ -135,8 +138,8 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
       if (e.returncode == 1) and (b"Inconsistent ontology" in (e.output or b"")):
         raise OwlReadyInconsistentOntologyError()
       else:
-        raise OwlReadyJavaError("Java error message is:\n%s" % (e.stderr or b"").decode("utf8"))
-    
+        raise OwlReadyJavaError("Java error message is:\n%s" % (e.stderr or e.output or b"").decode("utf8"))
+      
     output = output.decode("utf8").replace("\r","")
     if debug:
       print("* Owlready2 * HermiT took %s seconds" % (time.time() - t0), file = sys.stderr)
@@ -148,6 +151,7 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
     new_parents = defaultdict(list)
     new_equivs  = defaultdict(list)
     entity_2_type = {}
+
     for relation, concept_iris in _HERMIT_RESULT_REGEXP.findall(output):
       concept_storids = [ontology._abbreviate(x) for x in concept_iris[1:-1].split("> <")]
       owl_relation = _HERMIT_2_OWL[relation]
@@ -166,7 +170,7 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
             
             new_equivs[concept_storid].append(owl_nothing)
             entity_2_type[concept_storid] = _OWL_2_TYPE[owl_relation]
-          
+            
         else:
           for concept_iri1, concept_storid1 in zip(concept_iris, concept_storids):
             if concept_iri1.startswith("http://www.w3.org/2002/07/owl"): continue
@@ -174,7 +178,7 @@ def sync_reasoner_hermit(x = None, infer_property_values = False, debug = 1, kee
               if concept_iri1 == concept_iri2: continue
               new_equivs[concept_storid1].append(concept_storid2)
               entity_2_type[concept_storid1] = _OWL_2_TYPE[owl_relation]
-            
+
     if infer_property_values:
       inferred_obj_relations = []
       for prop_iri, knowns, possibles in _HERMIT_PROP_REGEXP.findall(output):
@@ -225,10 +229,12 @@ def sync_reasoner_pellet(x = None, infer_property_values = False, infer_data_pro
     else:
       world.save(tmp, format = "ntriples")
     tmp.close()
-    command = [owlready2.JAVA_EXE, "-Xmx2000M", "-cp", _PELLET_CLASSPATH, "pellet.Pellet", "realize", "--ignore-imports", tmp.name]
+
+    # Use Jena for loading because OWLAPI is bugged with NTriples.
+    command = [owlready2.JAVA_EXE, "-Xmx%sM" % JAVA_MEMORY, "-cp", _PELLET_CLASSPATH, "pellet.Pellet", "realize", "--loader", "Jena", "--input-format", "N-Triples", "--ignore-imports", tmp.name]
     if infer_property_values:      command.insert(-2, "--infer-prop-values")
     if infer_data_property_values: command.insert(-2, "--infer-data-prop-values")
-  
+    
     if debug:
       import time
       print("* Owlready2 * Running Pellet...", file = sys.stderr)
@@ -241,9 +247,13 @@ def sync_reasoner_pellet(x = None, infer_property_values = False, infer_data_pro
       if (e.returncode == 1) and (b"ERROR: Ontology is inconsistent" in (e.stderr or b"")): # XXX
         raise OwlReadyInconsistentOntologyError()
       else:
-        raise OwlReadyJavaError("Java error message is:\n%s" % (e.stderr or b"").decode("utf8"))
+        raise OwlReadyJavaError("Java error message is:\n%s" % (e.stderr or e.output or b"").decode("utf8"))
+
+    try:
+      output = output.decode("utf8").replace("\r","")
+    except UnicodeDecodeError:
+      output = output.decode("latin").replace("\r","")
       
-    output = output.decode("utf8").replace("\r","")
     if debug:
       print("* Owlready2 * Pellet took %s seconds" % (time.time() - t0), file = sys.stderr)
       if debug > 1:
@@ -313,10 +323,9 @@ def sync_reasoner_pellet(x = None, infer_property_values = False, infer_data_pro
         if ((not a_storid is None) and
             (not world._has_data_triple_spod(a_storid, prop.storid, value))):
           inferred_data_relations.append((a_storid, prop, value, datatype))
-        
       
     if not keep_tmp_file: os.unlink(tmp.name)
-
+    
   finally:
     if locked: world.graph.acquire_write_lock() # re-lock when applying results
     
@@ -373,10 +382,10 @@ def _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, en
         if not concept2 in concept1.equivalent_to: concept1.equivalent_to._append(concept2)
         
     for child, parents in new_parents_loaded.items():
-      old = set(parent for parent in child.is_a if not isinstance(parent, ClassConstruct))
+      old = set(parent for parent in child.is_a if not isinstance(parent, Construct))
       new = set(parents)
       
-      #new.update([parent_eq for parent in new for parent_eq in parent.equivalent_to.indirect() if not isinstance(parent, ClassConstruct)])
+      #new.update([parent_eq for parent in new for parent_eq in parent.equivalent_to.indirect() if not isinstance(parent, Construct)])
       
       new.update(old & _TYPES) # Types are not shown by HermiT
       if old == new: continue
@@ -387,7 +396,7 @@ def _apply_reasoning_results(world, ontology, debug, new_parents, new_equivs, en
       new_is_a = list(child.is_a)
       for removed in old - new: new_is_a.remove(removed)
       for added   in new - old: new_is_a.append(added)
-      
+
       child.is_a.reinit(new_is_a)
       
       for child_eq in child.equivalent_to.indirect():

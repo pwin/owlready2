@@ -45,6 +45,12 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
       graph.triplelite = triplelite
       self.context_graphs[onto] = graph
       
+  def _add_onto(self, onto):
+    graph            = TripleLiteRDFlibGraph(store = self, identifier = URIRef(onto.base_iri))
+    graph.onto       = onto
+    graph.triplelite = onto.graph
+    self.context_graphs[onto] = graph
+    
   def _2_python(self, x):
     if   isinstance(x, rdflib.term.URIRef ): return self.world[str(x)]
     elif isinstance(x, rdflib.term.BNode  ): return str(x)
@@ -99,15 +105,15 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
       
     sub = None
     if   (s > 0) and (s in self.world._entities):        sub = self.world._entities[s]
-    elif (s < 0) and (s in triplelite.ontology._bnodes): sub = triplelite.ontology._bnodes[s]
+    elif (s < 0) and (s in triplelite.onto._bnodes): sub = triplelite.onto._bnodes[s]
     if not sub is None:
       prop = self.world._entities.get(p)
       if   prop:
         try: delattr(sub, prop.python_name)
         except: pass
         
-      #elif isinstance(sub, owlready2.class_construct.ClassConstruct):
-      #  self._bn_needing_update.append((triplelite.ontology, s))
+      #elif isinstance(sub, owlready2.class_construct.Construct):
+      #  self._bn_needing_update.append((triplelite.onto, s))
       
       elif d is None:
         obj = self.world._load_by_storid(o)
@@ -182,7 +188,7 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     
   def triples(self, triple_pattern, context = None):
     rs,rp,ro,rd = self._rdflib_2_owlready(triple_pattern)
-
+    
     if   ro is None:
       for s,p,o,d in context.triplelite._get_triples_spod_spod(rs,rp,None, None):
         yield self._owlready_2_rdflib(s,p,o,d), context
@@ -257,6 +263,7 @@ class TripleLiteRDFlibStore(rdflib.store.Store):
     
         
 class TripleLiteRDFlibGraph(rdflib.Graph):
+  onto = None
   def query_owlready(self, query, *args, **kargs):
     r = self.query(query, *args, **kargs)
     for line in r:
@@ -272,7 +279,7 @@ class TripleLiteRDFlibGraph(rdflib.Graph):
   
   def _rdflib_2_owlready(self, o):
     if   isinstance(o, rdflib.term.URIRef ): o = self.store.world[str(o)]
-    elif isinstance(o, rdflib.term.BNode  ): o = (self.store.onto or self.store.world)._parse_bnode(o)
+    elif isinstance(o, rdflib.term.BNode  ): o = (self.onto or self.store.world)._parse_bnode(o)
     elif isinstance(o, rdflib.term.Literal):
       if o.language is None:
         if o.datatype:
@@ -288,5 +295,5 @@ class TripleLiteRDFlibGraph(rdflib.Graph):
     return o
 
   def get_context(self, onto): return self.store.get_context(onto)
-
   
+  def BNode(self): return BNode(-self.store.world.new_blank_node())

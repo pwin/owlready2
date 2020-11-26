@@ -17,9 +17,10 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from owlready2.namespace import *
-from owlready2.entity    import *
-from owlready2.prop      import *
+from owlready2.namespace       import *
+from owlready2.entity          import *
+from owlready2.prop            import *
+from owlready2.class_construct import *
 
 
 class AllDisjoint(object):
@@ -50,7 +51,7 @@ class AllDisjoint(object):
       if isinstance(self.storid, int):
         r = self.ontology._parse_list(self._list_bnode)
       else:
-        r = [self.ontology.world._get_by_storid(self.storid[0]), self.ontology.world._get_by_storid(self.storid[2])]
+        r = [self.ontology.world._to_python(self.storid[0]), self.ontology.world._to_python(self.storid[2])]
       r = CallbackList(r, self, AllDisjoint._callback)
       setattr(self, attr,r)
       return r
@@ -71,6 +72,9 @@ class AllDisjoint(object):
   def destroy(self): self._destroy_triples()
   
   def _create_triples(self):
+    for entity in self.entities:
+      if isinstance(entity, Construct): entity._set_ontology(self.ontology)
+      
     if len(self.entities) == 2:
       if   isinstance(self.entities[0], ThingClass):
         self.storid = (self.entities[0].storid, owl_disjointwith, self.entities[1].storid)
@@ -82,7 +86,7 @@ class AllDisjoint(object):
         return
       # It seems that there is no 1-1 relation for individuals
       # => continue
-    
+      
     if len(self.entities) >= 2:
       if not isinstance(self.storid, int): self.storid      = self.ontology.world.new_blank_node()
       if not self._list_bnode:             self._list_bnode = self.ontology.world.new_blank_node()
@@ -112,3 +116,20 @@ AllDifferent = AllDisjoint
 def partition(mother, children):
   mother.is_a.append(Or(children))
   AllDisjoint(children)
+
+  
+# class DisjointUnion(LogicalClassConstruct):
+#   _owl_op = owl_disjointunion
+#   is_a    = ()
+  
+#   def _satisfied_by(self, x):
+#     for Class in self.Classes:
+#       if Class._satisfied_by(x): return True
+#     return False
+  
+#   def __repr__(self):
+#     s = []
+#     for x in self.Classes:
+#       if isinstance(x, LogicalClassConstruct): s.append("(%s)" % x)
+#       else:                                    s.append(repr(x))
+#     return "%s([%s])" % (self.__class__.__name__, ", ".join(s))

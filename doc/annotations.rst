@@ -223,3 +223,9 @@ Then, FTS can be used in search as follows:
    >>> default_world.search(label = FTS("keyword1 keyword2*"))
 
 Stars can be used as joker, but only at the END of the keyword.
+
+When using full-text search, the _bm25 argument can be used to obtain the BM25 relevance score for each entity found:
+
+::
+
+   >>> default_world.search(label = FTS("keyword1 keyword2*"), _bm25 = True)

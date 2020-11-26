@@ -141,7 +141,7 @@ def parse_mrconso(PYM, terminologies, langs, importer, f, remnant = ""):
         importer.orig_2_cuis[orig].add(cui)
         importer.restrict(orig, SOME, PYM.unifieds.storid,  cui)
         importer.restrict(cui,  SOME, PYM.originals.storid, orig)
-    
+        
     importer.check_insert()
 
   
@@ -239,9 +239,10 @@ def parse_mrsat(PYM, terminologies, langs, importer, f, remnant_previous = ""):
         importer.datas.append((cui, prop, atv, 0))
         
     elif metaui.startswith("A"):
-      orig = importer.aui_2_orig[metaui]
-      importer.datas.append((orig, prop, atv, 0))
-      
+      orig = importer.aui_2_orig.get(metaui)
+      if not orig is None:
+        importer.datas.append((orig, prop, atv, 0))
+        
     importer.check_insert()
     previous = current
     
@@ -256,9 +257,10 @@ def parse_mrdef(PYM, terminologies, langs, importer, f, remnant = ""):
     if (importer.terminologies and (not terminology in importer.terminologies)): continue
     if suppress in importer.remove_suppressed: continue
 
-    orig = importer.aui_2_orig[aui]
-    importer.datas.append((orig, PYM.definitions.storid, defin, 0))
-    
+    orig = importer.aui_2_orig.get(aui)
+    if not orig is None:
+      importer.datas.append((orig, PYM.definitions.storid, defin, 0))
+      
     importer.check_insert()
 
 

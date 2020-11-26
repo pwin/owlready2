@@ -3,6 +3,8 @@ SWRL rules
 
 SWRL rules can be used to integrate 'if... then...' rules in ontologies.
 
+Note: loading SWRL rules is **only** supported from RDF/XML and NTriples files, but not from OWL/XML files.
+
 
 Creating SWRL rules
 -------------------
