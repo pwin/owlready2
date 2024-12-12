@@ -125,7 +125,7 @@ and the following methods:
 .. note::
 
    Many methods returns a generator. Generators allows iterating over the values without creating a list,
-   which can improve performande. However, they are often not very convenient when exploring the ontology:
+   which can improve performance. However, they are often not very convenient when exploring the ontology:
 
    ::
 
