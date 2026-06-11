@@ -1000,6 +1000,7 @@ class Ontology(Namespace, _GraphManager):
         return self.world._parse_bnode(bnode)
       for pred, obj in preds_objs:
         if   pred == owl_complementof:   r = Not          (None, self, bnode); break # will parse the rest on demand
+        elif pred == owl_datatypecomplementof: r = Not    (None, self, bnode); break # will parse the rest on demand
         elif pred == owl_unionof:        r = Or           (obj , self, bnode); break
         elif pred == owl_intersectionof: r = And          (obj , self, bnode); break
         #elif pred == owl_disjointunion:  r = DisjointUnion(obj , self, bnode); break
