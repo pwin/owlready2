@@ -493,10 +493,11 @@ class ThingClass(EntityClass):
   def get_class_properties(Class):
     l = set()
     for r in _property_value_restrictions(Class, None):
-      if   r.property._class_property_some and ((r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1)):
-        l.add(r.property)
-      elif r.property._class_property_only and  (r.type == ONLY):
-        l.add(r.property)
+      prop = r.property
+      if   getattr(prop, "_class_property_some", False) and ((r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1)):
+        l.add(prop)
+      elif getattr(prop, "_class_property_only", False) and  (r.type == ONLY):
+        l.add(prop)
         
     for storid in Class.namespace.world._get_triples_s_p(Class.storid):
       Prop = Class.namespace.world._get_by_storid(storid)
@@ -507,10 +508,11 @@ class ThingClass(EntityClass):
   def INDIRECT_get_class_properties(Class):
     l = set()
     for r in _inherited_properties_value_restrictions(Class, None, set()):
-      if   r.property._class_property_some and ((r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1)):
-        l.add(r.property)
-      elif r.property._class_property_only and  (r.type == ONLY):
-        l.add(r.property)
+      prop = r.property
+      if   getattr(prop, "_class_property_some", False) and ((r.type == VALUE) or (r.type == SOME) or ((r.type == EXACTLY) and r.cardinality >= 1) or ((r.type == MIN) and r.cardinality >= 1)):
+        l.add(prop)
+      elif getattr(prop, "_class_property_only", False) and  (r.type == ONLY):
+        l.add(prop)
         
     for storid in Class.namespace.world._get_triples_s_p(Class.storid):
       Prop = Class.namespace.world._get_by_storid(storid)
