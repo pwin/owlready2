@@ -323,6 +323,33 @@ class Test(BaseTest, unittest.TestCase):
     sql = db.cursor()
     sql.execute("""SELECT * from ontologies;""")
     assert sql.fetchall() == []
+
+  def test_world_save_pathlike(self):
+    import pathlib
+
+    filename = pathlib.Path(self.new_tmp_file())
+    world = self.new_world()
+    onto = world.get_ontology("http://test.org/pathlib_world.owl")
+
+    with onto:
+      class C(Thing): pass
+
+    world.save(file = filename, format = "ntriples")
+
+    assert filename.stat().st_size > 0
+
+  def test_ontology_save_pathlike(self):
+    import pathlib
+
+    filename = pathlib.Path(self.new_tmp_file())
+    onto = self.new_ontology()
+
+    with onto:
+      class C(Thing): pass
+
+    onto.save(file = filename, format = "ntriples")
+
+    assert filename.stat().st_size > 0
     
     
   def test_ontology_1(self):

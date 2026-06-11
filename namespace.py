@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import importlib, urllib.request, urllib.parse
+import importlib, os, urllib.request, urllib.parse
 
 from owlready2.base import *
 from owlready2.base import _universal_abbrev_2_iri, _universal_iri_2_abbrev, _universal_abbrev_2_datatype, _universal_datatype_2_abbrev
@@ -481,7 +481,7 @@ class World(_GraphManager):
   def save(self, file = None, format = "rdfxml", **kargs):
     if   file is None:
       self.graph.commit()
-    elif isinstance(file, str):
+    elif isinstance(file, (str, os.PathLike)):
       if _LOG_LEVEL: print("* Owlready2 * Saving world %s to %s..." % (self, file), file = sys.stderr)
       file = open(file, "wb")
       self.graph.save(file, format, **kargs)
@@ -870,7 +870,7 @@ class Ontology(Namespace, _GraphManager):
       if _LOG_LEVEL: print("* Owlready2 * Saving ontology %s to %s..." % (self.name, getattr(file, "name", "???")), file = sys.stderr)
       self.graph.save(file, format, **kargs)
       file.close()
-    elif isinstance(file, str):
+    elif isinstance(file, (str, os.PathLike)):
       if _LOG_LEVEL: print("* Owlready2 * Saving ontology %s to %s..." % (self.name, file), file = sys.stderr)
       file = open(file, "wb")
       self.graph.save(file, format, **kargs)
