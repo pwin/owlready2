@@ -210,6 +210,7 @@ owl_annotatedsource       = _universal_abbrev("http://www.w3.org/2002/07/owl#ann
 owl_annotatedproperty     = _universal_abbrev("http://www.w3.org/2002/07/owl#annotatedProperty")
 owl_annotatedtarget       = _universal_abbrev("http://www.w3.org/2002/07/owl#annotatedTarget")
 owl_complementof          = _universal_abbrev("http://www.w3.org/2002/07/owl#complementOf")
+owl_datatypecomplementof  = _universal_abbrev("http://www.w3.org/2002/07/owl#datatypeComplementOf")
 owl_disjointwith          = _universal_abbrev("http://www.w3.org/2002/07/owl#disjointWith")
 owl_propdisjointwith      = _universal_abbrev("http://www.w3.org/2002/07/owl#propertyDisjointWith")
 rdfs_datatype             = _universal_abbrev("http://www.w3.org/2000/01/rdf-schema#Datatype")
@@ -278,6 +279,4 @@ owl_disjointunion            = _universal_abbrev("http://www.w3.org/2002/07/owl#
 owlready_concrete            = _universal_abbrev("http://www.lesfleursdunormal.fr/static/_downloads/owlready_ontology.owl#concrete")
 
 issubclass_python = issubclass
-
-
 

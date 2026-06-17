@@ -2686,6 +2686,50 @@ class Test(BaseTest, unittest.TestCase):
     self.assert_triple(NOT.storid, rdf_type, owl_class)
     self.assert_triple(NOT.storid, owl_complementof, C1.storid)
     self.assert_triple(C2.storid, rdfs_subclassof, NOT.storid)
+
+  def test_construct_not_datatype(self):
+    n = self.new_ontology()
+
+    NOT = Not(int)
+    NOT._set_ontology(n)
+
+    self.assert_triple(NOT.storid, rdf_type, rdfs_datatype)
+    self.assert_triple(NOT.storid, owl_datatypecomplementof, _universal_datatype_2_abbrev[int])
+    self.assert_not_triple(NOT.storid, owl_complementof, _universal_datatype_2_abbrev[int])
+
+  def test_parse_datatype_complement_of(self):
+    n = self.new_ontology()
+    datatype_complement = n.world.new_blank_node()
+
+    n._add_obj_triple_spo(datatype_complement, rdf_type, rdfs_datatype)
+    n._add_obj_triple_spo(datatype_complement, owl_datatypecomplementof, _universal_datatype_2_abbrev[int])
+
+    parsed = n._parse_bnode(datatype_complement)
+
+    assert isinstance(parsed, Not)
+    assert parsed.Class is int
+
+  def test_parse_datatype_intersection_with_complement(self):
+    n = self.new_ontology()
+    datatype_complement = n.world.new_blank_node()
+    intersection = n.world.new_blank_node()
+    list_bnode = n.world.new_blank_node()
+
+    n._add_obj_triple_spo(datatype_complement, rdf_type, rdfs_datatype)
+    n._add_obj_triple_spo(datatype_complement, owl_datatypecomplementof, _universal_datatype_2_abbrev[int])
+    n._add_obj_triple_spo(intersection, rdf_type, rdfs_datatype)
+    n._add_obj_triple_spo(intersection, owl_intersectionof, list_bnode)
+    n._set_list_as_rdf(list_bnode, [
+      (_universal_datatype_2_abbrev[float], None),
+      (datatype_complement, None),
+    ])
+
+    parsed = n._parse_bnode(intersection)
+
+    assert isinstance(parsed, And)
+    assert parsed.Classes[0] is float
+    assert isinstance(parsed.Classes[1], Not)
+    assert parsed.Classes[1].Class is int
      
   def test_construct_restriction_1(self):
     n = get_ontology("http://www.semanticweb.org/jiba/ontologies/2017/0/test")

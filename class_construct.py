@@ -112,7 +112,11 @@ class Not(ClassConstruct):
   
   def __getattr__(self, attr):
     if attr == "Class":
-      self.__dict__["Class"] = C = self.ontology._to_python(self.ontology._get_obj_triple_sp_o(self.storid, owl_complementof), default_to_none = True)
+      o = self.ontology._get_obj_triple_sp_o(self.storid, owl_complementof)
+      if o is None: o = self.ontology._get_obj_triple_sp_o(self.storid, owl_datatypecomplementof)
+      if o is None: C = None
+      else:         C = self.ontology._to_python(o, default_to_none = True)
+      self.__dict__["Class"] = C
       return C
     return super().__getattribute__(attr)
   
@@ -130,8 +134,14 @@ class Not(ClassConstruct):
     
   def _create_triples(self, ontology):
     ClassConstruct._create_triples(self, ontology)
-    ontology._set_obj_triple_spo(self.storid, rdf_type, owl_class)
-    ontology._set_obj_triple_spo(self.storid, owl_complementof, self.Class.storid)
+    if self.Class in _universal_datatype_2_abbrev:
+      ontology._set_obj_triple_spo(self.storid, rdf_type, rdfs_datatype)
+      ontology._del_obj_triple_spo(self.storid, owl_complementof, None)
+      ontology._set_obj_triple_spo(self.storid, owl_datatypecomplementof, _universal_datatype_2_abbrev[self.Class])
+    else:
+      ontology._set_obj_triple_spo(self.storid, rdf_type, owl_class)
+      ontology._del_obj_triple_spo(self.storid, owl_datatypecomplementof, None)
+      ontology._set_obj_triple_spo(self.storid, owl_complementof, self.Class.storid)
     
   def _satisfied_by(self, x):
     return not self.Class._satisfied_by(x)
