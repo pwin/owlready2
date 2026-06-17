@@ -5955,6 +5955,21 @@ WHERE {
     assert isinstance(r.property, Inverse)
     self.assert_triple(r.property.storid, owl_inverse_property, P.storid, None,  world)
     
+  def test_inverse_2_get_class_properties(self):
+    world = self.new_world()
+    n = world.get_ontology("http://www.test.org/test.owl")
+    
+    with n:
+      class P(ObjectProperty): pass
+      class C(Thing): pass
+      class D(Thing):
+        is_a = [Inverse(P).some(C)]
+      class E(D): pass
+      
+    assert set(D.get_class_properties()) == set()
+    assert set(D.INDIRECT_get_class_properties()) == set()
+    assert set(E.INDIRECT_get_class_properties()) == set()
+    
   def test_inverse_3(self):
     world = self.new_world()
     n = world.get_ontology("http://www.test.org/test.owl")
